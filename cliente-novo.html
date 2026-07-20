@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novo Cliente</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-icon">CRM</div><div class="brand-text"><span>CRM</span><small>Simultâneo</small></div></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span><span class="nav-label">Dashboard</span></a>
+        <a class="nav-item" href="index.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l3-4 3 2 4-6"></path></svg></span><span class="nav-label">Funil</span></a>
+        <a class="nav-item active" href="clientes.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg></span><span class="nav-label">Clientes</span></a>
+        <a class="nav-item" href="projetos.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"></path><path d="M5 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7"></path><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span><span class="nav-label">Projetos</span></a>
+        <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c0 .7.4 1.3 1 1.5V11a2 2 0 0 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"></path></svg></span><span class="nav-label">Configurações</span></a>
+      </nav>
+      <div class="sidebar-footer"><div class="profile-avatar">J</div><div class="profile-info"><span class="profile-name">João</span><span class="profile-role">Gestor</span></div></div>
+    </aside>
+    <main class="page-content">
+      <div class="page-card">
+        <div class="page-header"><div><h1 class="page-title">Cadastrar Cliente</h1><div class="page-subtext">Complete os dados do novo cliente</div></div></div>
+        <div class="page-body">
+          <div class="form-grid">
+            <div class="field"><label>Nome *</label><input type="text"></div>
+            <div class="field"><label>Empresa</label><input type="text"></div>
+            <div class="field"><label>E-mail *</label><input type="email"></div>
+            <div class="field"><label>Telefone *</label><input type="text"></div>
+            <div class="field"><label>CPF/CNPJ</label><input type="text"></div>
+            <div class="field"><label>WhatsApp</label><input type="text"></div>
+          </div>
+          <div class="field" style="margin-top:20px;"><label>Endereço</label><textarea></textarea></div>
+          <div class="field" style="margin-top:20px;"><label>Observações</label><textarea></textarea></div>
+          <div class="actions"><button class="btn-primary">Salvar Cliente</button><button class="btn-secondary" onclick="history.back()">Cancelar</button></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
