@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Funil de Vendas — CRM</title>
+<link rel="stylesheet" href="funil.css">
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">CRM</div>
+        <div class="brand-text">
+          <span>CRM</span>
+          <small>Simultâneo</small>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-item active" href="index.html">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l3-4 3 2 4-6"></path></svg>
+          </span>
+          <span class="nav-label">Funil</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="profile-avatar">J</div>
+        <div class="profile-info">
+          <span class="profile-name">João</span>
+          <span class="profile-role">Gestor</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="page-content">
+      <div class="app">
+        <div class="toolbar">
+          <div class="toolbar-top">
+            <div class="brand">
+              <div class="brand-mark">F</div>
+              <div>
+                <div class="brand-text">Funil de Vendas</div>
+                <div class="brand-sub">protótipo — módulo comercial</div>
+              </div>
+            </div>
+            <div class="summary-pills" id="summaryPills"></div>
+          </div>
+          <div class="toolbar-bottom">
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B979A" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="searchInput" placeholder="Pesquisar cliente, projeto, contato...">
+            </div>
+            <div class="status-filters" id="statusFilters"></div>
+            <button class="btn-add" id="btnAdd">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova proposta
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr id="headerRow"></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+
+        <footer class="status-bar">
+          <span id="footerCount">0 propostas</span>
+          <span id="footerTotal">Total: R$ 0</span>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  const columns = [
+    {key:'numero', label:'Nº Proposta', type:'text', width:110},
+    {key:'cliente', label:'Cliente', type:'link-client', width:150},
+    {key:'projeto', label:'Projeto', type:'link-project', width:150},
+    {key:'contato', label:'Contato', type:'text', width:130},
+    {key:'pontoContato', label:'Ponto de Contato', type:'text', width:130},
+    {key:'dataOrcamento', label:'Data Orçamento', type:'date', width:120},
+    {key:'dataFechamento', label:'Data Fechamento', type:'date', width:120},
+    {key:'mesFechamento', label:'Mês Fecham.', type:'computed', width:100},
+    {key:'valorExterior', label:'Valor Exterior', type:'money-usd', width:110},
+    {key:'valorReais', label:'Valor R$', type:'money-brl', width:110},
+    {key:'statusProposta', label:'Status Proposta', type:'status-proposta', width:130},
+    {key:'statusProjeto', label:'Status Projeto', type:'status-projeto', width:150},
+    {key:'obs', label:'Observações', type:'text-long', width:180},
+  ];
+
+  const statusPropostaOptions = ['Aberta','Negociando','Fechada','Perdida','Pausada'];
+  const statusProjetoOptions = ['—','Aguardando dados para contrato','Contrato em elaboração','Aguardando assinatura','Contrato assinado','Em produção','Projeto em andamento','Entrega parcial','Aprovação','Cobrança enviada','Projeto finalizado'];
+
+  let data = [
+    {id:1, numero:'PRP-0231', cliente:'Construtora Aurora', projeto:'Shopping Curitiba', contato:'Marcos Lima', pontoContato:'Diretoria', dataOrcamento:'2026-05-02', dataFechamento:'2026-06-10', valorExterior:4200, valorReais:22800, statusProposta:'Fechada', statusProjeto:'Em produção', obs:'Cliente pediu revisão de fachada noturna'},
+    {id:2, numero:'PRP-0232', cliente:'Grupo Vitalle', projeto:'Residencial Bosque Verde', contato:'Ana Beatriz', pontoContato:'Marketing', dataOrcamento:'2026-05-14', dataFechamento:'', valorExterior:3100, valorReais:16850, statusProposta:'Negociando', statusProjeto:'—', obs:''},
+    {id:3, numero:'PRP-0233', cliente:'Construtora Aurora', projeto:'Edifício Horizonte', contato:'Marcos Lima', pontoContato:'Diretoria', dataOrcamento:'2026-04-20', dataFechamento:'2026-05-30', valorExterior:5600, valorReais:30450, statusProposta:'Fechada', statusProjeto:'Aguardando assinatura', obs:'Tour virtual incluso'},
+    {id:4, numero:'PRP-0234', cliente:'Incorpora SC', projeto:'Marina Business Center', contato:'Rafael Souza', pontoContato:'Comercial', dataOrcamento:'2026-06-01', dataFechamento:'', valorExterior:2800, valorReais:15200, statusProposta:'Aberta', statusProjeto:'—', obs:'Aguardando retorno do cliente'},
+    {id:5, numero:'PRP-0235', cliente:'JLV Empreendimentos', projeto:'Condomínio Alto da Serra', contato:'Juliana Vasco', pontoContato:'Diretoria', dataOrcamento:'2026-03-11', dataFechamento:'2026-04-02', valorExterior:1900, valorReais:10320, statusProposta:'Perdida', statusProjeto:'—', obs:'Fechou com concorrente'},
+    {id:6, numero:'PRP-0236', cliente:'Grupo Vitalle', projeto:'Residencial Bosque Verde', contato:'Ana Beatriz', pontoContato:'Marketing', dataOrcamento:'2026-06-15', dataFechamento:'2026-07-01', valorExterior:1200, valorReais:6520, statusProposta:'Fechada', statusProjeto:'Contrato em elaboração', obs:'Animação adicional'},
+    {id:7, numero:'PRP-0237', cliente:'Incorpora SC', projeto:'Marina Business Center', contato:'Rafael Souza', pontoContato:'Comercial', dataOrcamento:'2026-06-18', dataFechamento:'', valorExterior:3400, valorReais:18480, statusProposta:'Pausada', statusProjeto:'—', obs:'Cliente pausou projeto'},
+    {id:8, numero:'PRP-0238', cliente:'Nova Era Incorporadora', projeto:'Parque das Águas', contato:'Camila Rocha', pontoContato:'Diretoria', dataOrcamento:'2026-07-02', dataFechamento:'2026-07-15', valorExterior:6100, valorReais:33150, statusProposta:'Fechada', statusProjeto:'Aguardando dados para contrato', obs:''},
+  ];
+
+  let filterText = '';
+  let activeStatuses = new Set();
+  let sortKey = null;
+  let sortDir = 1;
+  let nextId = 9;
+
+  function monthLabel(dateStr){
+    if(!dateStr) return '—';
+    const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const d = new Date(dateStr+'T00:00:00');
+    return months[d.getMonth()] + '/' + String(d.getFullYear()).slice(2);
+  }
+
+  function formatMoney(val, currency){
+    if(val === '' || val === null || val === undefined) return '—';
+    const n = Number(val);
+    return (currency==='USD' ? 'US$ ' : 'R$ ') + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function formatDate(dateStr){
+    if(!dateStr) return '—';
+    const [y,m,d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  function statusClass(status, kind){
+    if(kind==='proposta'){
+      const map = {Aberta:'aberta', Negociando:'negociando', Fechada:'fechada', Perdida:'perdida', Pausada:'pausada'};
+      return map[status] || 'pausada';
+    }
+    return 'aberta';
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 1800);
+  }
+
+  function renderHeader(){
+    const row = document.getElementById('headerRow');
+    row.innerHTML = '';
+    columns.forEach(col=>{
+      const th = document.createElement('th');
+      th.style.width = col.width+'px';
+      let arrow = '';
+      if(sortKey === col.key) arrow = `<span class="sort-arrow">${sortDir===1?'▲':'▼'}</span>`;
+      th.innerHTML = col.label + arrow;
+      th.onclick = () => {
+        if(sortKey === col.key){ sortDir *= -1; } else { sortKey = col.key; sortDir = 1; }
+        render();
+      };
+      row.appendChild(th);
+    });
+    const thActions = document.createElement('th');
+    thActions.style.width = '90px';
+    thActions.textContent = 'Ações';
+    thActions.onclick = null;
+    thActions.style.cursor = 'default';
+    row.appendChild(thActions);
+  }
+
+  function renderStatusFilters(){
+    const wrap = document.getElementById('statusFilters');
+    wrap.innerHTML = '';
+    statusPropostaOptions.forEach(s=>{
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (activeStatuses.has(s) ? ' active' : '');
+      chip.textContent = s;
+      chip.onclick = () => {
+        if(activeStatuses.has(s)) activeStatuses.delete(s); else activeStatuses.add(s);
+        render();
+      };
+      wrap.appendChild(chip);
+    });
+  }
+
+  function renderSummary(){
+    const wrap = document.getElementById('summaryPills');
+    const total = data.length;
+    const abertas = data.filter(d=>d.statusProposta==='Aberta').length;
+    const fechadas = data.filter(d=>d.statusProposta==='Fechada').length;
+    const valorFechado = data.filter(d=>d.statusProposta==='Fechada').reduce((a,d)=>a+Number(d.valorReais||0),0);
+    const conv = total ? Math.round((fechadas/total)*100) : 0;
+    const pills = [
+      {num: total, lbl:'Propostas'},
+      {num: abertas, lbl:'Abertas'},
+      {num: conv+'%', lbl:'Conversão'},
+      {num: 'R$ '+Math.round(valorFechado/1000)+'k', lbl:'Fechado'},
+    ];
+    wrap.innerHTML = pills.map(p=>`<div class="pill-stat"><span class="num">${p.num}</span><span class="lbl">${p.lbl}</span></div>`).join('');
+  }
+
+  function getFiltered(){
+    let rows = data.filter(r=>{
+      if(activeStatuses.size && !activeStatuses.has(r.statusProposta)) return false;
+      if(filterText){
+        const hay = (r.numero+' '+r.cliente+' '+r.projeto+' '+r.contato+' '+r.pontoContato+' '+r.obs).toLowerCase();
+        if(!hay.includes(filterText.toLowerCase())) return false;
+      }
+      return true;
+    });
+    if(sortKey){
+      rows = rows.slice().sort((a,b)=>{
+        let av = a[sortKey], bv = b[sortKey];
+        if(sortKey==='valorExterior' || sortKey==='valorReais'){ av=Number(av||0); bv=Number(bv||0); }
+        if(av === undefined || av === '') av = '';
+        if(bv === undefined || bv === '') bv = '';
+        if(av < bv) return -1*sortDir;
+        if(av > bv) return 1*sortDir;
+        return 0;
+      });
+    }
+    return rows;
+  }
+
+  function makeCell(row, col){
+    const td = document.createElement('td');
+    const val = row[col.key];
+
+    if(col.type === 'computed'){
+      td.innerHTML = `<span class="badge-mes">${monthLabel(row.dataFechamento)}</span>`;
+      return td;
+    }
+    if(col.type === 'link-client'){
+      td.innerHTML = `<span class="client-link">${val}</span>`;
+      td.querySelector('.client-link').onclick = ()=> showToast(`Abrindo cadastro do cliente: ${val}`);
+      return td;
+    }
+    if(col.type === 'link-project'){
+      td.innerHTML = `<span class="project-link">${val}</span>`;
+      td.querySelector('.project-link').onclick = ()=> showToast(`Abrindo projeto: ${val}`);
+      return td;
+    }
+    if(col.type === 'money-usd' || col.type === 'money-brl'){
+      td.className = 'money-col editable';
+      td.textContent = formatMoney(val, col.type==='money-usd'?'USD':'BRL');
+      attachEdit(td, row, col, 'number');
+      return td;
+    }
+    if(col.type === 'date'){
+      td.className = 'editable';
+      td.textContent = formatDate(val);
+      attachEdit(td, row, col, 'date');
+      return td;
+    }
+    if(col.type === 'status-proposta'){
+      const cls = statusClass(val,'proposta');
+      td.innerHTML = `<span class="badge" style="color:var(--st-${cls});background:var(--st-${cls}-bg)">${val}</span>`;
+      td.className = 'editable';
+      td.onclick = ()=> openSelectEdit(td, row, col, statusPropostaOptions);
+      return td;
+    }
+    if(col.type === 'status-projeto'){
+      td.textContent = val || '—';
+      td.className = 'editable';
+      td.style.color = 'var(--ink-soft)';
+      td.style.fontSize = '12px';
+      td.onclick = ()=> openSelectEdit(td, row, col, statusProjetoOptions);
+      return td;
+    }
+    if(col.type === 'text-long'){
+      td.className = 'obs-cell editable';
+      td.textContent = val || '';
+      td.title = val || '';
+      attachEdit(td, row, col, 'text');
+      return td;
+    }
+    td.className = 'num-col editable';
+    td.textContent = val || '';
+    attachEdit(td, row, col, 'text');
+    return td;
+  }
+
+  function attachEdit(td, row, col, inputType){
+    td.onclick = () => {
+      if(td.querySelector('input')) return;
+      const current = row[col.key] || '';
+      td.innerHTML = `<input type="${inputType}" value="${current}">`;
+      const input = td.querySelector('input');
+      input.focus();
+      input.select();
+      const commit = () => {
+        row[col.key] = input.value;
+        render();
+      };
+      input.onblur = commit;
+      input.onkeydown = (e) => { if(e.key==='Enter') input.blur(); if(e.key==='Escape'){ render(); } };
+    };
+  }
+
+  function openSelectEdit(td, row, col, options){
+    if(td.querySelector('select')) return;
+    td.innerHTML = `<select>${options.map(o=>`<option value="${o}" ${o===row[col.key]?'selected':''}>${o}</option>`).join('')}</select>`;
+    const select = td.querySelector('select');
+    select.focus();
+    select.onchange = () => {
+      row[col.key] = select.value;
+      render();
+    };
+    select.onblur = () => render();
+  }
+
+  function renderTable(){
+    const body = document.getElementById('tableBody');
+    body.innerHTML = '';
+    const rows = getFiltered();
+
+    if(rows.length === 0){
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = columns.length + 1;
+      td.innerHTML = `<div class="empty-state">Nenhuma proposta encontrada para esse filtro.</div>`;
+      tr.appendChild(td);
+      body.appendChild(tr);
+    } else {
+      rows.forEach(row=>{
+        const tr = document.createElement('tr');
+        columns.forEach(col=>{
+          tr.appendChild(makeCell(row, col));
+        });
+        const tdActions = document.createElement('td');
+        tdActions.innerHTML = `
+          <div class="row-actions">
+            <button title="Anexar arquivo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button title="Ver histórico">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </button>
+            <button title="Detalhes da proposta">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg>
+            </button>
+          </div>`;
+        tdActions.querySelectorAll('button').forEach((btn,i)=>{
+          const labels = ['Anexo adicionado (mock)', 'Abrindo histórico da proposta', 'Abrindo detalhes da proposta'];
+          btn.onclick = () => showToast(labels[i]);
+        });
+        tr.appendChild(tdActions);
+        body.appendChild(tr);
+      });
+    }
+
+    const total = rows.reduce((a,r)=>a+Number(r.valorReais||0),0);
+    document.getElementById('footerCount').textContent = `${rows.length} proposta${rows.length!==1?'s':''} exibida${rows.length!==1?'s':''} de ${data.length}`;
+    document.getElementById('footerTotal').textContent = `Total (filtro): ${formatMoney(total,'BRL')}`;
+  }
+
+  function render(){
+    renderHeader();
+    renderStatusFilters();
+    renderSummary();
+    renderTable();
+  }
+
+  document.getElementById('searchInput').addEventListener('input', (e)=>{
+    filterText = e.target.value;
+    renderTable();
+  });
+
+  document.getElementById('btnAdd').onclick = () => {
+    const newRow = {
+      id: nextId++, numero: `PRP-0${230+nextId}`, cliente:'Novo Cliente', projeto:'Novo Projeto',
+      contato:'', pontoContato:'', dataOrcamento: new Date().toISOString().slice(0,10),
+      dataFechamento:'', valorExterior:0, valorReais:0, statusProposta:'Aberta', statusProjeto:'—', obs:''
+    };
+    data.unshift(newRow);
+    render();
+    showToast('Nova proposta criada — edite os campos diretamente na tabela');
+  };
+
+  render();
+  </script>
+</body>
+</html>
