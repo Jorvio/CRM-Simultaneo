@@ -30,10 +30,10 @@
                   <h2 class="page-title" style="font-size:18px; margin:0;">Dados da Empresa</h2>
                 </div>
                 <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
-                  <div class="field"><label>Cliente</label><input type="text" placeholder="Nome do cliente"></div>
-                  <div class="field"><label>Razão Social</label><input type="text" placeholder="Razão Social"></div>
-                  <div class="field"><label>CNPJ</label><input type="text" placeholder="00.000.000/0000-00"></div>
-                  <div class="field"><label>Endereço Completo CNPJ</label><textarea placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
+                  <div class="field"><label>Cliente</label><input id="fldCliName" type="text" placeholder="Nome do cliente"></div>
+                  <div class="field"><label>Razão Social</label><input id="fldCliRazao" type="text" placeholder="Razão Social"></div>
+                  <div class="field"><label>CNPJ</label><input id="fldCliCNPJ" type="text" placeholder="00.000.000/0000-00"></div>
+                  <div class="field"><label>Endereço Completo CNPJ</label><textarea id="fldCliEndereco" placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
                 </div>
               </div>
               <div class="page-card" style="padding:20px;">
@@ -47,11 +47,28 @@
                 </div>
               </div>
             </div>
-            <div class="actions"><button class="btn-primary">Salvar Cliente</button><button class="btn-secondary" onclick="history.back()">Cancelar</button></div>
+            <div class="actions"><button class="btn-primary" id="btnSaveClient">Salvar Cliente</button><button class="btn-secondary" onclick="history.back()">Cancelar</button></div>
           </div>
         </div>
       </div>
     </main>
   </div>
+  <script>
+  document.getElementById('btnSaveClient').onclick = function(){
+    const name = document.getElementById('fldCliName').value.trim();
+    const razao = document.getElementById('fldCliRazao').value.trim();
+    const cnpj = document.getElementById('fldCliCNPJ').value.trim();
+    const endereco = document.getElementById('fldCliEndereco').value.trim();
+    if(!name){ alert('Nome do cliente é obrigatório'); return; }
+    const key = 'crm_clients';
+    let list = [];
+    try{ list = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ list = []; }
+    list.unshift({id: Date.now(), name, razao, cnpj, endereco});
+    localStorage.setItem(key, JSON.stringify(list));
+    alert('Cliente cadastrado');
+    try{ window.opener && window.opener.postMessage({type:'crm:client_added', client:{name, cnpj}}, '*'); }catch(e){}
+    history.back();
+  };
+  </script>
 </body>
 </html>

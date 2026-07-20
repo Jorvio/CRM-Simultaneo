@@ -390,18 +390,159 @@
     renderTable();
   });
 
-  document.getElementById('btnAdd').onclick = () => {
-    const newRow = {
-      id: nextId++, numero: `PRP-0${230+nextId}`, cliente:'Novo Cliente', projeto:'Novo Projeto',
-      contato:'', pontoContato:'', dataOrcamento: new Date().toISOString().slice(0,10),
-      dataFechamento:'', valorExterior:0, valorReais:0, statusProposta:'Aberta', statusProjeto:'—', obs:''
-    };
-    data.unshift(newRow);
-    render();
-    showToast('Nova proposta criada — edite os campos diretamente na tabela');
-  };
+  // Open modal to create a new proposal
+  document.getElementById('btnAdd').onclick = () => openProposalModal();
 
   render();
+
+  // --- Modal markup and logic for New Proposal ---
+  const modalHTML = `
+  <div class="modal" id="proposalModal" aria-hidden="true">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-panel">
+      <div class="modal-header"><h3>Nova Proposta</h3><button id="modalClose">✕</button></div>
+      <div class="modal-body">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="field"><label>Nº Proposta *</label><input id="fldNumero" type="text"></div>
+          <div class="field"><label>Cliente *</label><input id="fldCliente" type="text" placeholder="Pesquisar por nome, CPF ou CNPJ"><div id="clienteResults" class="search-results"></div></div>
+          <div class="field"><label>Projeto *</label><input id="fldProjeto" type="text" placeholder="Pesquisar por nome do projeto ou nº da proposta"><div id="projetoResults" class="search-results"></div></div>
+          <div class="field"><label>Contato *</label><input id="fldContato" type="text"></div>
+          <div class="field"><label>Ponto de Contato *</label><input id="fldPonto" type="text"></div>
+          <div class="field"><label>Data Orçamento *</label><input id="fldOrcamento" type="date"></div>
+          <div class="field"><label>Data Fechamento *</label><input id="fldFechamento" type="date"></div>
+          <div class="field"><label>Mês Fecham.</label><input id="fldMesFech" type="text" disabled></div>
+          <div class="field"><label>Valor Exterior *</label><input id="fldValorExt" type="number" step="0.01"></div>
+          <div class="field"><label>Valor R$ *</label><input id="fldValorBr" type="number" step="0.01"></div>
+          <div class="field"><label>Status Proposta *</label><select id="fldStatusProposta">${statusPropostaOptions.map(s=>`<option>${s}</option>`).join('')}</select></div>
+          <div class="field"><label>Status Projeto *</label><select id="fldStatusProjeto">${statusProjetoOptions.map(s=>`<option>${s}</option>`).join('')}</select></div>
+          <div class="field" style="grid-column:1 / -1"><label>Observações</label><textarea id="fldObs" rows="3"></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn-secondary" id="btnCancelModal">Cancelar</button><button class="btn-primary" id="btnSaveModal">Salvar Proposta</button></div>
+    </div>
+  </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+  const proposalModal = document.getElementById('proposalModal');
+  const modalBackdrop = document.getElementById('modalBackdrop');
+
+  function openProposalModal(){
+    // prefill defaults
+    document.getElementById('fldNumero').value = `PRP-${Math.floor(Math.random()*9000)+1000}`;
+    document.getElementById('fldOrcamento').value = new Date().toISOString().slice(0,10);
+    document.getElementById('fldFechamento').value = '';
+    document.getElementById('fldMesFech').value = '';
+    document.getElementById('fldCliente').value = '';
+    document.getElementById('fldProjeto').value = '';
+    document.getElementById('fldContato').value = '';
+    document.getElementById('fldPonto').value = '';
+    document.getElementById('fldValorExt').value = '';
+    document.getElementById('fldValorBr').value = '';
+    document.getElementById('fldObs').value = '';
+    proposalModal.setAttribute('aria-hidden','false');
+    proposalModal.classList.add('open');
+    document.getElementById('fldCliente').focus();
+  }
+
+  function closeProposalModal(){ proposalModal.setAttribute('aria-hidden','true'); proposalModal.classList.remove('open'); }
+
+  document.getElementById('modalClose').onclick = closeProposalModal;
+  document.getElementById('btnCancelModal').onclick = closeProposalModal;
+
+  // helpers: clients/projects persisted in localStorage
+  function loadStore(key){ try{ return JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){return [];} }
+  function saveStore(key, arr){ localStorage.setItem(key, JSON.stringify(arr)); }
+
+  // seed stores from existing table data (first load)
+  (function seedStores(){
+    const clients = loadStore('crm_clients');
+    if(clients.length === 0){
+      const names = Array.from(new Set(data.map(d=>d.cliente))).map((name,i)=>({id:i+1,name,cnpj:'',cpf:''}));
+      if(names.length) saveStore('crm_clients', names);
+    }
+    const projects = loadStore('crm_projects');
+    if(projects.length === 0){
+      const prjs = Array.from(new Set(data.map(d=>d.projeto))).map((name,i)=>({id:i+1,name,propostaNum:''}));
+      if(prjs.length) saveStore('crm_projects', prjs);
+    }
+  })();
+
+  function searchClients(q){
+    if(!q) return []; const list = loadStore('crm_clients');
+    q = q.toLowerCase();
+    return list.filter(c => (c.name||'').toLowerCase().includes(q) || (c.cpf||'').toLowerCase().includes(q) || (c.cnpj||'').toLowerCase().includes(q));
+  }
+  function searchProjects(q){ if(!q) return []; const list = loadStore('crm_projects'); q=q.toLowerCase(); return list.filter(p => (p.name||'').toLowerCase().includes(q) || (p.propostaNum||'').toLowerCase().includes(q)); }
+
+  // wire client/project search inputs
+  const fldCliente = document.getElementById('fldCliente');
+  const fldProjeto = document.getElementById('fldProjeto');
+  const clienteResults = document.getElementById('clienteResults');
+  const projetoResults = document.getElementById('projetoResults');
+
+  function renderSearchResults(container, items, type){
+    container.innerHTML = '';
+    if(items.length === 0){
+      const n = document.createElement('div'); n.className='no-result'; n.innerHTML = `${type} não encontrado.<br><button class="btn-link" data-action="create-${type.toLowerCase()}">+ Cadastrar ${type}</button>`;
+      container.appendChild(n);
+      n.querySelector('button').onclick = ()=> { window.open(type==='Cliente' ? 'cliente-novo.html' : 'projeto-novo.html', '_blank'); };
+      return;
+    }
+    items.slice(0,8).forEach(it=>{
+      const r = document.createElement('div'); r.className='result-item'; r.textContent = it.name || it.projeto || '';
+      r.onclick = ()=>{
+        if(type==='Cliente') fldCliente.value = it.name; else fldProjeto.value = it.name;
+        container.innerHTML = '';
+      };
+      container.appendChild(r);
+    });
+  }
+
+  fldCliente.addEventListener('input', ()=>{ renderSearchResults(clienteResults, searchClients(fldCliente.value), 'Cliente'); });
+  fldProjeto.addEventListener('input', ()=>{ renderSearchResults(projetoResults, searchProjects(fldProjeto.value), 'Projeto'); });
+
+  // auto fill month from fechamento
+  const fldFech = document.getElementById('fldFechamento');
+  fldFech.addEventListener('change', ()=>{ document.getElementById('fldMesFech').value = monthLabel(fldFech.value); });
+
+  // handle save
+  document.getElementById('btnSaveModal').onclick = ()=>{
+    const numero = document.getElementById('fldNumero').value.trim();
+    const cliente = document.getElementById('fldCliente').value.trim();
+    const projeto = document.getElementById('fldProjeto').value.trim();
+    const contato = document.getElementById('fldContato').value.trim();
+    const ponto = document.getElementById('fldPonto').value.trim();
+    const orc = document.getElementById('fldOrcamento').value;
+    const fech = document.getElementById('fldFechamento').value;
+    const valorExt = parseFloat(document.getElementById('fldValorExt').value || 0);
+    const valorBr = parseFloat(document.getElementById('fldValorBr').value || 0);
+    const statusP = document.getElementById('fldStatusProposta').value;
+    const statusPrj = document.getElementById('fldStatusProjeto').value;
+    const obs = document.getElementById('fldObs').value.trim();
+
+    // validation
+    const required = { 'Nº Proposta':numero, 'Cliente':cliente, 'Projeto':projeto, 'Contato':contato, 'Ponto de Contato':ponto, 'Data Orçamento':orc, 'Data Fechamento':fech };
+    for(const k in required){ if(!required[k]){ showToast(`${k} é obrigatório`); return; } }
+
+    const newRow = {
+      id: nextId++, numero, cliente, projeto, contato, pontoContato: ponto,
+      dataOrcamento: orc, dataFechamento: fech, mesFechamento: monthLabel(fech), valorExterior:valorExt, valorReais:valorBr,
+      statusProposta: statusP, statusProjeto: statusPrj, obs
+    };
+
+    data.unshift(newRow);
+    // also ensure client/project persisted for future searches
+    const clients = loadStore('crm_clients'); if(!clients.find(c=>c.name===cliente)){ clients.unshift({id:Date.now(), name:cliente}); saveStore('crm_clients', clients); }
+    const projects = loadStore('crm_projects'); if(!projects.find(p=>p.name===projeto)){ projects.unshift({id:Date.now(), name:projeto}); saveStore('crm_projects', projects); }
+
+    render();
+    closeProposalModal();
+    showToast('Proposta salva e adicionada ao funil');
+  };
+
+  // listen to storage events so new clients/projects are picked up when created in other pages
+  window.addEventListener('storage', (e)=>{ if(e.key==='crm_clients' || e.key==='crm_projects'){ /* no-op: searches read from storage when used */ } });
   </script>
 </body>
 </html>
