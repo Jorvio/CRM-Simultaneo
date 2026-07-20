@@ -20,21 +20,60 @@
       <div class="sidebar-footer"><div class="profile-avatar">J</div><div class="profile-info"><span class="profile-name">João</span><span class="profile-role">Gestor</span></div></div>
     </aside>
     <main class="page-content">
-      <div class="page-card">
-        <div class="page-header"><div><h1 class="page-title">Cadastrar Projeto</h1><div class="page-subtext">Cadastre novas demandas e entregas</div></div></div>
-        <div class="page-body">
-          <div class="form-grid">
-            <div class="field"><label>Nome do Projeto *</label><input type="text"></div>
-            <div class="field"><label>Cliente *</label><select><option>Selecione</option><option>Construtora Horizonte</option><option>Grupo Andrade</option><option>Shopping Curitiba</option></select></div>
-            <div class="field"><label>Tipo de Serviço *</label><select><option>Renderização 3D</option><option>Animação 3D</option><option>Tour Virtual</option><option>Vídeo Institucional</option><option>Projeto Arquitetônico</option></select></div>
-            <div class="field"><label>Valor do Projeto</label><input type="text" placeholder="R$ 0,00"></div>
-            <div class="field"><label>Data de Início</label><input type="date"></div>
-            <div class="field"><label>Data de Entrega</label><input type="date"></div>
-            <div class="field"><label>Status</label><select><option>Proposta</option><option>Negociação</option><option>Aguardando Contrato</option><option>Em Produção</option><option>Revisão</option><option>Concluído</option><option>Cancelado</option></select></div>
-            <div class="field"><label>Responsável</label><input type="text"></div>
+      <div class="app">
+        <div class="page-card">
+          <div class="page-header"><div><h1 class="page-title">Cadastrar Projeto</h1><div class="page-subtext">Inclua dados do responsável, financeiro e contrato</div></div></div>
+          <div class="page-body">
+            <div class="card-grid">
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Responsável</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field"><label>Nome Completo</label><input type="text" placeholder="Nome completo"></div>
+                  <div class="field"><label>CPF</label><input type="text" placeholder="000.000.000-00"></div>
+                  <div class="field"><label>RG - Órgão Emissor</label><input type="text" placeholder="RG e órgão emissor"></div>
+                  <div class="field"><label>Profissão</label><input type="text" placeholder="Profissão"></div>
+                  <div class="field"><label>Estado Civil</label><input type="text" placeholder="Estado civil"></div>
+                  <div class="field"><label>Endereço Completo Responsável</label><textarea placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
+                  <div class="field"><label>E-mail</label><input type="email" placeholder="email@empresa.com"></div>
+                  <div class="field"><label>Telefone</label><input type="text" placeholder="(47) 99999-9999"></div>
+                  <div class="field"><label>E-mail em cópia</label><input type="email" placeholder="email.copia@empresa.com"></div>
+                </div>
+              </div>
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Financeiro</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field"><label>Forma de pagamento</label><input type="text" placeholder="Ex: Boleto, Cartão, Transferência"></div>
+                  <div class="field"><label>Forma de parcelamento</label><input type="text" placeholder="Ex: 3x, 6x, 12x"></div>
+                  <div class="field"><label>Dia de vencimento das parcelas</label><input type="text" placeholder="Dia do mês"></div>
+                  <div class="field"><label>Valor total do contrato</label><input type="text" placeholder="R$ 0,00"></div>
+                  <div class="field"><label>Valor das parcelas</label><input type="text" placeholder="R$ 0,00"></div>
+                </div>
+              </div>
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Contrato</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field"><label>Envio do contrato</label><input type="text" placeholder="Ex: Por e-mail, correio, assinatura digital"></div>
+                  <div class="field"><label>Envio de cobranças</label><input type="text" placeholder="Ex: Mensal, quinzenal"></div>
+                </div>
+              </div>
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Acompanhamento do Projeto</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field"><label>Solicitação de arquivos de projeto</label><input type="text" placeholder="Ex: Modelos, plantas, texturas"></div>
+                  <div class="field"><label>Entregas e aprovações</label><textarea placeholder="Fases de entrega e aprovação"></textarea></div>
+                </div>
+              </div>
+            </div>
+            <div class="actions"><button class="btn-primary">Salvar Projeto</button><button class="btn-secondary" onclick="history.back()">Cancelar</button></div>
           </div>
-          <div class="field" style="margin-top:20px;"><label>Descrição do Projeto</label><textarea placeholder="Detalhes do projeto..."></textarea></div>
-          <div class="actions"><button class="btn-primary">Salvar Projeto</button><button class="btn-secondary" onclick="history.back()">Cancelar</button></div>
         </div>
       </div>
     </main>

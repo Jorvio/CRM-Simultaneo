@@ -81,6 +81,7 @@ tbody td{padding:12px 14px; border-bottom:1px solid var(--border); border-right:
 tbody tr:hover{background:var(--surface-alt);} 
 
 .form-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;}
+.card-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;}
 .field{display:flex; flex-direction:column; gap:8px;}
 label{font-size:13px; font-weight:600; color:var(--text);}
 input, textarea, select{width:100%; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--surface); color:var(--text); font:inherit;}
