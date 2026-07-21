@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Usuários - CRM</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="css/auth.css">
+<style>
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    z-index: 1200;
+  }
+
+  .modal-overlay.open {
+    display: flex;
+  }
+
+  .modal-card {
+    width: min(680px, 100%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+</style>
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-icon">CRM</div><div class="brand-text"><span>CRM</span><small>Simultâneo</small></div></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html"><span class="nav-label">Dashboard</span></a>
+        <a class="nav-item" href="index.html"><span class="nav-label">Funil</span></a>
+        <a class="nav-item" href="clientes.html"><span class="nav-label">Clientes</span></a>
+        <a class="nav-item" href="projetos.html"><span class="nav-label">Projetos</span></a>
+        <a class="nav-item active" href="#"><span class="nav-label">Configurações</span></a>
+      </nav>
+      <div class="sidebar-footer"><div class="profile-avatar">U</div><div class="profile-info"><span class="profile-name">Usuário</span><span class="profile-role">EDITOR</span></div></div>
+    </aside>
+
+    <main class="page-content">
+      <div class="app">
+        <div class="page-card">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Gerenciamento de usuários</h1>
+              <div class="page-subtext">Acesso restrito para administradoras</div>
+            </div>
+            <button id="btnOpenCreateUser" class="btn-primary" type="button">+ Novo usuário</button>
+          </div>
+
+          <div class="page-body">
+            <div id="usersMessage" class="auth-info is-hidden" role="alert" aria-live="polite"></div>
+
+            <div class="table-wrap" style="margin-top:12px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>E-mail</th>
+                    <th>Função</th>
+                    <th>Status</th>
+                    <th>Criado em</th>
+                    <th>Alterar função</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="createUserModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-card">
+      <div class="page-header" style="padding:0 0 14px;">
+        <div>
+          <h2 class="page-title" style="font-size:20px;">Criar usuário</h2>
+          <div class="page-subtext">Usuários novos entram com senha temporária e devem trocar no primeiro acesso.</div>
+        </div>
+        <button id="btnCloseCreateUser" type="button" class="btn-secondary">Fechar</button>
+      </div>
+
+      <form id="createUserForm" class="auth-form" novalidate>
+        <div class="field">
+          <label for="newUserFullName">Nome completo</label>
+          <input id="newUserFullName" type="text" required>
+        </div>
+
+        <div class="field">
+          <label for="newUserEmail">E-mail</label>
+          <input id="newUserEmail" type="email" required>
+        </div>
+
+        <div class="field">
+          <label for="newUserRole">Função</label>
+          <select id="newUserRole" required>
+            <option value="editor">Editor</option>
+            <option value="master">Master</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="newUserPassword">Senha temporária</label>
+          <input id="newUserPassword" type="password" required minlength="8">
+        </div>
+
+        <div class="field">
+          <label for="newUserPasswordConfirm">Confirmar senha temporária</label>
+          <input id="newUserPasswordConfirm" type="password" required minlength="8">
+        </div>
+
+        <div class="actions" style="justify-content:flex-end; gap:10px;">
+          <button id="btnCancelCreateUser" type="button" class="btn-secondary">Cancelar</button>
+          <button id="btnCreateUser" type="submit" class="btn-primary">Criar usuário</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="js/auth-guard.js"></script>
+  <script type="module" src="js/user-menu.js"></script>
+  <script type="module" src="js/usuarios.js"></script>
+</body>
+</html>

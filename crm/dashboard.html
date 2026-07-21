@@ -5,6 +5,7 @@
 <title>Dashboard CRM</title>
 <link rel="stylesheet" href="shared.css">
 <link rel="stylesheet" href="dash.css">
+<link rel="stylesheet" href="css/auth.css">
 
 <style>
 /* ── Month/Year Controls ─────────────────────────── */
@@ -125,7 +126,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module">
-  import './supabase.js'; // define window.supabaseClient
+  import './js/auth-guard.js';
+  import './js/user-menu.js';
+  import '../bd/supabase.js'; // define window.supabaseClient
 
   // ── Constantes visuais ───────────────────────────────────────────────────
   const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];

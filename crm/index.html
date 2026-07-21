@@ -5,6 +5,7 @@
 <title>Funil de Vendas — CRM</title>
 <link rel="stylesheet" href="shared.css">
 <link rel="stylesheet" href="funil.css">
+<link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
   <div class="page-shell">
@@ -99,7 +100,9 @@
   <div class="toast" id="toast"></div>
 
   <script type="module">
-  import { db, dbMessage } from './supabase.js';
+  import './js/auth-guard.js';
+  import './js/user-menu.js';
+  import { db, dbMessage } from '../bd/supabase.js';
   const columns = [
     {key:'numero', label:'Nº Proposta', type:'text', width:110},
     {key:'cliente', label:'Cliente', type:'link-client', width:150},

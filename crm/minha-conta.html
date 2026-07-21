@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minha conta - CRM</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-icon">CRM</div><div class="brand-text"><span>CRM</span><small>Simultâneo</small></div></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html"><span class="nav-label">Dashboard</span></a>
+        <a class="nav-item" href="index.html"><span class="nav-label">Funil</span></a>
+        <a class="nav-item" href="clientes.html"><span class="nav-label">Clientes</span></a>
+        <a class="nav-item" href="projetos.html"><span class="nav-label">Projetos</span></a>
+        <a class="nav-item active" href="#"><span class="nav-label">Configurações</span></a>
+      </nav>
+      <div class="sidebar-footer"><div class="profile-avatar">U</div><div class="profile-info"><span class="profile-name">Usuário</span><span class="profile-role">EDITOR</span></div></div>
+    </aside>
+
+    <main class="page-content">
+      <div class="app">
+        <div class="page-card account-card">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Minha conta</h1>
+              <div class="page-subtext">Gerencie seu perfil e sua senha</div>
+            </div>
+          </div>
+
+          <div class="page-body">
+            <div class="account-header">
+              <div id="accountAvatar" class="account-avatar">U</div>
+              <div>
+                <strong>Dados de acesso</strong>
+                <div style="color:var(--text-soft);font-size:13px;">As alterações são aplicadas imediatamente</div>
+              </div>
+            </div>
+
+            <div id="accountMessage" class="auth-error is-hidden" role="alert" aria-live="polite"></div>
+
+            <form id="accountForm" class="auth-form" novalidate>
+              <div class="field">
+                <label for="accountName">Nome completo</label>
+                <input id="accountName" type="text" required>
+              </div>
+
+              <div class="field">
+                <label for="accountEmail">E-mail</label>
+                <input id="accountEmail" type="email" disabled>
+              </div>
+
+              <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="field">
+                  <label for="accountRole">Função</label>
+                  <input id="accountRole" type="text" disabled>
+                </div>
+                <div class="field">
+                  <label for="accountStatus">Status</label>
+                  <input id="accountStatus" type="text" disabled>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="accountProvider">Provedor de login</label>
+                <input id="accountProvider" type="text" disabled>
+              </div>
+
+              <div class="field">
+                <label for="accountPassword">Nova senha (opcional)</label>
+                <div class="input-wrap">
+                  <input id="accountPassword" type="password" autocomplete="new-password">
+                  <button id="toggleAccountPassword" type="button" class="toggle-pass">Mostrar</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="accountPasswordConfirm">Confirmar nova senha</label>
+                <div class="input-wrap">
+                  <input id="accountPasswordConfirm" type="password" autocomplete="new-password">
+                  <button id="toggleAccountPasswordConfirm" type="button" class="toggle-pass">Mostrar</button>
+                </div>
+              </div>
+
+              <button id="btnSaveAccount" type="submit" class="btn-primary">Salvar alterações</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/auth-guard.js"></script>
+  <script type="module" src="js/user-menu.js"></script>
+  <script type="module" src="js/login.js"></script>
+</body>
+</html>

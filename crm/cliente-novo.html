@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Novo Cliente</title>
 <link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
   <div class="page-shell">
@@ -53,7 +54,9 @@
     </main>
   </div>
   <script type="module">
-  import { supabase, db } from './supabase.js';
+  import './js/auth-guard.js';
+  import './js/user-menu.js';
+  import { supabase, db } from '../bd/supabase.js';
 
   const params = new URLSearchParams(window.location.search);
   const clientId = params.get('id');

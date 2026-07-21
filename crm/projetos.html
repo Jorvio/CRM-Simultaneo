@@ -6,6 +6,7 @@
 <title>Projetos</title>
 
 <link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="css/auth.css">
 <style>
 .project-actions {
   display: flex;
@@ -164,7 +165,9 @@
     </div>
   </div>
   <script type="module">
-  import { supabase, db } from './supabase.js';
+  import './js/auth-guard.js';
+  import './js/user-menu.js';
+  import { supabase, db } from '../bd/supabase.js';
   const proposalManagerModal = document.getElementById('proposalManagerModal');
   const proposalManagerBackdrop = document.getElementById('proposalManagerBackdrop');
   const proposalManagerClose = document.getElementById('proposalManagerClose');

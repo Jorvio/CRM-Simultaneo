@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redefinir senha - CRM</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page">
+  <main class="auth-card" aria-labelledby="resetTitle">
+    <div class="auth-brand">
+      <div class="brand-icon">CRM</div>
+      <div class="brand-text">
+        <span>CRM</span>
+        <small>Simultâneo</small>
+      </div>
+    </div>
+
+    <h1 id="resetTitle" class="auth-title">Redefinir senha</h1>
+    <p class="auth-subtitle">Escolha uma nova senha para a sua conta</p>
+
+    <div id="resetMessage" class="auth-error is-hidden" role="alert" aria-live="polite"></div>
+
+    <form id="resetForm" class="auth-form" novalidate>
+      <div class="field">
+        <label for="resetPassword">Nova senha</label>
+        <div class="input-wrap">
+          <input id="resetPassword" type="password" autocomplete="new-password" required>
+          <button id="toggleResetPassword" type="button" class="toggle-pass">Mostrar</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="resetPasswordConfirm">Confirmar nova senha</label>
+        <div class="input-wrap">
+          <input id="resetPasswordConfirm" type="password" autocomplete="new-password" required>
+          <button id="toggleResetPasswordConfirm" type="button" class="toggle-pass">Mostrar</button>
+        </div>
+      </div>
+
+      <button id="btnResetPassword" type="submit" class="btn-primary btn-block">Redefinir senha</button>
+    </form>
+  </main>
+
+  <script type="module" src="js/login.js"></script>
+</body>
+</html>

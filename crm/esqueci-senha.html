@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Esqueci a senha - CRM</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page">
+  <main class="auth-card" aria-labelledby="forgotTitle">
+    <div class="auth-brand">
+      <div class="brand-icon">CRM</div>
+      <div class="brand-text">
+        <span>CRM</span>
+        <small>Simultâneo</small>
+      </div>
+    </div>
+
+    <h1 id="forgotTitle" class="auth-title">Esqueci minha senha</h1>
+    <p class="auth-subtitle">Informe seu e-mail para receber o link de redefinição</p>
+
+    <div id="forgotMessage" class="auth-info is-hidden" role="alert" aria-live="polite"></div>
+
+    <form id="forgotForm" class="auth-form" novalidate>
+      <div class="field">
+        <label for="forgotEmail">E-mail</label>
+        <input id="forgotEmail" name="email" type="email" autocomplete="email" required>
+      </div>
+
+      <button id="btnSendReset" type="submit" class="btn-primary btn-block">Enviar link</button>
+      <a class="auth-link" href="login.html">Voltar ao login</a>
+    </form>
+  </main>
+
+  <script type="module" src="js/login.js"></script>
+</body>
+</html>
