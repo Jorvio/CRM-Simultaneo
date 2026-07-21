@@ -561,14 +561,26 @@
       const supabase = window.supabaseClient;
       if (!supabase) throw new Error('window.supabaseClient não disponível');
 
-      const [propostasR, clientesR, projetosR, contratosR] = await Promise.all([
+      const [propostasR, clientesR, projetosR] = await Promise.all([
         supabase.from('proposals').select('*'),
         supabase.from('clients').select('*'),
         supabase.from('projects').select('*'),
-        supabase.from('contracts').select('*'),
       ]);
 
-      const erro = propostasR.error || clientesR.error || projetosR.error || contratosR.error;
+      // contracts é complementar no dashboard; não pode bloquear o restante dos dados.
+      let contratosR = { data: [], error: null };
+      try {
+        const contratosResp = await supabase.from('contracts').select('*');
+        if (contratosResp?.error) {
+          console.warn('[Dashboard] Sem acesso a contracts, seguindo sem contratos:', contratosResp.error);
+        } else {
+          contratosR = contratosResp;
+        }
+      } catch (contractsError) {
+        console.warn('[Dashboard] Falha ao consultar contracts, seguindo sem contratos:', contractsError);
+      }
+
+      const erro = propostasR.error || clientesR.error || projetosR.error;
       if (erro) {
         console.error('[Dashboard] Erro ao carregar:', erro);
         root.innerHTML = `<div style="padding:40px;text-align:center;color:#EF4444;">
