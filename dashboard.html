@@ -5,6 +5,25 @@
 <title>Dashboard CRM</title>
 <link rel="stylesheet" href="shared.css">
 <link rel="stylesheet" href="dash.css">
+
+<style>
+/* ── Month/Year Controls ─────────────────────────── */
+.dash-controls{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:22px;display:flex;align-items:center;gap:10px;}
+.meses-barra{display:flex;flex:1;gap:3px;overflow-x:auto;scrollbar-width:none;}
+.meses-barra::-webkit-scrollbar{display:none;}
+.mes-filtro{flex-shrink:0;background:transparent;border:1px solid transparent;border-radius:6px;padding:6px 10px;font-size:11.5px;font-weight:500;color:var(--text-soft,#6B7280);cursor:pointer;font-family:Space Grotesk,sans-serif;letter-spacing:.02em;transition:background .15s,color .15s;white-space:nowrap;}
+.mes-filtro:hover{background:var(--surface-alt,#F3F4F6);}
+.mes-filtro.ativo{background:var(--sidebar-active,#EFF6FF);border-color:var(--border,#E5E7EB);color:var(--text,#111827);font-weight:700;}
+.ano-wrap{position:relative;flex-shrink:0;}
+.btn-ano{display:flex;align-items:center;gap:6px;background:var(--surface-alt,#F3F4F6);border:1px solid var(--border,#E5E7EB);border-radius:7px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--text,#111827);cursor:pointer;font-family:Space Grotesk,sans-serif;white-space:nowrap;}
+.btn-ano svg{width:14px;height:14px;stroke:#2563EB;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.btn-ano:hover{border-color:#2563EB;}
+.anos-dropdown{position:absolute;top:calc(100% + 6px);right:0;background:var(--surface,#fff);border:1px solid var(--border,#E5E7EB);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;max-height:260px;overflow-y:auto;min-width:100px;}
+.anos-dropdown.hidden{display:none;}
+.anos-dropdown button{display:block;width:100%;background:transparent;border:none;padding:8px 16px;text-align:left;font-size:13px;color:var(--text-soft,#6B7280);cursor:pointer;font-family:JetBrains Mono,monospace;}
+.anos-dropdown button:hover{background:var(--surface-alt,#F3F4F6);color:var(--text,#111827);}
+.anos-dropdown button.ativo-ano{color:#2563EB;font-weight:700;}
+</style>
 </head>
 <body>
   <div class="dashboard-shell">
@@ -54,17 +73,48 @@
     </aside>
 
     <main class="dashboard-main">
-      <div id="dash-root"></div>
+      <!-- Controles: sempre visíveis -->
+      <div class="dash-controls">
+        <div class="meses-barra" id="mesesBarra">
+          <button class="mes-filtro" data-mes="0">Janeiro</button>
+          <button class="mes-filtro" data-mes="1">Fevereiro</button>
+          <button class="mes-filtro" data-mes="2">Março</button>
+          <button class="mes-filtro" data-mes="3">Abril</button>
+          <button class="mes-filtro" data-mes="4">Maio</button>
+          <button class="mes-filtro" data-mes="5">Junho</button>
+          <button class="mes-filtro" data-mes="6">Julho</button>
+          <button class="mes-filtro" data-mes="7">Agosto</button>
+          <button class="mes-filtro" data-mes="8">Setembro</button>
+          <button class="mes-filtro" data-mes="9">Outubro</button>
+          <button class="mes-filtro" data-mes="10">Novembro</button>
+          <button class="mes-filtro" data-mes="11">Dezembro</button>
+        </div>
+        <div class="ano-wrap">
+          <button class="btn-ano" id="btnAno">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="anoExibido">2026</span>
+          </button>
+          <div class="anos-dropdown hidden" id="anosDropdown"></div>
+        </div>
+      </div>
+
+      <!-- Conteúdo dinâmico -->
+      <div id="dash-root">
+        <div style="padding:48px;text-align:center;color:var(--text-soft,#6B7280);">
+          <div style="font-size:16px;margin-bottom:6px;">Carregando dashboard...</div>
+          <div style="font-size:12px;opacity:.7;">Buscando dados no Supabase</div>
+        </div>
+      </div>
     </main>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module">
-  import './supabase.js'; // garante window.supabaseClient e roda testarConexao()
+  import './supabase.js'; // define window.supabaseClient
 
-  const ANO = new Date().getFullYear();
-  const MESES      = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
-  const MESES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  // ── Constantes visuais ───────────────────────────────────────────────────
+  const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const MESES_ABREV = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 
   const C = {
     panel:'#FFFFFF', panelHi:'#F9FAFB',
@@ -74,26 +124,56 @@
   };
 
   const ICONS = {
-    trending:     '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
-    trendingDown: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
-    clock:        '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-    check:        '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-    x:            '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-    layers:       '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-    dollar:       '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
-    box:          '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
-    alert:        '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-    building:     '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/></svg>',
-    chevLeft:     '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
-    chevRight:    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+    trending:    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+    trendDown:   '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
+    clock:       '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    check:       '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    x:           '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    layers:      '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+    dollar:      '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    box:         '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+    building:    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/></svg>',
+    alert:       '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
   };
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Estado global ────────────────────────────────────────────────────────
+  let mesSelecionado  = new Date().getMonth();
+  let anoSelecionado  = new Date().getFullYear();
+  let dadosMensais    = criarDadosMensaisZerados();
+  let dadosGlobais    = { totalClientes: 0, totalProjetos: 0, totalContratos: 0 };
+  let todasPropostas  = [];
+  let barChart = null, lineChart = null, donutChart = null;
+  let chartRenderVersion = 0;
+  const root = document.getElementById('dash-root');
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  function criarDadosMensaisZerados() {
+    return MESES_FULL.map((nome, i) => ({
+      mes: i, nome,
+      propostas: 0, propostasAbertas: 0, propostasNegociando: 0,
+      propostasAprovadas: 0, propostasPerdidas: 0, propostasPausadas: 0,
+      valorPropostas: 0, valorAprovado: 0,
+      topClientes: []
+    }));
+  }
+
+  function extrairPartesDaData(data) {
+    if (!data) return null;
+    const s = String(data).split('T')[0];
+    const p = s.split('-');
+    if (p.length !== 3) return null;
+    const ano = Number(p[0]);
+    const mes = Number(p[1]) - 1;
+    const dia = Number(p[2]);
+    if (isNaN(ano) || isNaN(mes) || isNaN(dia)) return null;
+    return { ano, mes, dia };
+  }
 
   function converterValor(valor) {
     if (valor === null || valor === undefined || valor === '') return 0;
     if (typeof valor === 'number') return valor;
-    return Number(String(valor).replace(/\./g,'').replace(',','.').replace(/[^\d.-]/g,'')) || 0;
+    return Number(String(valor).replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
   }
 
   function formatarMoeda(valor) {
@@ -102,13 +182,13 @@
 
   function fmtBRL(v) {
     v = Number(v) || 0;
-    if (v >= 1000000) return 'R$ ' + (v/1000000).toLocaleString('pt-BR',{maximumFractionDigits:1}) + 'M';
-    if (v >= 1000)    return 'R$ ' + (v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1}) + 'k';
+    if (v >= 1000000) return 'R$ ' + (v/1000000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'M';
+    if (v >= 1000)    return 'R$ ' + (v/1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'k';
     return 'R$ ' + v.toLocaleString('pt-BR');
   }
 
   function fmtBRLFull(v) {
-    return 'R$ ' + (Number(v)||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
   function definirTexto(id, valor) {
@@ -117,86 +197,133 @@
     el.textContent = valor;
   }
 
-  // ── Normalização ──────────────────────────────────────────────────────────
-
   function normalizarProposta(p) {
     return {
       id:             p.id,
-      numero:         p.numero         || p.proposta_num   || p.propostaNum   || '',
-      cliente:        p.cliente        || p.clienteName    || '',
-      projeto:        p.projeto        || p.projetoName    || '',
-      contato:        p.contato        || '',
-      dataOrcamento:  p.data_orcamento || p.dataOrcamento  || p.created_at    || '',
-      dataFechamento: p.data_fechamento|| p.dataFechamento || '',
-      valorExterior:  converterValor(p.valor_exterior  != null ? p.valor_exterior  : p.valorExterior),
-      valorReais:     converterValor(p.valor_reais     != null ? p.valor_reais     : p.valorReais),
-      statusProposta: p.status_proposta|| p.statusProposta || 'Aberta',
-      statusProjeto:  p.status_projeto || p.statusProjeto  || '—',
-      obs:            p.obs            || '',
-      created_at:     p.created_at     || '',
+      numero:         p.numero          || p.proposta_num   || p.propostaNum   || '',
+      cliente:        p.cliente         || p.clienteName    || '',
+      projeto:        p.projeto         || p.projetoName    || '',
+      contato:        p.contato         || '',
+      dataOrcamento:  p.data_orcamento  || p.dataOrcamento  || p.created_at    || '',
+      dataFechamento: p.data_fechamento || p.dataFechamento || '',
+      valorReais:     converterValor(p.valor_reais    != null ? p.valor_reais    : p.valorReais),
+      valorExterior:  converterValor(p.valor_exterior != null ? p.valor_exterior : p.valorExterior),
+      statusProposta: p.status_proposta || p.statusProposta || 'Aberta',
+      statusProjeto:  p.status_projeto  || p.statusProjeto  || '—',
+      obs:            p.obs             || '',
+      created_at:     p.created_at      || '',
     };
   }
 
-  function getMesIndex(p) {
-    const dateStr = p.dataOrcamento;
-    if (!dateStr) return -1;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return -1;
-    if (d.getFullYear() !== ANO) return -1;
-    return d.getMonth(); // 0–11
-  }
+  // ── Processamento de dados ───────────────────────────────────────────────
 
-  // ── Métricas por mês ──────────────────────────────────────────────────────
+  function processarDadosDoDashboard() {
+    console.log('[Dashboard] Processando dados para ano:', anoSelecionado);
+    const meses = criarDadosMensaisZerados();
 
-  function calcularMetricas(props) {
-    const total       = props.length;
-    const abertas     = props.filter(p => p.statusProposta === 'Aberta').length;
-    const negociando  = props.filter(p => p.statusProposta === 'Negociando').length;
-    const fechadas    = props.filter(p => p.statusProposta === 'Fechada').length;
-    const perdidas    = props.filter(p => p.statusProposta === 'Perdida').length;
-    const pausadas    = props.filter(p => p.statusProposta === 'Pausada').length;
+    todasPropostas.forEach(p => {
+      // Propostas recebidas → agrupadas por data_orcamento
+      const dtOrc = extrairPartesDaData(p.dataOrcamento);
+      if (dtOrc && dtOrc.ano === anoSelecionado) {
+        const m = meses[dtOrc.mes];
+        m.propostas++;
+        m.valorPropostas += p.valorReais;
+        const st = p.statusProposta;
+        if      (st === 'Aberta')     m.propostasAbertas++;
+        else if (st === 'Negociando') m.propostasNegociando++;
+        else if (st === 'Perdida')    m.propostasPerdidas++;
+        else if (st === 'Pausada')    m.propostasPausadas++;
+        if (p.cliente) {
+          const ci = m.topClientes.findIndex(c => c.nome === p.cliente);
+          if (ci >= 0) m.topClientes[ci].valor += p.valorReais;
+          else m.topClientes.push({ nome: p.cliente, valor: p.valorReais });
+        }
+      }
 
-    const propostasFechadas = props.filter(p => p.statusProposta === 'Fechada');
-    const valorVendido      = propostasFechadas.reduce((s,p) => s + p.valorReais, 0);
-    const valorNegociacao   = props.filter(p => p.statusProposta === 'Negociando').reduce((s,p) => s + p.valorReais, 0);
-    const ticketMedio       = propostasFechadas.length > 0 ? Math.round(valorVendido / propostasFechadas.length) : 0;
-    const taxaConversao     = total > 0 ? Math.round((fechadas / total) * 100) : 0;
-
-    const clienteMap = {};
-    props.forEach(p => {
-      if (!p.cliente) return;
-      clienteMap[p.cliente] = (clienteMap[p.cliente] || 0) + p.valorReais;
+      // Propostas aprovadas → agrupadas por data_fechamento
+      if (p.statusProposta === 'Fechada') {
+        const dtFech = extrairPartesDaData(p.dataFechamento || p.dataOrcamento);
+        if (dtFech && dtFech.ano === anoSelecionado) {
+          const m = meses[dtFech.mes];
+          m.propostasAprovadas++;
+          m.valorAprovado += p.valorReais;
+        }
+      }
     });
-    const topClientes = Object.entries(clienteMap)
-      .sort((a,b) => b[1] - a[1])
-      .slice(0,4)
-      .map(([nome,valor]) => ({ nome, valor }));
 
-    return { total, abertas, negociando, fechadas, perdidas, pausadas, valorVendido, valorNegociacao, ticketMedio, taxaConversao, topClientes };
+    meses.forEach(m => {
+      m.topClientes.sort((a, b) => b.valor - a.valor);
+      m.topClientes = m.topClientes.slice(0, 4);
+    });
+
+    dadosMensais = meses;
+    console.log('[Dashboard] dadosMensais calculado:', dadosMensais);
+    atualizarDashboardDoMes();
   }
 
-  // ── Estado global ─────────────────────────────────────────────────────────
+  function atualizarDashboardDoMes() {
+    console.log('[Dashboard] Atualizando mês', mesSelecionado, '/', anoSelecionado);
+    render();
+  }
 
-  let selected     = Math.min(new Date().getMonth(), 11);
-  let barChart, lineChart, donutChart;
-  let chartRenderVersion = 0;
-  let globalData   = null;
-  const root       = document.getElementById('dash-root');
+  // ── Seleção de mês ────────────────────────────────────────────────────────
+
+  function selecionarMes(indiceMes) {
+    mesSelecionado = Number(indiceMes);
+    document.querySelectorAll('.mes-filtro').forEach((btn, i) => {
+      btn.classList.toggle('ativo', i === mesSelecionado);
+    });
+    atualizarDashboardDoMes();
+  }
+
+  // ── Seleção de ano ────────────────────────────────────────────────────────
+
+  function selecionarAno(ano) {
+    anoSelecionado = Number(ano);
+    atualizarAnoExibido();
+    processarDadosDoDashboard();
+  }
+
+  function atualizarAnoExibido() {
+    const el = document.getElementById('anoExibido');
+    if (el) el.textContent = anoSelecionado;
+    document.querySelectorAll('.anos-dropdown button').forEach(btn => {
+      btn.classList.toggle('ativo-ano', Number(btn.dataset.ano) === anoSelecionado);
+    });
+  }
+
+  function construirDropdownAnos() {
+    const dropdown = document.getElementById('anosDropdown');
+    if (!dropdown) return;
+    const anoAtual = new Date().getFullYear();
+    const anosDisponiveis = [];
+    for (let ano = anoAtual; ano >= 2005; ano--) anosDisponiveis.push(ano);
+    dropdown.innerHTML = anosDisponiveis.map(ano =>
+      `<button data-ano="${ano}" class="${ano === anoSelecionado ? 'ativo-ano' : ''}">${ano}</button>`
+    ).join('');
+    dropdown.querySelectorAll('button').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        selecionarAno(Number(btn.dataset.ano));
+        dropdown.classList.add('hidden');
+      };
+    });
+  }
 
   // ── KPI helper ────────────────────────────────────────────────────────────
 
-  function kpi({label, value, delta, icon, tone}) {
+  function kpi(label, value, opts = {}) {
+    const { icon = '', tone = C.text, delta = null } = opts;
     const up = delta != null && delta >= 0;
     return `
       <div class="kpi">
-        <div class="kpi-top">${icon ? '<span style="color:' + (tone||C.mutedDim) + '">' + icon + '</span>' : ''}<span class="kpi-label">${label}</span></div>
-        <div class="kpi-value num" style="color:${tone||C.text}">${value}</div>
-        ${delta != null ? `
-          <div class="kpi-delta">
-            <span style="color:${up?C.cyan:C.red}">${up?ICONS.trending:ICONS.trendingDown}</span>
-            <span class="pct num" style="color:${up?C.cyan:C.red}">${up?'+':''}${delta}%</span>
-            <span class="vs">vs mês anterior</span>
-          </div>` : ''}
+        <div class="kpi-top">${icon ? '<span style="color:' + (opts.iconColor || C.mutedDim) + '">' + icon + '</span>' : ''}<span class="kpi-label">${label}</span></div>
+        <div class="kpi-value num" style="color:${tone}">${value}</div>
+        ${delta != null ? `<div class="kpi-delta">
+          <span style="color:${up ? C.cyan : C.red}">${up ? ICONS.trending : ICONS.trendDown}</span>
+          <span class="pct num" style="color:${up ? C.cyan : C.red}">${up ? '+' : ''}${delta}%</span>
+          <span class="vs">vs mês anterior</span>
+        </div>` : ''}
       </div>`;
   }
 
@@ -205,94 +332,83 @@
     return Math.round(((curr[key] - prev[key]) / prev[key]) * 100);
   }
 
-  // ── Render principal ──────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   function render() {
-    const { monthlyMetrics, totalClientes, totalProjetos, totalContratos, todasPropostas } = globalData;
-    const data     = monthlyMetrics[selected];
-    const prevData = selected > 0 ? monthlyMetrics[selected - 1] : null;
-    const ytdValor = monthlyMetrics.slice(0, selected + 1).reduce((s,m) => s + m.valorVendido, 0);
-    const ytdTotal = monthlyMetrics.slice(0, selected + 1).reduce((s,m) => s + m.total, 0);
+    const d      = dadosMensais[mesSelecionado];
+    const prev   = mesSelecionado > 0 ? dadosMensais[mesSelecionado - 1] : null;
+    const ytdValor = dadosMensais.slice(0, mesSelecionado + 1).reduce((s, m) => s + m.valorAprovado, 0);
+    const ytdProp  = dadosMensais.slice(0, mesSelecionado + 1).reduce((s, m) => s + m.propostas, 0);
+    const taxaConv = d.propostas > 0 ? Math.round((d.propostasAprovadas / d.propostas) * 100) : 0;
+    const ticket   = d.propostasAprovadas > 0 ? Math.round(d.valorAprovado / d.propostasAprovadas) : 0;
 
     const funil = [
-      { label:'Abertas',    value:data.abertas,    color:'#4a5162' },
-      { label:'Negociando', value:data.negociando, color:C.amber   },
-      { label:'Fechadas',   value:data.fechadas,   color:C.cyan    },
-      { label:'Perdidas',   value:data.perdidas,   color:C.red     },
+      { label:'Abertas',    value: d.propostasAbertas,    color:'#4a5162' },
+      { label:'Negociando', value: d.propostasNegociando, color: C.amber  },
+      { label:'Aprovadas',  value: d.propostasAprovadas,  color: C.cyan   },
+      { label:'Perdidas',   value: d.propostasPerdidas,   color: C.red    },
     ];
-    const funilMax = Math.max(...funil.map(f=>f.value), 1);
+    const funilMax = Math.max(...funil.map(f => f.value), 1);
 
-    const statusLabels = ['Abertas','Fechadas','Negociando','Perdidas','Pausadas'];
-    const statusValues = [data.abertas, data.fechadas, data.negociando, data.perdidas, data.pausadas];
+    const statusLabels = ['Abertas','Aprovadas','Negociando','Perdidas','Pausadas'];
+    const statusValues = [d.propostasAbertas, d.propostasAprovadas, d.propostasNegociando, d.propostasPerdidas, d.propostasPausadas];
     const statusColors = [C.amber, C.cyan, '#4a5162', C.red, C.violet];
 
     const recentes = todasPropostas
-      .slice()
-      .sort((a,b) => new Date(b.created_at||b.dataOrcamento||0) - new Date(a.created_at||a.dataOrcamento||0))
-      .slice(0, 5);
+      .filter(p => { const dt = extrairPartesDaData(p.dataOrcamento); return dt && dt.ano === anoSelecionado && dt.mes === mesSelecionado; })
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+      .slice(0, 6);
 
     root.innerHTML = `
       <div class="dash-header">
         <div>
-          <div class="eyebrow">DASHBOARD GERENCIAL — ${ANO} — DADOS REAIS DO BANCO</div>
-          <h1 class="title disp">${MESES_FULL[selected]} <span>/ ${ANO}</span></h1>
+          <div class="eyebrow">DASHBOARD GERENCIAL — ${MESES_FULL[mesSelecionado].toUpperCase()} / ${anoSelecionado}</div>
+          <h1 class="title disp">${MESES_FULL[mesSelecionado]} <span>/ ${anoSelecionado}</span></h1>
         </div>
         <div class="ytd">
-          <div>Valor vendido acum. (ano): <b class="num" style="color:${C.cyan}">${fmtBRL(ytdValor)}</b></div>
-          <div>Propostas abertas (ano): <b class="num" style="color:${C.amber}">${ytdTotal}</b></div>
+          <div>Valor aprovado acumulado: <b class="num" style="color:${C.cyan}">${fmtBRL(ytdValor)}</b></div>
+          <div>Propostas recebidas (ano): <b class="num" style="color:${C.amber}">${ytdProp}</b></div>
         </div>
-      </div>
-
-      <div class="scrubber">
-        <button class="scrub-btn" id="prevBtn">${ICONS.chevLeft}</button>
-        <div class="frames">
-          ${MESES.map((m,i) => `
-            <div class="frame ${i===selected?'active':''}" data-i="${i}">
-              <div class="frame-tick"></div>
-              <div class="frame-label num">${m}<span style="font-size:9px;opacity:0.55;display:block;">${monthlyMetrics[i].total||''}</span></div>
-            </div>`).join('')}
-        </div>
-        <button class="scrub-btn" id="nextBtn">${ICONS.chevRight}</button>
       </div>
 
       <div class="section-label">${ICONS.box}<span>VISÃO GERAL</span><div class="section-rule"></div></div>
       <div class="kpi-grid">
-        ${kpi({label:'Total de clientes',  value: totalClientes || '0',        icon:ICONS.building})}
-        ${kpi({label:'Total de projetos',  value: totalProjetos || '0',        icon:ICONS.box})}
-        ${kpi({label:'Total de contratos', value: totalContratos || '0',       icon:ICONS.check, tone:C.cyan})}
-        ${kpi({label:'Total de propostas', value: todasPropostas.length || '0'})}
+        ${kpi('Total de clientes',  dadosGlobais.totalClientes,  { icon: ICONS.building })}
+        ${kpi('Total de projetos',  dadosGlobais.totalProjetos,  { icon: ICONS.box })}
+        ${kpi('Total de contratos', dadosGlobais.totalContratos, { icon: ICONS.check, tone: C.cyan })}
+        ${kpi('Total de propostas', todasPropostas.length)}
       </div>
 
-      <div class="section-label">${ICONS.trending}<span>COMERCIAL — ${MESES_FULL[selected].toUpperCase()}</span><div class="section-rule"></div></div>
+      <div class="section-label">${ICONS.trending}<span>COMERCIAL — ${MESES_FULL[mesSelecionado].toUpperCase()}</span><div class="section-rule"></div></div>
       <div class="kpi-grid">
-        ${kpi({label:'Propostas no mês',     value: data.total       || '0', delta:calcDelta(data,prevData,'total')})}
-        ${kpi({label:'Abertas',              value: data.abertas     || '0', icon:ICONS.clock,  tone:C.muted})}
-        ${kpi({label:'Negociando',           value: data.negociando  || '0', icon:ICONS.layers, tone:C.amber})}
-        ${kpi({label:'Fechadas',             value: data.fechadas    || '0', icon:ICONS.check,  tone:C.cyan,  delta:calcDelta(data,prevData,'fechadas')})}
-        ${kpi({label:'Perdidas',             value: data.perdidas    || '0', icon:ICONS.x,      tone:C.red})}
-        ${kpi({label:'Taxa de conversão',    value: data.taxaConversao + '%',                   tone:C.amber})}
-        ${kpi({label:'Ticket médio',         value: fmtBRL(data.ticketMedio)})}
-        ${kpi({label:'Valor vendido',        value: fmtBRL(data.valorVendido),                  tone:C.cyan, delta:calcDelta(data,prevData,'valorVendido')})}
-        ${kpi({label:'Valor em negociação',  value: fmtBRL(data.valorNegociacao),               tone:C.amber})}
+        ${kpi('Propostas recebidas',   d.propostas          || 0, { delta: calcDelta(d, prev, 'propostas') })}
+        ${kpi('Abertas',               d.propostasAbertas   || 0, { icon: ICONS.clock,  iconColor: C.muted,  tone: C.muted  })}
+        ${kpi('Negociando',            d.propostasNegociando|| 0, { icon: ICONS.layers, iconColor: C.amber,  tone: C.amber  })}
+        ${kpi('Aprovadas',             d.propostasAprovadas || 0, { icon: ICONS.check,  iconColor: C.cyan,   tone: C.cyan,  delta: calcDelta(d, prev, 'propostasAprovadas') })}
+        ${kpi('Perdidas',              d.propostasPerdidas  || 0, { icon: ICONS.x,      iconColor: C.red,    tone: C.red    })}
+        ${kpi('Taxa de conversão',     taxaConv + '%',             { tone: C.amber  })}
+        ${kpi('Ticket médio',          fmtBRL(ticket))}
+        ${kpi('Valor em propostas',    fmtBRL(d.valorPropostas  || 0), { tone: C.muted, delta: calcDelta(d, prev, 'valorPropostas')  })}
+        ${kpi('Valor aprovado',        fmtBRL(d.valorAprovado   || 0), { tone: C.cyan,  delta: calcDelta(d, prev, 'valorAprovado')   })}
       </div>
 
       <div class="section-label">${ICONS.trending}<span>GRÁFICOS</span><div class="section-rule"></div></div>
 
       <div class="charts-row two">
         <div class="panel">
-          <div class="panel-title disp">Valor vendido por mês</div>
-          <div class="panel-sub">Propostas fechadas (R$) — ${ANO}</div>
+          <div class="panel-title disp">Valor aprovado por mês</div>
+          <div class="panel-sub">Propostas fechadas (R$) — ${anoSelecionado}</div>
           <canvas id="barCanvas" height="90"></canvas>
         </div>
         <div class="panel">
           <div class="panel-title disp">Status das propostas</div>
-          <div class="panel-sub">${MESES_FULL[selected]} — distribuição</div>
+          <div class="panel-sub">${MESES_FULL[mesSelecionado]} — distribuição</div>
           <div class="servicos-wrap">
             <canvas id="donutCanvas" style="max-width:45%;"></canvas>
             <div class="servicos-legend">
-              ${data.total === 0
-                ? '<div style="color:var(--ink-soft,#6B7280);font-size:13px;padding:8px 0;">Nenhuma proposta neste mês</div>'
-                : statusLabels.map((s,i) => statusValues[i] > 0
+              ${d.propostas === 0
+                ? '<div style="color:var(--text-soft,#6B7280);font-size:13px;">Nenhuma proposta neste período</div>'
+                : statusLabels.map((s, i) => statusValues[i] > 0
                   ? `<div class="servico-row"><span class="servico-dot" style="background:${statusColors[i]}"></span><span class="servico-nome">${s}</span><span class="servico-val num">${statusValues[i]}</span></div>`
                   : '').join('')}
             </div>
@@ -303,16 +419,16 @@
       <div class="charts-row three">
         <div class="panel">
           <div class="panel-title disp">Propostas por mês</div>
-          <div class="panel-sub">Quantidade total — ${ANO}</div>
+          <div class="panel-sub">Quantidade recebida — ${anoSelecionado}</div>
           <canvas id="lineCanvas" height="130"></canvas>
         </div>
         <div class="panel">
           <div class="panel-title disp">Funil comercial</div>
-          <div class="panel-sub">${MESES_FULL[selected]} — etapas</div>
+          <div class="panel-sub">${MESES_FULL[mesSelecionado]} — etapas</div>
           <div style="padding-top:8px;">
-            ${data.total === 0
-              ? '<div style="color:var(--ink-soft,#6B7280);font-size:13px;padding:12px 0;">Nenhuma proposta neste mês.</div>'
-              : funil.filter(f=>f.value>0).map(f => `
+            ${funil.filter(f => f.value > 0).length === 0
+              ? '<div style="color:var(--text-soft,#6B7280);font-size:13px;padding:12px 0;">Nenhuma proposta neste período.</div>'
+              : funil.map(f => `
                   <div class="funil-item">
                     <div class="funil-top"><span class="l">${f.label}</span><span class="v num">${f.value}</span></div>
                     <div class="funil-bar-bg"><div class="funil-bar-fill" style="width:${(f.value/funilMax)*100}%;background:${f.color}"></div></div>
@@ -321,53 +437,47 @@
         </div>
         <div class="panel">
           <div class="panel-title disp">Top clientes</div>
-          <div class="panel-sub">${MESES_FULL[selected]} — por valor</div>
+          <div class="panel-sub">${MESES_FULL[mesSelecionado]} — por valor</div>
           <div style="padding-top:6px;">
-            ${data.topClientes.length === 0
-              ? '<div style="color:var(--ink-soft,#6B7280);font-size:13px;padding:12px 0;">Nenhum dado disponível.</div>'
-              : data.topClientes.map(c => `
+            ${d.topClientes.length === 0
+              ? '<div style="color:var(--text-soft,#6B7280);font-size:13px;padding:12px 0;">Nenhum dado neste período.</div>'
+              : d.topClientes.map(c => `
                   <div class="cliente-row">${ICONS.building}<span class="cliente-nome">${c.nome}</span><span class="cliente-val num">${fmtBRL(c.valor)}</span></div>`).join('')}
           </div>
         </div>
       </div>
 
-      ${recentes.length > 0 ? `
-        <div class="section-label">${ICONS.clock}<span>PROPOSTAS RECENTES</span><div class="section-rule"></div></div>
-        <div class="panel" style="overflow-x:auto;padding:0;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-              <tr style="color:var(--ink-soft,#6B7280);border-bottom:1px solid var(--border,#E5E7EB);">
-                <th style="padding:10px 14px;font-weight:500;text-align:left;">Nº Proposta</th>
-                <th style="padding:10px 14px;font-weight:500;text-align:left;">Cliente</th>
-                <th style="padding:10px 14px;font-weight:500;text-align:left;">Projeto</th>
-                <th style="padding:10px 14px;font-weight:500;text-align:left;">Status</th>
-                <th style="padding:10px 14px;font-weight:500;text-align:right;">Valor R$</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${recentes.map(p => {
-                const sc = p.statusProposta==='Fechada' ? C.cyan : p.statusProposta==='Perdida' ? C.red : C.amber;
-                return `<tr style="border-bottom:1px solid var(--border,#E5E7EB);">
-                  <td style="padding:9px 14px;font-family:monospace;">${p.numero||'—'}</td>
-                  <td style="padding:9px 14px;">${p.cliente||'—'}</td>
-                  <td style="padding:9px 14px;">${p.projeto||'—'}</td>
-                  <td style="padding:9px 14px;"><span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${sc}22;color:${sc}">${p.statusProposta}</span></td>
-                  <td style="padding:9px 14px;text-align:right;font-family:monospace;">${fmtBRLFull(p.valorReais)}</td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>` : ''}
+      <div class="section-label">${ICONS.clock}<span>PROPOSTAS DO PERÍODO</span><div class="section-rule"></div></div>
+      <div class="panel" style="overflow-x:auto;padding:0;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="color:var(--text-soft,#6B7280);border-bottom:1px solid var(--border,#E5E7EB);">
+              <th style="padding:10px 14px;font-weight:500;text-align:left;">Nº Proposta</th>
+              <th style="padding:10px 14px;font-weight:500;text-align:left;">Cliente</th>
+              <th style="padding:10px 14px;font-weight:500;text-align:left;">Projeto</th>
+              <th style="padding:10px 14px;font-weight:500;text-align:left;">Status</th>
+              <th style="padding:10px 14px;font-weight:500;text-align:right;">Valor R$</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recentes.length === 0
+              ? '<tr><td colspan="5" style="padding:16px 14px;color:var(--text-soft,#6B7280);text-align:center;">Nenhuma proposta registrada neste período.</td></tr>'
+              : recentes.map(p => {
+                  const sc = p.statusProposta==='Fechada' ? C.cyan : p.statusProposta==='Perdida' ? C.red : C.amber;
+                  return `<tr style="border-bottom:1px solid var(--border,#E5E7EB);">
+                    <td style="padding:9px 14px;font-family:monospace;">${p.numero||'—'}</td>
+                    <td style="padding:9px 14px;">${p.cliente||'—'}</td>
+                    <td style="padding:9px 14px;">${p.projeto||'—'}</td>
+                    <td style="padding:9px 14px;"><span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${sc}22;color:${sc}">${p.statusProposta}</span></td>
+                    <td style="padding:9px 14px;text-align:right;font-family:monospace;">${fmtBRLFull(p.valorReais)}</td>
+                  </tr>`;
+                }).join('')}
+          </tbody>
+        </table>
+      </div>
     `;
 
-    // scrubber
-    root.querySelector('#prevBtn').onclick = () => { selected = Math.max(0, selected-1); render(); };
-    root.querySelector('#nextBtn').onclick = () => { selected = Math.min(11, selected+1); render(); };
-    root.querySelectorAll('.frame').forEach(el => {
-      el.onclick = () => { selected = parseInt(el.dataset.i, 10); render(); };
-    });
-
-    // gráficos
+    // ── Gráficos ────────────────────────────────────────────────────────────
     const rv = ++chartRenderVersion;
     setTimeout(() => {
       if (rv !== chartRenderVersion) return;
@@ -389,12 +499,11 @@
         barChart = new window.Chart(barCanvas.getContext('2d'), {
           type: 'bar',
           data: {
-            labels: MESES,
+            labels: MESES_ABREV,
             datasets: [{
-              data: monthlyMetrics.map(m => m.valorVendido),
-              backgroundColor: monthlyMetrics.map((_,i) => i===selected ? C.amber : '#333a48'),
-              borderRadius: 4,
-              maxBarThickness: 34,
+              data: dadosMensais.map(m => m.valorAprovado),
+              backgroundColor: dadosMensais.map((_, i) => i === mesSelecionado ? C.amber : '#333a48'),
+              borderRadius: 4, maxBarThickness: 34,
             }]
           },
           options: {
@@ -402,9 +511,9 @@
             plugins: { legend:{display:false}, tooltip:{ backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text, callbacks:{ label: ctx => fmtBRLFull(ctx.parsed.y) } } },
             scales: {
               x: { grid:{display:false}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:11}} },
-              y: { grid:{color:C.lineSoft}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:10}, callback:v => fmtBRL(v)} }
+              y: { grid:{color:C.lineSoft}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:10}, callback: v => fmtBRL(v)} }
             },
-            onClick: (_,els) => { if (els.length) { selected = els[0].index; render(); } }
+            onClick: (_, els) => { if (els.length) { selecionarMes(els[0].index); } }
           }
         });
       }
@@ -414,9 +523,9 @@
         lineChart = new window.Chart(lineCanvas.getContext('2d'), {
           type: 'line',
           data: {
-            labels: MESES,
+            labels: MESES_ABREV,
             datasets: [{
-              data: monthlyMetrics.map(m => m.total),
+              data: dadosMensais.map(m => m.propostas),
               borderColor: C.cyan, backgroundColor: C.cyan + '22',
               fill:true, tension:0.35, pointRadius:3, pointBackgroundColor:C.cyan,
             }]
@@ -432,7 +541,7 @@
         });
       }
 
-      const donutData   = statusValues.filter(v => v > 0);
+      const donutData   = statusValues.filter((v,i) => statusValues[i] > 0);
       const donutLabels = statusLabels.filter((_,i) => statusValues[i] > 0);
       const donutColors = statusColors.filter((_,i) => statusValues[i] > 0);
       if (donutCanvas && donutData.length > 0) {
@@ -449,85 +558,94 @@
     }, 40);
   }
 
-  // ── Carregamento do Supabase ───────────────────────────────────────────────
+  // ── Carregamento do Supabase ──────────────────────────────────────────────
 
   async function carregarDashboard() {
-    root.innerHTML = `
-      <div style="padding:60px;text-align:center;color:var(--ink-soft,#6B7280);">
-        <div style="font-size:18px;margin-bottom:8px;">Carregando dashboard...</div>
-        <div style="font-size:13px;opacity:0.7;">Buscando dados no Supabase</div>
-      </div>`;
-
     try {
-      console.log('[Dashboard] Iniciando carregamento de dados...');
+      console.log('[Dashboard] Iniciando carregamento...');
 
       const supabase = window.supabaseClient;
-      if (!supabase) {
-        throw new Error('window.supabaseClient não disponível. Verifique o carregamento do supabase.js');
-      }
+      if (!supabase) throw new Error('window.supabaseClient não disponível');
 
-      const [propostasResp, clientesResp, projetosResp, contratosResp] = await Promise.all([
+      const [propostasR, clientesR, projetosR, contratosR] = await Promise.all([
         supabase.from('proposals').select('*'),
         supabase.from('clients').select('*'),
         supabase.from('projects').select('*'),
         supabase.from('contracts').select('*'),
       ]);
 
-      const erro = propostasResp.error || clientesResp.error || projetosResp.error || contratosResp.error;
+      const erro = propostasR.error || clientesR.error || projetosR.error || contratosR.error;
       if (erro) {
-        console.error('[Dashboard] Erro ao carregar dados:', erro);
-        root.innerHTML = `
-          <div style="padding:40px;text-align:center;color:#EF4444;">
-            <div style="font-size:18px;margin-bottom:8px;">Erro ao carregar dashboard</div>
-            <div style="font-size:13px;margin-bottom:16px;">${erro.message}</div>
-            <button onclick="window.carregarDashboard()" style="padding:8px 20px;cursor:pointer;border:1px solid #EF4444;border-radius:6px;background:transparent;color:#EF4444;">Tentar novamente</button>
-          </div>`;
+        console.error('[Dashboard] Erro ao carregar:', erro);
+        root.innerHTML = `<div style="padding:40px;text-align:center;color:#EF4444;">
+          <div style="font-size:16px;margin-bottom:8px;">Erro ao carregar dashboard</div>
+          <div style="font-size:13px;margin-bottom:14px;">${erro.message}</div>
+          <button onclick="window.carregarDashboard()" style="padding:7px 18px;cursor:pointer;border:1px solid #EF4444;border-radius:6px;background:transparent;color:#EF4444;">Tentar novamente</button>
+        </div>`;
         alert('Erro ao carregar dashboard: ' + erro.message);
         return;
       }
 
-      const todasPropostas = (propostasResp.data || []).map(normalizarProposta);
-      const clientes       = clientesResp.data  || [];
-      const projetos       = projetosResp.data  || [];
-      const contratos      = contratosResp.data || [];
+      todasPropostas = (propostasR.data || []).map(normalizarProposta);
+      dadosGlobais = {
+        totalClientes:  (clientesR.data  || []).length,
+        totalProjetos:  (projetosR.data  || []).length,
+        totalContratos: (contratosR.data || []).length,
+      };
 
-      console.log('[Dashboard] ✅ Dados carregados com sucesso:', {
+      console.log('[Dashboard] ✅ Dados carregados:', {
         propostas:  todasPropostas,
-        clientes:   clientes,
-        projetos:   projetos,
-        contratos:  contratos,
+        clientes:   clientesR.data  || [],
+        projetos:   projetosR.data  || [],
+        contratos:  contratosR.data || [],
       });
 
-      // Agrupar propostas por mês do ANO atual
-      const monthlyMetrics = MESES.map((_,i) => {
-        const propostasMes = todasPropostas.filter(p => getMesIndex(p) === i);
-        return calcularMetricas(propostasMes);
-      });
-
-      console.log('[Dashboard] Métricas mensais:', monthlyMetrics);
-
-      globalData = { monthlyMetrics, todasPropostas, totalClientes:clientes.length, totalProjetos:projetos.length, totalContratos:contratos.length };
-
-      atualizarDashboard({ propostas:todasPropostas, clientes, projetos, contratos });
+      processarDadosDoDashboard();
 
     } catch (error) {
       console.error('[Dashboard] Erro inesperado:', error);
-      root.innerHTML = `
-        <div style="padding:40px;text-align:center;color:#EF4444;">
-          <div style="font-size:18px;margin-bottom:8px;">Erro inesperado no dashboard</div>
-          <div style="font-size:13px;">${error.message}</div>
-        </div>`;
+      root.innerHTML = `<div style="padding:40px;text-align:center;color:#EF4444;">
+        <div style="font-size:16px;margin-bottom:8px;">Erro inesperado</div>
+        <div style="font-size:13px;">${error.message}</div>
+      </div>`;
       alert('Erro inesperado no dashboard: ' + error.message);
     }
   }
 
-  function atualizarDashboard({ propostas, clientes, projetos, contratos }) {
-    console.log('[Dashboard] atualizarDashboard() chamada com:', { propostas:propostas.length, clientes:clientes.length, projetos:projetos.length, contratos:contratos.length });
-    render();
-  }
+  // ── Inicialização ─────────────────────────────────────────────────────────
 
   window.carregarDashboard = carregarDashboard;
-  document.addEventListener('DOMContentLoaded', carregarDashboard);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Botões de mês
+    document.querySelectorAll('.mes-filtro').forEach((btn, i) => {
+      btn.addEventListener('click', () => selecionarMes(i));
+    });
+    // Marcar mês atual
+    const btns = document.querySelectorAll('.mes-filtro');
+    if (btns[mesSelecionado]) btns[mesSelecionado].classList.add('ativo');
+    // Scroll para o mês atual
+    if (btns[mesSelecionado]) btns[mesSelecionado].scrollIntoView({ inline: 'center', behavior: 'smooth' });
+
+    // Botão de ano
+    construirDropdownAnos();
+    atualizarAnoExibido();
+
+    const btnAno   = document.getElementById('btnAno');
+    const dropdown = document.getElementById('anosDropdown');
+
+    btnAno.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', () => {
+      dropdown.classList.add('hidden');
+    });
+
+    // Carregar dados
+    carregarDashboard();
+  });
   </script>
 </body>
 </html>
