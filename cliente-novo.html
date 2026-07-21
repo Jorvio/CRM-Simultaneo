@@ -63,17 +63,16 @@
     const endereco = document.getElementById('fldCliEndereco').value.trim();
     if(!name){ alert('Nome do cliente é obrigatório'); return; }
 
+    const payload = { name, razaoSocial: razao, cnpj, endereco };
+    console.log('[btnSaveClient] Salvando cliente no Supabase:', payload);
     try {
-      await db.insertClient({
-        name,
-        razaoSocial: razao,
-        cnpj,
-        endereco
-      });
-      alert('Cliente cadastrado');
+      const result = await db.insertClient(payload);
+      console.log('[btnSaveClient] Cliente inserido com sucesso:', result);
+      alert('Cliente cadastrado com sucesso!');
       history.back();
     } catch (error) {
-      dbMessage('Falha ao salvar cliente', 'error');
+      console.error('[btnSaveClient] Erro ao salvar cliente:', error);
+      alert(`Erro ao salvar cliente:\n${error.message || JSON.stringify(error)}`);
     }
   };
   </script>

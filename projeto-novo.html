@@ -92,16 +92,16 @@
     const propNum = document.getElementById('fldProjPropNum').value.trim();
     if(!name){ alert('Nome do projeto é obrigatório'); return; }
 
+    const payload = { name, servicos: serv, propostaNum: propNum };
+    console.log('[btnSaveProj] Salvando projeto no Supabase:', payload);
     try {
-      await db.insertProject({
-        name,
-        servicos: serv,
-        propostaNum: propNum
-      });
-      alert('Projeto cadastrado');
+      const result = await db.insertProject(payload);
+      console.log('[btnSaveProj] Projeto inserido com sucesso:', result);
+      alert('Projeto cadastrado com sucesso!');
       history.back();
     } catch (error) {
-      dbMessage('Falha ao salvar projeto', 'error');
+      console.error('[btnSaveProj] Erro ao salvar projeto:', error);
+      alert(`Erro ao salvar projeto:\n${error.message || JSON.stringify(error)}`);
     }
   };
   </script>

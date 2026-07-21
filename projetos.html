@@ -101,13 +101,15 @@
             await db.deleteProject(project.id);
             renderProjects();
           } catch (error) {
-            dbMessage('Falha ao excluir projeto', 'error');
+            console.error('[deleteProject] Erro:', error);
+            alert(`Erro ao excluir projeto:\n${error.message || JSON.stringify(error)}`);
           }
         };
         tbody.appendChild(tr);
       });
     } catch (error) {
-      dbMessage('Erro ao carregar projetos', 'error');
+      console.error('[renderProjects] Erro ao carregar projetos:', error);
+      alert(`Erro ao carregar projetos:\n${error.message || JSON.stringify(error)}`);
     }
   }
 

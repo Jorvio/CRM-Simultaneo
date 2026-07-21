@@ -32,55 +32,8 @@
             </div>
           </div>
           <div class="page-body">
-            <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
-              <div class="page-card" style="padding:18px;">
-                <h3 style="margin-top:0;">Empresa</h3>
-                <p><strong>Cliente:</strong> João Silva</p>
-                <p><strong>Razão Social:</strong> Silva Engenharia</p>
-                <p><strong>CNPJ:</strong> 12.345.678/0001-99</p>
-                <p><strong>Endereço:</strong> Rua Exemplo, 123, Centro — Curitiba/PR — 80000-000</p>
-              </div>
-              <div class="page-card" style="padding:18px;">
-                <h3 style="margin-top:0;">Projeto</h3>
-                <p><strong>Nome do Projeto:</strong> Residencial Vista Verde</p>
-                <p><strong>Serviços:</strong> Renderização 3D, Tour Virtual</p>
-                <p><strong>Nº da Proposta:</strong> PRP-0231</p>
-              </div>
-            </div>
-
-            <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-top:18px;">
-              <div class="page-card" style="padding:18px;">
-                <h3 style="margin-top:0;">Responsável</h3>
-                <p><strong>Nome Completo:</strong> João Silva</p>
-                <p><strong>CPF:</strong> 000.000.000-00</p>
-                <p><strong>RG:</strong> 12.345.678 SSP/PR</p>
-                <p><strong>Profissão:</strong> Engenheiro</p>
-                <p><strong>Estado Civil:</strong> Casado</p>
-                <p><strong>E-mail:</strong> joao@email.com</p>
-                <p><strong>Telefone:</strong> (47) 99999-9999</p>
-                <p><strong>Endereço:</strong> Rua Exemplo, 123 — Curitiba/PR</p>
-              </div>
-              <div class="page-card" style="padding:18px;">
-                <h3 style="margin-top:0;">Financeiro</h3>
-                <p><strong>Forma de pagamento:</strong> Boleto</p>
-                <p><strong>Parcelamento:</strong> 6x</p>
-                <p><strong>Dia de vencimento:</strong> 10</p>
-                <p><strong>Valor total do contrato:</strong> R$ 18.000</p>
-                <p><strong>Valor das parcelas:</strong> R$ 3.000</p>
-              </div>
-            </div>
-
-            <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-top:18px;">
-              <div class="page-card" style="padding:18px;">
-                <h3 style="margin-top:0;">Contrato</h3>
-                <p><strong>Envio do contrato:</strong> Assinatura digital</p>
-                <p><strong>Envio de cobranças:</strong> Mensal</p>
-              </div>
-              <div class="page-card" style="padding:18px;">
-                <h3 style="margin-top:0;">Acompanhamento do Projeto</h3>
-                <p><strong>Solicitação de arquivos:</strong> Plantas, modelos 3D</p>
-                <p><strong>Entregas e aprovações:</strong> Fase 1 — Aprovação inicial; Fase 2 — Entrega final</p>
-              </div>
+            <div id="recordContent">
+              <p style="color:var(--ink-soft); padding:20px;">Carregando registro...</p>
             </div>
 
           </div>
@@ -97,7 +50,7 @@
 
   async function renderRecord() {
     const params = getQueryParams();
-    const content = document.querySelector('.page-body');
+    const content = document.getElementById('recordContent');
     if (!params.type || !params.id) {
       content.innerHTML = '<div class="empty-state">Registro não especificado. Use o botão Voltar para retornar.</div>';
       return;
@@ -143,8 +96,9 @@
         content.innerHTML = '<div class="empty-state">Tipo de registro inválido.</div>';
       }
     } catch (error) {
-      dbMessage('Erro ao carregar registro', 'error');
-      content.innerHTML = '<div class="empty-state">Erro ao carregar registro.</div>';
+      console.error('[renderRecord] Erro ao carregar registro:', error);
+      alert(`Erro ao carregar registro:\n${error.message || JSON.stringify(error)}`);
+      content.innerHTML = '<div class="empty-state">Erro ao carregar registro. Veja o console para detalhes.</div>';
     }
   }
 

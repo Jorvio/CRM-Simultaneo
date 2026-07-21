@@ -86,7 +86,8 @@
                     await db.deleteClient(client.id);
                     renderClients();
                   } catch (error) {
-                    dbMessage('Falha ao excluir cliente', 'error');
+                    console.error('[deleteClient] Erro:', error);
+                    alert(`Erro ao excluir cliente:\n${error.message || JSON.stringify(error)}`);
                   }
                 };
                 tbody.appendChild(tr);

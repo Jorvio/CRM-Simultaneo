@@ -119,18 +119,7 @@
   const statusPropostaOptions = ['Aberta','Negociando','Fechada','Perdida','Pausada'];
   const statusProjetoOptions = ['—','Aguardando dados para contrato','Contrato em elaboração','Aguardando assinatura','Contrato assinado','Em produção','Projeto em andamento','Entrega parcial','Aprovação','Cobrança enviada','Projeto finalizado'];
 
-  const sampleData = [
-    {id:1, numero:'PRP-0231', cliente:'Construtora Aurora', projeto:'Shopping Curitiba', contato:'Marcos Lima', pontoContato:'Diretoria', dataOrcamento:'2026-05-02', dataFechamento:'2026-06-10', valorExterior:4200, valorReais:22800, statusProposta:'Fechada', statusProjeto:'Em produção', obs:'Cliente pediu revisão de fachada noturna'},
-    {id:2, numero:'PRP-0232', cliente:'Grupo Vitalle', projeto:'Residencial Bosque Verde', contato:'Ana Beatriz', pontoContato:'Marketing', dataOrcamento:'2026-05-14', dataFechamento:'', valorExterior:3100, valorReais:16850, statusProposta:'Negociando', statusProjeto:'—', obs:''},
-    {id:3, numero:'PRP-0233', cliente:'Construtora Aurora', projeto:'Edifício Horizonte', contato:'Marcos Lima', pontoContato:'Diretoria', dataOrcamento:'2026-04-20', dataFechamento:'2026-05-30', valorExterior:5600, valorReais:30450, statusProposta:'Fechada', statusProjeto:'Aguardando assinatura', obs:'Tour virtual incluso'},
-    {id:4, numero:'PRP-0234', cliente:'Incorpora SC', projeto:'Marina Business Center', contato:'Rafael Souza', pontoContato:'Comercial', dataOrcamento:'2026-06-01', dataFechamento:'', valorExterior:2800, valorReais:15200, statusProposta:'Aberta', statusProjeto:'—', obs:'Aguardando retorno do cliente'},
-    {id:5, numero:'PRP-0235', cliente:'JLV Empreendimentos', projeto:'Condomínio Alto da Serra', contato:'Juliana Vasco', pontoContato:'Diretoria', dataOrcamento:'2026-03-11', dataFechamento:'2026-04-02', valorExterior:1900, valorReais:10320, statusProposta:'Perdida', statusProjeto:'—', obs:'Fechou com concorrente'},
-    {id:6, numero:'PRP-0236', cliente:'Grupo Vitalle', projeto:'Residencial Bosque Verde', contato:'Ana Beatriz', pontoContato:'Marketing', dataOrcamento:'2026-06-15', dataFechamento:'2026-07-01', valorExterior:1200, valorReais:6520, statusProposta:'Fechada', statusProjeto:'Contrato em elaboração', obs:'Animação adicional'},
-    {id:7, numero:'PRP-0237', cliente:'Incorpora SC', projeto:'Marina Business Center', contato:'Rafael Souza', pontoContato:'Comercial', dataOrcamento:'2026-06-18', dataFechamento:'', valorExterior:3400, valorReais:18480, statusProposta:'Pausada', statusProjeto:'—', obs:'Cliente pausou projeto'},
-    {id:8, numero:'PRP-0238', cliente:'Nova Era Incorporadora', projeto:'Parque das Águas', contato:'Camila Rocha', pontoContato:'Diretoria', dataOrcamento:'2026-07-02', dataFechamento:'2026-07-15', valorExterior:6100, valorReais:33150, statusProposta:'Fechada', statusProjeto:'Aguardando dados para contrato', obs:''},
-  ];
-
-  let data = sampleData.slice();
+  let data = [];  // dados carregados do Supabase
   let filterText = '';
   let activeStatuses = new Set();
   let sortKey = null;
@@ -318,7 +307,7 @@
         row[col.key] = input.value;
         if(col.key === 'dataFechamento'){ row.mesFechamento = monthLabel(row.dataFechamento); }
         if(row.id){
-          try { await db.updateProposal(row.id, {[col.key]: row[col.key], ...(col.key==='dataFechamento'?{mesFechamento:row.mesFechamento}: {})}); } catch(e){ dbMessage('Erro ao atualizar proposta', 'error'); }
+          try { await db.updateProposal(row.id, {[col.key]: row[col.key], ...(col.key==='dataFechamento'?{mesFechamento:row.mesFechamento}: {})}); } catch(e){ console.error('[updateProposal] Erro:', e); alert(`Erro ao atualizar proposta: ${e.message || JSON.stringify(e)}`); }
         }
         render();
       };
@@ -336,7 +325,7 @@
       row[col.key] = select.value;
       if(row.id){
         if(col.key==='dataFechamento'){ row.mesFechamento = monthLabel(row.dataFechamento); }
-        try { await db.updateProposal(row.id, {[col.key]: row[col.key]}); } catch(e){ dbMessage('Erro ao atualizar proposta', 'error'); }
+        try { await db.updateProposal(row.id, {[col.key]: row[col.key]}); } catch(e){ console.error('[updateProposal select] Erro:', e); alert(`Erro ao atualizar: ${e.message || JSON.stringify(e)}`); }
       }
       render();
     };
@@ -545,7 +534,8 @@
         data = proposals.map(normalizeProposalRow);
       }
     } catch(e){
-      dbMessage('Não foi possível carregar propostas do Supabase', 'error');
+      console.error('[loadData] Erro ao carregar propostas:', e);
+      alert(`Erro ao carregar propostas: ${e.message || JSON.stringify(e)}`);
     }
     render();
   }
@@ -586,7 +576,7 @@
     const statusPrj = document.getElementById('fldStatusProjeto').value;
     const obs = document.getElementById('fldObs').value.trim();
 
-    const required = { 'Nº Proposta':numero, 'Cliente':cliente, 'Projeto':projeto, 'Contato':contato, 'Ponto de Contato':ponto, 'Data Orçamento':orc, 'Data Fechamento':fech };
+    const required = { 'Nº Proposta':numero, 'Cliente':cliente, 'Projeto':projeto, 'Contato':contato, 'Ponto de Contato':ponto, 'Data Orçamento':orc };
     for(const k in required){ if(!required[k]){ showToast(`${k} é obrigatório`); return; } }
 
     const payload = {
@@ -595,14 +585,17 @@
       statusProposta: statusP, statusProjeto: statusPrj, obs
     };
 
+    console.log('[btnSaveModal] Salvando proposta no Supabase:', payload);
     try {
       const inserted = await db.insertProposal(payload);
+      console.log('[btnSaveModal] Proposta inserida com sucesso:', inserted);
       data.unshift(normalizeProposalRow(inserted));
       render();
       closeProposalModal();
       showToast('Proposta salva e adicionada ao funil');
     } catch (e) {
-      dbMessage('Falha ao salvar proposta', 'error');
+      console.error('[btnSaveModal] Erro ao salvar proposta:', e);
+      alert(`Erro ao salvar proposta:\n${e.message || JSON.stringify(e)}`);
     }
   };
   </script>
