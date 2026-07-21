@@ -23,6 +23,21 @@
 .anos-dropdown button{display:block;width:100%;background:transparent;border:none;padding:8px 16px;text-align:left;font-size:13px;color:var(--text-soft,#6B7280);cursor:pointer;font-family:JetBrains Mono,monospace;}
 .anos-dropdown button:hover{background:var(--surface-alt,#F3F4F6);color:var(--text,#111827);}
 .anos-dropdown button.ativo-ano{color:#2563EB;font-weight:700;}
+
+/* ── Compact Charts ───────────────────────────── */
+.dashboard-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch;}
+.chart-card{background:#ffffff;border:1px solid #e2e7ef;border-radius:12px;padding:16px;min-width:0;height:340px;overflow:hidden;}
+.chart-card-header{margin-bottom:12px;}
+.chart-card-title{margin:0;font-size:15px;font-weight:700;color:var(--text,#111827);}
+.chart-card-subtitle{margin:3px 0 0 0;font-size:12px;color:#6b7280;}
+.chart-wrapper{position:relative;width:100%;height:260px;min-height:260px;max-height:260px;}
+.chart-wrapper canvas{display:block;width:100% !important;height:100% !important;max-height:260px !important;}
+
+@media (max-width: 900px) {
+  .dashboard-charts{grid-template-columns:1fr;}
+  .chart-card{height:320px;}
+  .chart-wrapper{height:240px;min-height:240px;max-height:240px;}
+}
 </style>
 </head>
 <body>
@@ -144,8 +159,7 @@
   let todasPropostas  = [];
   const clientNameById = new Map();
   const projectNameById = new Map();
-  let barChart = null, lineChart = null, donutChart = null;
-  let chartRenderVersion = 0;
+  let barChart = null, donutChart = null;
   const root = document.getElementById('dash-root');
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -399,55 +413,23 @@
 
       <div class="section-label">${ICONS.trending}<span>GRÁFICOS</span><div class="section-rule"></div></div>
 
-      <div class="charts-row two">
-        <div class="panel">
-          <div class="panel-title disp">Valor aprovado por mês</div>
-          <div class="panel-sub">Propostas fechadas (R$) — ${anoSelecionado}</div>
-          <canvas id="barCanvas" height="90"></canvas>
-        </div>
-        <div class="panel">
-          <div class="panel-title disp">Status das propostas</div>
-          <div class="panel-sub">${MESES_FULL[mesSelecionado]} — distribuição</div>
-          <div class="servicos-wrap">
-            <canvas id="donutCanvas" style="max-width:45%;"></canvas>
-            <div class="servicos-legend">
-              ${d.propostas === 0
-                ? '<div style="color:var(--text-soft,#6B7280);font-size:13px;">Nenhuma proposta neste período</div>'
-                : statusLabels.map((s, i) => statusValues[i] > 0
-                  ? `<div class="servico-row"><span class="servico-dot" style="background:${statusColors[i]}"></span><span class="servico-nome">${s}</span><span class="servico-val num">${statusValues[i]}</span></div>`
-                  : '').join('')}
-            </div>
+      <div class="dashboard-charts">
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3 class="chart-card-title">Valor aprovado por mês</h3>
+            <p class="chart-card-subtitle">Propostas fechadas em reais</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="graficoValorMensal"></canvas>
           </div>
         </div>
-      </div>
-
-      <div class="charts-row three">
-        <div class="panel">
-          <div class="panel-title disp">Propostas por mês</div>
-          <div class="panel-sub">Quantidade recebida — ${anoSelecionado}</div>
-          <canvas id="lineCanvas" height="130"></canvas>
-        </div>
-        <div class="panel">
-          <div class="panel-title disp">Funil comercial</div>
-          <div class="panel-sub">${MESES_FULL[mesSelecionado]} — etapas</div>
-          <div style="padding-top:8px;">
-            ${funil.filter(f => f.value > 0).length === 0
-              ? '<div style="color:var(--text-soft,#6B7280);font-size:13px;padding:12px 0;">Nenhuma proposta neste período.</div>'
-              : funil.map(f => `
-                  <div class="funil-item">
-                    <div class="funil-top"><span class="l">${f.label}</span><span class="v num">${f.value}</span></div>
-                    <div class="funil-bar-bg"><div class="funil-bar-fill" style="width:${(f.value/funilMax)*100}%;background:${f.color}"></div></div>
-                  </div>`).join('')}
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3 class="chart-card-title">Status das propostas</h3>
+            <p class="chart-card-subtitle">Distribuição por status</p>
           </div>
-        </div>
-        <div class="panel">
-          <div class="panel-title disp">Top clientes</div>
-          <div class="panel-sub">${MESES_FULL[mesSelecionado]} — por valor</div>
-          <div style="padding-top:6px;">
-            ${d.topClientes.length === 0
-              ? '<div style="color:var(--text-soft,#6B7280);font-size:13px;padding:12px 0;">Nenhum dado neste período.</div>'
-              : d.topClientes.map(c => `
-                  <div class="cliente-row">${ICONS.building}<span class="cliente-nome">${c.nome}</span><span class="cliente-val num">${fmtBRL(c.valor)}</span></div>`).join('')}
+          <div class="chart-wrapper">
+            <canvas id="graficoStatusPropostas"></canvas>
           </div>
         </div>
       </div>
@@ -483,84 +465,88 @@
     `;
 
     // ── Gráficos ────────────────────────────────────────────────────────────
-    const rv = ++chartRenderVersion;
-    setTimeout(() => {
-      if (rv !== chartRenderVersion) return;
-      if (barChart)   { barChart.destroy();   barChart   = null; }
-      if (lineChart)  { lineChart.destroy();  lineChart  = null; }
-      if (donutChart) { donutChart.destroy(); donutChart = null; }
+    if (typeof window.Chart === 'undefined') {
+      console.warn('[Dashboard] Chart.js não carregado');
+      return;
+    }
 
-      if (typeof window.Chart === 'undefined') {
-        console.warn('[Dashboard] Chart.js não carregado');
-        return;
-      }
+    const barCanvas = root.querySelector('#graficoValorMensal');
+    const donutCanvas = root.querySelector('#graficoStatusPropostas');
 
-      const barCanvas   = root.querySelector('#barCanvas');
-      const lineCanvas  = root.querySelector('#lineCanvas');
-      const donutCanvas = root.querySelector('#donutCanvas');
+    if (barChart) {
+      barChart.destroy();
+      barChart = null;
+    }
 
-      if (barCanvas) {
-        barCanvas.style.cssText = 'width:100%;height:220px;';
-        barChart = new window.Chart(barCanvas.getContext('2d'), {
-          type: 'bar',
-          data: {
-            labels: MESES_ABREV,
-            datasets: [{
-              data: dadosMensais.map(m => m.valorAprovado),
-              backgroundColor: dadosMensais.map((_, i) => i === mesSelecionado ? C.amber : '#333a48'),
-              borderRadius: 4, maxBarThickness: 34,
-            }]
+    if (donutChart) {
+      donutChart.destroy();
+      donutChart = null;
+    }
+
+    if (barCanvas) {
+      barChart = new window.Chart(barCanvas, {
+        type: 'bar',
+        data: {
+          labels: MESES_ABREV,
+          datasets: [{
+            label: 'Valor aprovado',
+            data: dadosMensais.map((m) => Number(m.valorAprovado || 0)),
+            backgroundColor: dadosMensais.map((_, i) => i === mesSelecionado ? C.amber : '#333a48'),
+            borderRadius: 4,
+            maxBarThickness: 34
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 300 },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: C.panelHi,
+              borderColor: C.line,
+              borderWidth: 1,
+              titleColor: C.text,
+              bodyColor: C.text,
+              callbacks: { label: (ctx) => fmtBRLFull(ctx.parsed.y) }
+            }
           },
-          options: {
-            responsive:true, maintainAspectRatio:false,
-            plugins: { legend:{display:false}, tooltip:{ backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text, callbacks:{ label: ctx => fmtBRLFull(ctx.parsed.y) } } },
-            scales: {
-              x: { grid:{display:false}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:11}} },
-              y: { grid:{color:C.lineSoft}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:10}, callback: v => fmtBRL(v)} }
-            },
-            onClick: (_, els) => { if (els.length) { selecionarMes(els[0].index); } }
+          scales: {
+            x: { grid: { display: false }, ticks: { color: C.mutedDim, font: { family: 'JetBrains Mono', size: 11 } } },
+            y: { grid: { color: C.lineSoft }, ticks: { color: C.mutedDim, font: { family: 'JetBrains Mono', size: 10 }, callback: (v) => fmtBRL(v) } }
           }
-        });
-      }
+        }
+      });
+    }
 
-      if (lineCanvas) {
-        lineCanvas.style.cssText = 'width:100%;height:180px;';
-        lineChart = new window.Chart(lineCanvas.getContext('2d'), {
-          type: 'line',
-          data: {
-            labels: MESES_ABREV,
-            datasets: [{
-              data: dadosMensais.map(m => m.propostas),
-              borderColor: C.cyan, backgroundColor: C.cyan + '22',
-              fill:true, tension:0.35, pointRadius:3, pointBackgroundColor:C.cyan,
-            }]
-          },
-          options: {
-            responsive:true, maintainAspectRatio:false,
-            plugins: { legend:{display:false}, tooltip:{ backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text } },
-            scales: {
-              x: { grid:{display:false}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:10}} },
-              y: { grid:{color:C.lineSoft}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:10}} }
+    if (donutCanvas) {
+      donutChart = new window.Chart(donutCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: statusLabels,
+          datasets: [{
+            data: statusValues.map((v) => Number(v || 0)),
+            backgroundColor: statusColors,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          animation: { duration: 300 },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 10,
+                usePointStyle: true
+              }
             }
           }
-        });
-      }
-
-      const donutData   = statusValues.filter((v,i) => statusValues[i] > 0);
-      const donutLabels = statusLabels.filter((_,i) => statusValues[i] > 0);
-      const donutColors = statusColors.filter((_,i) => statusValues[i] > 0);
-      if (donutCanvas && donutData.length > 0) {
-        donutCanvas.style.cssText = 'width:100%;height:220px;';
-        donutChart = new window.Chart(donutCanvas.getContext('2d'), {
-          type: 'doughnut',
-          data: { labels:donutLabels, datasets:[{ data:donutData, backgroundColor:donutColors, borderWidth:0 }] },
-          options: {
-            responsive:true, maintainAspectRatio:false, cutout:'62%',
-            plugins: { legend:{display:false}, tooltip:{ backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text } }
-          }
-        });
-      }
-    }, 40);
+        }
+      });
+    }
   }
 
   // ── Carregamento do Supabase ──────────────────────────────────────────────
@@ -636,9 +622,6 @@
     // Marcar mês atual
     const btns = document.querySelectorAll('.mes-filtro');
     if (btns[mesSelecionado]) btns[mesSelecionado].classList.add('ativo');
-    // Scroll para o mês atual
-    if (btns[mesSelecionado]) btns[mesSelecionado].scrollIntoView({ inline: 'center', behavior: 'smooth' });
-
     // Botão de ano
     construirDropdownAnos();
     atualizarAnoExibido();
