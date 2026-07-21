@@ -6,6 +6,91 @@
 <title>Projetos</title>
 
 <link rel="stylesheet" href="shared.css">
+<style>
+.project-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.proposal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.proposal-link {
+  font-size: 12px;
+  color: var(--brand, #2563eb);
+  text-decoration: none;
+}
+
+.proposal-link:hover {
+  text-decoration: underline;
+}
+
+.proposal-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 999;
+}
+
+.proposal-modal.open {
+  display: block;
+}
+
+.proposal-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.proposal-modal-panel {
+  position: relative;
+  max-width: 720px;
+  margin: 60px auto;
+  background: #fff;
+  border: 1px solid #e1e6ee;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.proposal-management-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.proposal-management-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px;
+  border: 1px solid #e1e6ee;
+  border-radius: 8px;
+}
+
+.proposal-management-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-delete-proposal {
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  background: #ffffff;
+}
+
+.btn-delete-proposal:hover {
+  color: #ffffff;
+  background: #dc2626;
+}
+</style>
 
 </head>
 <body>
@@ -65,8 +150,30 @@
       </div>
     </main>
   </div>
+  <div class="proposal-modal" id="proposalManagerModal" aria-hidden="true">
+    <div class="proposal-modal-backdrop" id="proposalManagerBackdrop"></div>
+    <div class="proposal-modal-panel">
+      <div class="page-header" style="padding:0 0 12px 0; margin:0 0 12px 0; border-bottom:1px solid var(--border);">
+        <div>
+          <h2 class="page-title" style="font-size:18px; margin:0;">Gerenciar propostas</h2>
+          <div class="page-subtext" id="proposalManagerSubtitle">Projeto</div>
+        </div>
+        <button class="btn-secondary" type="button" id="proposalManagerClose">Fechar</button>
+      </div>
+      <div class="proposal-management-list" id="proposalManagerList"></div>
+    </div>
+  </div>
   <script type="module">
   import { supabase, db } from './supabase.js';
+  const proposalManagerModal = document.getElementById('proposalManagerModal');
+  const proposalManagerBackdrop = document.getElementById('proposalManagerBackdrop');
+  const proposalManagerClose = document.getElementById('proposalManagerClose');
+  const proposalManagerList = document.getElementById('proposalManagerList');
+  const proposalManagerSubtitle = document.getElementById('proposalManagerSubtitle');
+  const tableWrap = document.querySelector('.table-wrap');
+
+  let projetosCache = [];
+  let projetoGerenciadoId = null;
 
   function formatarMoeda(valor) {
     if (valor == null || valor === '') return '—';
@@ -87,36 +194,101 @@
       return '<div class="empty-state" style="padding:10px;">Este projeto ainda não possui propostas cadastradas.</div>';
     }
 
-    const linhas = propostas.map((p) => `
-      <tr>
-        <td>${escaparHtml(p.proposal_number || '—')}</td>
-        <td>${escaparHtml(p.proposal_status || '—')}</td>
-        <td>${formatarMoeda(p.value_brl)}</td>
-        <td>
-          <a class="btn-secondary" href="visualizar.html?type=proposal&id=${p.id}">Visualizar</a>
-          <a class="btn" href="index.html?proposalId=${p.id}">Editar</a>
-        </td>
-      </tr>
-    `).join('');
-
     return `
-      <div style="overflow-x:auto;">
-        <table style="margin:0; width:100%; min-width:680px;">
-          <thead>
-            <tr>
-              <th>Número da proposta</th>
-              <th>Status</th>
-              <th>Valor</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>${linhas}</tbody>
-        </table>
+      <div class="proposal-links">
+        ${propostas.map((p) => {
+          const numero = escaparHtml(p.proposal_number || 'sem número');
+          return `<a class="proposal-link" href="visualizar.html?type=proposal&id=${p.id}">[${numero}]</a>`;
+        }).join('')}
       </div>
     `;
   }
 
-  async function renderProjects() {
+  function abrirGerenciarPropostas(projetoId) {
+    const projeto = projetosCache.find((item) => item.id === projetoId);
+    if (!projeto) return;
+
+    projetoGerenciadoId = projetoId;
+
+    proposalManagerSubtitle.textContent = projeto.name || 'Projeto';
+    proposalManagerList.innerHTML = '';
+
+    const propostas = projeto.propostas || [];
+    if (!propostas.length) {
+      proposalManagerList.innerHTML = '<div class="empty-state">Este projeto ainda não possui propostas cadastradas.</div>';
+      proposalManagerModal.classList.add('open');
+      proposalManagerModal.setAttribute('aria-hidden', 'false');
+      return;
+    }
+
+    propostas.forEach((proposta) => {
+      const numeroProposta = proposta.proposal_number || 'sem número';
+      const item = document.createElement('div');
+      item.className = 'proposal-management-item';
+      item.innerHTML = `
+        <span>Proposta ${escaparHtml(numeroProposta)}</span>
+        <div class="proposal-management-actions">
+          <a class="btn-secondary" href="visualizar.html?type=proposal&id=${proposta.id}">Visualizar</a>
+          <button type="button" class="btn-delete-proposal">Excluir</button>
+        </div>
+      `;
+
+      const deleteButton = item.querySelector('.btn-delete-proposal');
+      deleteButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await excluirProposta(proposta);
+      });
+
+      proposalManagerList.appendChild(item);
+    });
+
+    proposalManagerModal.classList.add('open');
+    proposalManagerModal.setAttribute('aria-hidden', 'false');
+  }
+
+  function fecharGerenciarPropostas() {
+    projetoGerenciadoId = null;
+    proposalManagerModal.classList.remove('open');
+    proposalManagerModal.setAttribute('aria-hidden', 'true');
+  }
+
+  async function excluirProposta(proposta) {
+    const numeroProposta = proposta.proposal_number || 'sem número';
+
+    const confirmou = window.confirm(
+      `Deseja realmente excluir a proposta nº ${numeroProposta}? Esta ação não poderá ser desfeita.`
+    );
+
+    if (!confirmou) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('proposals')
+      .delete()
+      .eq('id', proposta.id);
+
+    if (error) {
+      console.error('Erro completo ao excluir proposta:', error);
+      alert('Não foi possível excluir a proposta. Verifique se ela possui registros vinculados.');
+      return;
+    }
+
+    alert('Proposta excluída com sucesso.');
+    await carregarProjetos();
+
+    if (projetoGerenciadoId != null) {
+      abrirGerenciarPropostas(projetoGerenciadoId);
+    } else {
+      fecharGerenciarPropostas();
+    }
+  }
+
+  async function carregarProjetos() {
+    const tableScrollTop = tableWrap ? tableWrap.scrollTop : 0;
+    const tableScrollLeft = tableWrap ? tableWrap.scrollLeft : 0;
+
     try {
       const { data: projetos, error } = await supabase
         .from('projects')
@@ -155,6 +327,8 @@
         return;
       }
 
+      projetosCache = projetos || [];
+
       const tbody = document.getElementById('projectTableBody');
       tbody.innerHTML = '';
       if (!projetos || projetos.length === 0) {
@@ -174,25 +348,38 @@
           <td>${renderPropostasDoProjeto(projeto.propostas)}</td>
           <td>${projeto.status || ''}</td>
           <td>
-            <div style="display:flex;gap:8px;">
+            <div class="project-actions">
               <a class="btn-secondary" href="visualizar.html?type=project&id=${projeto.id}">Visualizar</a>
               <a class="btn" href="projeto-novo.html?id=${projeto.id}">Editar</a>
               <button class="btn-secondary" type="button" data-id="${projeto.id}">Excluir</button>
+              <button class="btn-secondary" type="button" data-manage-id="${projeto.id}">Gerenciar propostas</button>
             </div>
           </td>
         `;
-        const deleteButton = tr.querySelector('button');
+        const deleteButton = tr.querySelector('button[data-id]');
+        const manageButton = tr.querySelector('button[data-manage-id]');
+
         deleteButton.onclick = async () => {
           if (!confirm('Excluir projeto?')) return;
           try {
             await db.deleteProject(projeto.id);
-            renderProjects();
+            await carregarProjetos();
           } catch (error) {
             console.error('[deleteProject] Erro:', error);
             alert(`Erro ao excluir projeto:\n${error.message || JSON.stringify(error)}`);
           }
         };
+
+        manageButton.onclick = () => {
+          abrirGerenciarPropostas(projeto.id);
+        };
+
         tbody.appendChild(tr);
+      }
+
+      if (tableWrap) {
+        tableWrap.scrollTop = tableScrollTop;
+        tableWrap.scrollLeft = tableScrollLeft;
       }
     } catch (error) {
       console.error('Erro completo ao carregar projetos:', error);
@@ -200,7 +387,10 @@
     }
   }
 
-  renderProjects();
+  proposalManagerBackdrop.addEventListener('click', fecharGerenciarPropostas);
+  proposalManagerClose.addEventListener('click', fecharGerenciarPropostas);
+
+  carregarProjetos();
   </script>
 </body>
 </html>
