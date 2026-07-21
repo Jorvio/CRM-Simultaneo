@@ -3,16 +3,93 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL = 'https://vgyeddlrfnzuragrrgla.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_URJREuSZM4oeQMzr_B3ljg_yhuWGC-B';
 
-console.log('[Supabase] Inicializando cliente...');
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const supabaseRead = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false
+if (!window.supabase?.createClient) {
+  window.supabase = { ...(window.supabase || {}), createClient };
+}
+
+(function inicializarSupabase() {
+  if (window.__crmSupabaseInitialized) {
+    console.warn('[Supabase] Tentativa de inicializacao duplicada bloqueada.');
+    return;
   }
-});
-console.log('[Supabase] Cliente criado:', supabase);
+
+  window.__crmSupabaseInitialized = true;
+
+  if (window.supabaseClient) {
+    console.log('[Supabase] Cliente existente reutilizado.');
+    return;
+  }
+
+  if (!window.supabase?.createClient) {
+    throw new Error('A biblioteca oficial do Supabase nao foi carregada.');
+  }
+
+  window.supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    }
+  );
+
+  console.log('[Supabase] Cliente unico inicializado.');
+})();
+
+const supabase = window.supabaseClient;
+
+function isUnauthorizedError(error) {
+  return (
+    error?.status === 401 ||
+    error?.code === '401' ||
+    String(error?.message || '').toLowerCase().includes('jwt')
+  );
+}
+
+async function handleUnauthorized(error) {
+  if (!isUnauthorizedError(error)) {
+    return false;
+  }
+
+  console.error('A sessao nao foi enviada ou o token e invalido.', error);
+  await supabase.auth.signOut();
+  window.location.replace('./login.html');
+  return true;
+}
+
+export async function obterSessaoObrigatoria() {
+  const client = window.supabaseClient;
+
+  if (!client) {
+    throw new Error('Cliente Supabase nao inicializado.');
+  }
+
+  const {
+    data: { session },
+    error
+  } = await client.auth.getSession();
+
+  if (error) {
+    console.error('[Auth] Erro ao recuperar sessao:', error);
+    throw error;
+  }
+
+  if (!session?.user || !session?.access_token) {
+    console.error('[Auth] Consulta tentada sem sessao.');
+    window.location.replace('./login.html');
+    return null;
+  }
+
+  console.log('[Auth] Sessao valida:', {
+    userId: session.user.id,
+    email: session.user.email
+  });
+
+  return session;
+}
 
 function normalizeRoleName(roleName) {
   return String(roleName || '').trim().toLowerCase();
@@ -45,13 +122,20 @@ function buildPermissions(perfil) {
 }
 
 async function loadCurrentProfile() {
+  const session = await obterSessaoObrigatoria();
+  if (!session?.user) {
+    const error = new Error('Usuario nao autenticado.');
+    error.code = 'AUTH_REQUIRED';
+    throw error;
+  }
+
   const {
     data: { user },
     error: userError
   } = await supabase.auth.getUser();
 
   if (!user || userError) {
-    const error = new Error('Usuário não autenticado.');
+    const error = new Error('Usuario nao autenticado.');
     error.code = 'AUTH_REQUIRED';
     throw error;
   }
@@ -71,7 +155,7 @@ async function loadCurrentProfile() {
     .single();
 
   if (perfilError || !perfil) {
-    const error = new Error('Perfil de acesso não encontrado.');
+    const error = new Error('Perfil de acesso nao encontrado.');
     error.code = 'PROFILE_NOT_FOUND';
     throw error;
   }
@@ -136,22 +220,54 @@ function sanitizeResponsavelPayload(payload = {}) {
   return safePayload;
 }
 
-window.supabaseClient = supabaseRead;
 window.testarConexao = testarConexao;
 
 window.db = {
   client: supabase,
 
   async fetchClients() {
-    await assertPermission('select');
     console.log('[db] fetchClients');
-    return exec(supabaseRead.from('clients').select('*').order('id', { ascending: true }));
+    const session = await obterSessaoObrigatoria();
+    if (!session) return [];
+    await assertPermission('select');
+
+    const { data, error } = await supabase
+      .from('clients')
+      .select(`
+        id,
+        name,
+        legal_name,
+        cpf,
+        cnpj,
+        address,
+        client_type,
+        created_at,
+        updated_at
+      `)
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('[Supabase] Erro completo ao carregar clientes:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        userId: session.user.id,
+        email: session.user.email
+      });
+
+      const redirected = await handleUnauthorized(error);
+      if (redirected) return [];
+      throw error;
+    }
+
+    return Array.isArray(data) ? data : [];
   },
   async fetchProjects() {
     await assertPermission('select');
     console.log('[db] fetchProjects');
     return exec(
-      supabaseRead
+      supabase
         .from('projects')
         .select(`
           *,
@@ -175,63 +291,81 @@ window.db = {
   async fetchResponsaveis() {
     await assertPermission('select');
     console.log('[db] fetchResponsaveis');
-    return exec(supabaseRead.from('responsaveis').select('*').order('id', { ascending: true }));
+    return exec(supabase.from('responsaveis').select('*').order('id', { ascending: true }));
   },
   async fetchContracts() {
     await assertPermission('select');
     console.log('[db] fetchContracts');
-    return exec(supabaseRead.from('contracts').select('*').order('id', { ascending: true }));
+    return exec(supabase.from('contracts').select('*').order('id', { ascending: true }));
   },
   async fetchProposals() {
-    await assertPermission('select');
     console.log('[db] fetchProposals');
-    return exec(
-      supabaseRead
-        .from('proposals')
-        .select(`
+    const session = await obterSessaoObrigatoria();
+    if (!session) return [];
+    await assertPermission('select');
+
+    const { data, error } = await supabase
+      .from('proposals')
+      .select(`
+        id,
+        project_id,
+        client_id,
+        proposal_number,
+        contact_id,
+        contact_name,
+        point_of_contact,
+        budget_date,
+        closing_date,
+        closing_month,
+        value_usd,
+        value_brl,
+        proposal_status,
+        project_status,
+        notes,
+        created_at,
+        updated_at,
+
+        cliente:clients!proposals_client_id_fkey (
           id,
-          project_id,
-          client_id,
-          proposal_number,
-          contact_id,
-          contact_name,
-          point_of_contact,
-          budget_date,
-          closing_date,
-          closing_month,
-          value_usd,
-          value_brl,
-          proposal_status,
-          project_status,
-          notes,
-          created_at,
+          name,
+          legal_name
+        ),
 
-          cliente:clients!proposals_client_id_fkey (
-            id,
-            name,
-            legal_name,
-            client_type
-          ),
+        projeto:projects!proposals_project_id_fkey (
+          id,
+          name,
+          client_id
+        )
+      `)
+      .order('created_at', { ascending: false });
 
-          projeto:projects!proposals_project_id_fkey (
-            id,
-            name,
-            client_id
-          )
-        `)
-        .order('created_at', { ascending: false })
-    );
+    if (error) {
+      console.error('[Supabase] Erro completo ao carregar propostas:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        userId: session.user.id,
+        email: session.user.email
+      });
+
+      const redirected = await handleUnauthorized(error);
+      if (redirected) return [];
+      throw error;
+    }
+
+    return Array.isArray(data) ? data : [];
   },
   async fetchClientById(id) {
     await assertPermission('select');
     console.log('[db] fetchClientById', id);
-    return exec(supabaseRead.from('clients').select('*').eq('id', id).single());
+    return exec(supabase.from('clients').select('*').eq('id', id).single());
   },
   async fetchProjectById(id) {
     await assertPermission('select');
     console.log('[db] fetchProjectById', id);
     return exec(
-      supabaseRead
+      supabase
         .from('projects')
         .select(`
           *,
@@ -257,7 +391,7 @@ window.db = {
     await assertPermission('select');
     console.log('[db] fetchProjectsByClient', clientId);
     return exec(
-      supabaseRead
+      supabase
         .from('projects')
         .select('id, name, client_id')
         .eq('client_id', clientId)
@@ -268,7 +402,7 @@ window.db = {
     await assertPermission('select');
     console.log('[db] fetchProposalsByProject', projectId);
     return exec(
-      supabaseRead
+      supabase
         .from('proposals')
         .select(`
           id,
@@ -290,7 +424,7 @@ window.db = {
   async fetchProposalById(id) {
     await assertPermission('select');
     console.log('[db] fetchProposalById', id);
-    return exec(supabaseRead.from('proposals').select('*').eq('id', id).single());
+    return exec(supabase.from('proposals').select('*').eq('id', id).single());
   },
   async insertClient(payload) {
     await assertPermission('insert');
@@ -369,7 +503,7 @@ window.db = {
     await assertPermission('select');
     const results = {};
     for (const table of ['clients', 'projects', 'responsaveis', 'contracts', 'proposals']) {
-      const { data, error } = await supabaseRead.from(table).select('id').limit(1);
+      const { data, error } = await supabase.from(table).select('id').limit(1);
       results[table] = error ? `ERRO: ${error.message}` : 'ok';
       console.log(`[RLS] ${table}:`, results[table]);
     }
