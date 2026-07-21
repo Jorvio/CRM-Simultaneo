@@ -58,351 +58,476 @@
     </main>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module">
-  import { db, dbMessage } from './supabase.js';
-  (async function(){
-    // ---------------------------------------------------------------------
-    // MOCK DATA — 12 meses de 2026
-    // ---------------------------------------------------------------------
-    const MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
-    const MESES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  import './supabase.js'; // garante window.supabaseClient e roda testarConexao()
 
-    function seedRandom(seed){
-      let s = seed;
-      return function(){ s = (s*9301+49297)%233280; return s/233280; };
-    }
+  const ANO = new Date().getFullYear();
+  const MESES      = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+  const MESES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-    const monthlyData = MESES.map((m,i)=>{
-      const rnd = seedRandom(i*17+3);
-      const abertas = Math.round(6+rnd()*6);
-      const negociando = Math.round(3+rnd()*5);
-      const fechadas = Math.round(4+rnd()*7);
-      const perdidas = Math.round(1+rnd()*4);
-      const total = abertas+negociando+fechadas+perdidas;
-      const ticketMedio = Math.round(18000+rnd()*22000);
-      const valorVendido = fechadas*ticketMedio;
-      const valorNegociacao = negociando*(ticketMedio*0.9);
-      const receita = Math.round(valorVendido*(0.55+rnd()*0.3));
-      const parcelasPagas = Math.round(10+rnd()*14);
-      const parcelasPendentes = Math.round(4+rnd()*8);
-      const parcelasVencidas = Math.round(rnd()*4);
-      const projetosAtivos = Math.round(8+rnd()*10);
-      const aguardandoContrato = Math.round(1+rnd()*4);
-      const emProducao = Math.round(4+rnd()*7);
-      const concluidos = Math.round(3+rnd()*6);
-      const v3d = Math.round(30+rnd()*25);
-      const anim = Math.round(15+rnd()*20);
-      const video = Math.round(10+rnd()*15);
-      const tour = Math.round(8+rnd()*12);
+  const C = {
+    panel:'#FFFFFF', panelHi:'#F9FAFB',
+    line:'#E5E7EB', lineSoft:'#F3F4F6',
+    text:'#111827', muted:'#6B7280', mutedDim:'#9CA3AF',
+    amber:'#F59E0B', cyan:'#10B981', violet:'#7C3AED', red:'#EF4444',
+  };
 
-      return {
-        mes:m, mesFull:MESES_FULL[i],
-        abertas,negociando,fechadas,perdidas,total,
-        ticketMedio,valorVendido,valorNegociacao,
-        taxaConversao: total? Math.round((fechadas/total)*100):0,
-        receita,parcelasPagas,parcelasPendentes,parcelasVencidas,
-        projetosAtivos,aguardandoContrato,emProducao,concluidos,
-        servicos:[
-          {nome:"Visualização 3D", valor:v3d},
-          {nome:"Animação 3D", valor:anim},
-          {nome:"Vídeo", valor:video},
-          {nome:"Tour Virtual 360°", valor:tour},
-        ],
-        topClientes:[
-          {nome:"Construtora Horizonte", valor:Math.round(valorVendido*0.32)},
-          {nome:"Grupo Andrade Empreend.", valor:Math.round(valorVendido*0.24)},
-          {nome:"Shopping Curitiba S.A.", valor:Math.round(valorVendido*0.18)},
-          {nome:"Vetta Incorporadora", valor:Math.round(valorVendido*0.14)},
-        ],
-      };
+  const ICONS = {
+    trending:     '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+    trendingDown: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
+    clock:        '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    check:        '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    x:            '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    layers:       '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+    dollar:       '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    box:          '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+    alert:        '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    building:     '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/></svg>',
+    chevLeft:     '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+    chevRight:    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+  };
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  function converterValor(valor) {
+    if (valor === null || valor === undefined || valor === '') return 0;
+    if (typeof valor === 'number') return valor;
+    return Number(String(valor).replace(/\./g,'').replace(',','.').replace(/[^\d.-]/g,'')) || 0;
+  }
+
+  function formatarMoeda(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function fmtBRL(v) {
+    v = Number(v) || 0;
+    if (v >= 1000000) return 'R$ ' + (v/1000000).toLocaleString('pt-BR',{maximumFractionDigits:1}) + 'M';
+    if (v >= 1000)    return 'R$ ' + (v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1}) + 'k';
+    return 'R$ ' + v.toLocaleString('pt-BR');
+  }
+
+  function fmtBRLFull(v) {
+    return 'R$ ' + (Number(v)||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function definirTexto(id, valor) {
+    const el = document.getElementById(id);
+    if (!el) { console.warn('[Dashboard] Elemento não encontrado: #' + id); return; }
+    el.textContent = valor;
+  }
+
+  // ── Normalização ──────────────────────────────────────────────────────────
+
+  function normalizarProposta(p) {
+    return {
+      id:             p.id,
+      numero:         p.numero         || p.proposta_num   || p.propostaNum   || '',
+      cliente:        p.cliente        || p.clienteName    || '',
+      projeto:        p.projeto        || p.projetoName    || '',
+      contato:        p.contato        || '',
+      dataOrcamento:  p.data_orcamento || p.dataOrcamento  || p.created_at    || '',
+      dataFechamento: p.data_fechamento|| p.dataFechamento || '',
+      valorExterior:  converterValor(p.valor_exterior  != null ? p.valor_exterior  : p.valorExterior),
+      valorReais:     converterValor(p.valor_reais     != null ? p.valor_reais     : p.valorReais),
+      statusProposta: p.status_proposta|| p.statusProposta || 'Aberta',
+      statusProjeto:  p.status_projeto || p.statusProjeto  || '—',
+      obs:            p.obs            || '',
+      created_at:     p.created_at     || '',
+    };
+  }
+
+  function getMesIndex(p) {
+    const dateStr = p.dataOrcamento;
+    if (!dateStr) return -1;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return -1;
+    if (d.getFullYear() !== ANO) return -1;
+    return d.getMonth(); // 0–11
+  }
+
+  // ── Métricas por mês ──────────────────────────────────────────────────────
+
+  function calcularMetricas(props) {
+    const total       = props.length;
+    const abertas     = props.filter(p => p.statusProposta === 'Aberta').length;
+    const negociando  = props.filter(p => p.statusProposta === 'Negociando').length;
+    const fechadas    = props.filter(p => p.statusProposta === 'Fechada').length;
+    const perdidas    = props.filter(p => p.statusProposta === 'Perdida').length;
+    const pausadas    = props.filter(p => p.statusProposta === 'Pausada').length;
+
+    const propostasFechadas = props.filter(p => p.statusProposta === 'Fechada');
+    const valorVendido      = propostasFechadas.reduce((s,p) => s + p.valorReais, 0);
+    const valorNegociacao   = props.filter(p => p.statusProposta === 'Negociando').reduce((s,p) => s + p.valorReais, 0);
+    const ticketMedio       = propostasFechadas.length > 0 ? Math.round(valorVendido / propostasFechadas.length) : 0;
+    const taxaConversao     = total > 0 ? Math.round((fechadas / total) * 100) : 0;
+
+    const clienteMap = {};
+    props.forEach(p => {
+      if (!p.cliente) return;
+      clienteMap[p.cliente] = (clienteMap[p.cliente] || 0) + p.valorReais;
+    });
+    const topClientes = Object.entries(clienteMap)
+      .sort((a,b) => b[1] - a[1])
+      .slice(0,4)
+      .map(([nome,valor]) => ({ nome, valor }));
+
+    return { total, abertas, negociando, fechadas, perdidas, pausadas, valorVendido, valorNegociacao, ticketMedio, taxaConversao, topClientes };
+  }
+
+  // ── Estado global ─────────────────────────────────────────────────────────
+
+  let selected     = Math.min(new Date().getMonth(), 11);
+  let barChart, lineChart, donutChart;
+  let chartRenderVersion = 0;
+  let globalData   = null;
+  const root       = document.getElementById('dash-root');
+
+  // ── KPI helper ────────────────────────────────────────────────────────────
+
+  function kpi({label, value, delta, icon, tone}) {
+    const up = delta != null && delta >= 0;
+    return `
+      <div class="kpi">
+        <div class="kpi-top">${icon ? '<span style="color:' + (tone||C.mutedDim) + '">' + icon + '</span>' : ''}<span class="kpi-label">${label}</span></div>
+        <div class="kpi-value num" style="color:${tone||C.text}">${value}</div>
+        ${delta != null ? `
+          <div class="kpi-delta">
+            <span style="color:${up?C.cyan:C.red}">${up?ICONS.trending:ICONS.trendingDown}</span>
+            <span class="pct num" style="color:${up?C.cyan:C.red}">${up?'+':''}${delta}%</span>
+            <span class="vs">vs mês anterior</span>
+          </div>` : ''}
+      </div>`;
+  }
+
+  function calcDelta(curr, prev, key) {
+    if (!prev || !prev[key] || prev[key] === 0) return null;
+    return Math.round(((curr[key] - prev[key]) / prev[key]) * 100);
+  }
+
+  // ── Render principal ──────────────────────────────────────────────────────
+
+  function render() {
+    const { monthlyMetrics, totalClientes, totalProjetos, totalContratos, todasPropostas } = globalData;
+    const data     = monthlyMetrics[selected];
+    const prevData = selected > 0 ? monthlyMetrics[selected - 1] : null;
+    const ytdValor = monthlyMetrics.slice(0, selected + 1).reduce((s,m) => s + m.valorVendido, 0);
+    const ytdTotal = monthlyMetrics.slice(0, selected + 1).reduce((s,m) => s + m.total, 0);
+
+    const funil = [
+      { label:'Abertas',    value:data.abertas,    color:'#4a5162' },
+      { label:'Negociando', value:data.negociando, color:C.amber   },
+      { label:'Fechadas',   value:data.fechadas,   color:C.cyan    },
+      { label:'Perdidas',   value:data.perdidas,   color:C.red     },
+    ];
+    const funilMax = Math.max(...funil.map(f=>f.value), 1);
+
+    const statusLabels = ['Abertas','Fechadas','Negociando','Perdidas','Pausadas'];
+    const statusValues = [data.abertas, data.fechadas, data.negociando, data.perdidas, data.pausadas];
+    const statusColors = [C.amber, C.cyan, '#4a5162', C.red, C.violet];
+
+    const recentes = todasPropostas
+      .slice()
+      .sort((a,b) => new Date(b.created_at||b.dataOrcamento||0) - new Date(a.created_at||a.dataOrcamento||0))
+      .slice(0, 5);
+
+    root.innerHTML = `
+      <div class="dash-header">
+        <div>
+          <div class="eyebrow">DASHBOARD GERENCIAL — ${ANO} — DADOS REAIS DO BANCO</div>
+          <h1 class="title disp">${MESES_FULL[selected]} <span>/ ${ANO}</span></h1>
+        </div>
+        <div class="ytd">
+          <div>Valor vendido acum. (ano): <b class="num" style="color:${C.cyan}">${fmtBRL(ytdValor)}</b></div>
+          <div>Propostas abertas (ano): <b class="num" style="color:${C.amber}">${ytdTotal}</b></div>
+        </div>
+      </div>
+
+      <div class="scrubber">
+        <button class="scrub-btn" id="prevBtn">${ICONS.chevLeft}</button>
+        <div class="frames">
+          ${MESES.map((m,i) => `
+            <div class="frame ${i===selected?'active':''}" data-i="${i}">
+              <div class="frame-tick"></div>
+              <div class="frame-label num">${m}<span style="font-size:9px;opacity:0.55;display:block;">${monthlyMetrics[i].total||''}</span></div>
+            </div>`).join('')}
+        </div>
+        <button class="scrub-btn" id="nextBtn">${ICONS.chevRight}</button>
+      </div>
+
+      <div class="section-label">${ICONS.box}<span>VISÃO GERAL</span><div class="section-rule"></div></div>
+      <div class="kpi-grid">
+        ${kpi({label:'Total de clientes',  value: totalClientes || '0',        icon:ICONS.building})}
+        ${kpi({label:'Total de projetos',  value: totalProjetos || '0',        icon:ICONS.box})}
+        ${kpi({label:'Total de contratos', value: totalContratos || '0',       icon:ICONS.check, tone:C.cyan})}
+        ${kpi({label:'Total de propostas', value: todasPropostas.length || '0'})}
+      </div>
+
+      <div class="section-label">${ICONS.trending}<span>COMERCIAL — ${MESES_FULL[selected].toUpperCase()}</span><div class="section-rule"></div></div>
+      <div class="kpi-grid">
+        ${kpi({label:'Propostas no mês',     value: data.total       || '0', delta:calcDelta(data,prevData,'total')})}
+        ${kpi({label:'Abertas',              value: data.abertas     || '0', icon:ICONS.clock,  tone:C.muted})}
+        ${kpi({label:'Negociando',           value: data.negociando  || '0', icon:ICONS.layers, tone:C.amber})}
+        ${kpi({label:'Fechadas',             value: data.fechadas    || '0', icon:ICONS.check,  tone:C.cyan,  delta:calcDelta(data,prevData,'fechadas')})}
+        ${kpi({label:'Perdidas',             value: data.perdidas    || '0', icon:ICONS.x,      tone:C.red})}
+        ${kpi({label:'Taxa de conversão',    value: data.taxaConversao + '%',                   tone:C.amber})}
+        ${kpi({label:'Ticket médio',         value: fmtBRL(data.ticketMedio)})}
+        ${kpi({label:'Valor vendido',        value: fmtBRL(data.valorVendido),                  tone:C.cyan, delta:calcDelta(data,prevData,'valorVendido')})}
+        ${kpi({label:'Valor em negociação',  value: fmtBRL(data.valorNegociacao),               tone:C.amber})}
+      </div>
+
+      <div class="section-label">${ICONS.trending}<span>GRÁFICOS</span><div class="section-rule"></div></div>
+
+      <div class="charts-row two">
+        <div class="panel">
+          <div class="panel-title disp">Valor vendido por mês</div>
+          <div class="panel-sub">Propostas fechadas (R$) — ${ANO}</div>
+          <canvas id="barCanvas" height="90"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-title disp">Status das propostas</div>
+          <div class="panel-sub">${MESES_FULL[selected]} — distribuição</div>
+          <div class="servicos-wrap">
+            <canvas id="donutCanvas" style="max-width:45%;"></canvas>
+            <div class="servicos-legend">
+              ${data.total === 0
+                ? '<div style="color:var(--ink-soft,#6B7280);font-size:13px;padding:8px 0;">Nenhuma proposta neste mês</div>'
+                : statusLabels.map((s,i) => statusValues[i] > 0
+                  ? `<div class="servico-row"><span class="servico-dot" style="background:${statusColors[i]}"></span><span class="servico-nome">${s}</span><span class="servico-val num">${statusValues[i]}</span></div>`
+                  : '').join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row three">
+        <div class="panel">
+          <div class="panel-title disp">Propostas por mês</div>
+          <div class="panel-sub">Quantidade total — ${ANO}</div>
+          <canvas id="lineCanvas" height="130"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-title disp">Funil comercial</div>
+          <div class="panel-sub">${MESES_FULL[selected]} — etapas</div>
+          <div style="padding-top:8px;">
+            ${data.total === 0
+              ? '<div style="color:var(--ink-soft,#6B7280);font-size:13px;padding:12px 0;">Nenhuma proposta neste mês.</div>'
+              : funil.filter(f=>f.value>0).map(f => `
+                  <div class="funil-item">
+                    <div class="funil-top"><span class="l">${f.label}</span><span class="v num">${f.value}</span></div>
+                    <div class="funil-bar-bg"><div class="funil-bar-fill" style="width:${(f.value/funilMax)*100}%;background:${f.color}"></div></div>
+                  </div>`).join('')}
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title disp">Top clientes</div>
+          <div class="panel-sub">${MESES_FULL[selected]} — por valor</div>
+          <div style="padding-top:6px;">
+            ${data.topClientes.length === 0
+              ? '<div style="color:var(--ink-soft,#6B7280);font-size:13px;padding:12px 0;">Nenhum dado disponível.</div>'
+              : data.topClientes.map(c => `
+                  <div class="cliente-row">${ICONS.building}<span class="cliente-nome">${c.nome}</span><span class="cliente-val num">${fmtBRL(c.valor)}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      ${recentes.length > 0 ? `
+        <div class="section-label">${ICONS.clock}<span>PROPOSTAS RECENTES</span><div class="section-rule"></div></div>
+        <div class="panel" style="overflow-x:auto;padding:0;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="color:var(--ink-soft,#6B7280);border-bottom:1px solid var(--border,#E5E7EB);">
+                <th style="padding:10px 14px;font-weight:500;text-align:left;">Nº Proposta</th>
+                <th style="padding:10px 14px;font-weight:500;text-align:left;">Cliente</th>
+                <th style="padding:10px 14px;font-weight:500;text-align:left;">Projeto</th>
+                <th style="padding:10px 14px;font-weight:500;text-align:left;">Status</th>
+                <th style="padding:10px 14px;font-weight:500;text-align:right;">Valor R$</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recentes.map(p => {
+                const sc = p.statusProposta==='Fechada' ? C.cyan : p.statusProposta==='Perdida' ? C.red : C.amber;
+                return `<tr style="border-bottom:1px solid var(--border,#E5E7EB);">
+                  <td style="padding:9px 14px;font-family:monospace;">${p.numero||'—'}</td>
+                  <td style="padding:9px 14px;">${p.cliente||'—'}</td>
+                  <td style="padding:9px 14px;">${p.projeto||'—'}</td>
+                  <td style="padding:9px 14px;"><span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${sc}22;color:${sc}">${p.statusProposta}</span></td>
+                  <td style="padding:9px 14px;text-align:right;font-family:monospace;">${fmtBRLFull(p.valorReais)}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>` : ''}
+    `;
+
+    // scrubber
+    root.querySelector('#prevBtn').onclick = () => { selected = Math.max(0, selected-1); render(); };
+    root.querySelector('#nextBtn').onclick = () => { selected = Math.min(11, selected+1); render(); };
+    root.querySelectorAll('.frame').forEach(el => {
+      el.onclick = () => { selected = parseInt(el.dataset.i, 10); render(); };
     });
 
-    function fmtBRL(v){
-      return v>=1000 ? `R$ ${(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:0})}k` : `R$ ${v.toLocaleString('pt-BR')}`;
-    }
-    function fmtBRLFull(v){ return `R$ ${v.toLocaleString('pt-BR',{maximumFractionDigits:0})}`; }
+    // gráficos
+    const rv = ++chartRenderVersion;
+    setTimeout(() => {
+      if (rv !== chartRenderVersion) return;
+      if (barChart)   { barChart.destroy();   barChart   = null; }
+      if (lineChart)  { lineChart.destroy();  lineChart  = null; }
+      if (donutChart) { donutChart.destroy(); donutChart = null; }
 
-    const C = {
-      void:'#F8FAFC', panel:'#FFFFFF', panelHi:'#F9FAFB',
-      line:'#E5E7EB', lineSoft:'#F3F4F6',
-      text:'#111827', muted:'#6B7280', mutedDim:'#9CA3AF',
-      amber:'#F59E0B', amberDim:'#FEF3C7',
-      cyan:'#10B981', violet:'#7C3AED', red:'#EF4444',
-    };
+      if (typeof window.Chart === 'undefined') {
+        console.warn('[Dashboard] Chart.js não carregado');
+        return;
+      }
 
-    const ICONS = {
-      trending: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
-      trendingDown: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
-      clock: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-      check: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-      x: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-      layers: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-      dollar: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
-      box: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
-      alert: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-      building: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><line x1="10" y1="6" x2="10" y2="6"/><line x1="14" y1="6" x2="14" y2="6"/><line x1="10" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="14" y2="10"/><line x1="10" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="14" y2="14"/></svg>',
-      chevLeft: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
-      chevRight: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
-    };
+      const barCanvas   = root.querySelector('#barCanvas');
+      const lineCanvas  = root.querySelector('#lineCanvas');
+      const donutCanvas = root.querySelector('#donutCanvas');
 
-    let selected = 6; // Julho
-    let barChart, lineChart, donutChart;
-    let chartRenderVersion = 0;
-    const root = document.getElementById('dash-root');
-
-    function kpi({label, value, delta, icon, tone, id}){
-      const up = delta!=null && delta>=0;
-      return `
-        <div class="kpi">
-          <div class="kpi-top">${icon?`<span style="color:${tone||C.mutedDim}">${icon}</span>`:''}<span class="kpi-label">${label}</span></div>
-          <div class="kpi-value num" style="color:${tone||C.text}">${value}</div>
-          ${delta!=null?`
-            <div class="kpi-delta">
-              <span style="color:${up?C.cyan:C.red}">${up?ICONS.trending:ICONS.trendingDown}</span>
-              <span class="pct num" style="color:${up?C.cyan:C.red}">${up?'+':''}${delta}%</span>
-              <span class="vs">vs mês anterior</span>
-            </div>`:''}
-        </div>`;
-    }
-
-    function delta(curr, prev, key){
-      if(!prev) return null;
-      const c=curr[key], p=prev[key];
-      if(p===0) return null;
-      return Math.round(((c-p)/p)*100);
-    }
-
-    function render(){
-      const data = monthlyData[selected];
-      const prevData = monthlyData[selected-1];
-      const ytdSlice = monthlyData.slice(0, selected+1);
-      const ytdReceita = ytdSlice.reduce((s,m)=>s+m.receita,0);
-      const ytdVendido = ytdSlice.reduce((s,m)=>s+m.valorVendido,0);
-
-      const funil = [
-        {label:'Abertas', value:data.abertas, color:'#4a5162'},
-        {label:'Negociando', value:data.negociando, color:C.amber},
-        {label:'Fechadas', value:data.fechadas, color:C.cyan},
-        {label:'Perdidas', value:data.perdidas, color:C.red},
-      ];
-      const funilMax = Math.max(...funil.map(f=>f.value),1);
-
-      root.innerHTML = `
-        <div class="dash-header">
-          <div>
-            <div class="eyebrow">DASHBOARD GERENCIAL — VISÃO MENSAL</div>
-            <h1 class="title disp">${data.mesFull} <span>/ 2026</span></h1>
-          </div>
-          <div class="ytd">
-            <div>Receita acumulada (ano): <b class="num" style="color:${C.cyan}">${fmtBRL(ytdReceita)}</b></div>
-            <div>Vendido acumulado (ano): <b class="num" style="color:${C.amber}">${fmtBRL(ytdVendido)}</b></div>
-          </div>
-        </div>
-
-        <div class="scrubber">
-          <button class="scrub-btn" id="prevBtn">${ICONS.chevLeft}</button>
-          <div class="frames">
-            ${MESES.map((m,i)=>`
-              <div class="frame ${i===selected?'active':''}" data-i="${i}">
-                <div class="frame-tick"></div>
-                <div class="frame-label num">${m}</div>
-              </div>`).join('')}
-          </div>
-          <button class="scrub-btn" id="nextBtn">${ICONS.chevRight}</button>
-        </div>
-
-        <div class="section-label">${ICONS.trending}<span>COMERCIAL</span><div class="section-rule"></div></div>
-        <div class="kpi-grid">
-          ${kpi({label:'Total de propostas', value:data.total, delta:delta(data,prevData,'total')})}
-          ${kpi({label:'Abertas', value:data.abertas, icon:ICONS.clock, tone:C.muted})}
-          ${kpi({label:'Negociando', value:data.negociando, icon:ICONS.layers, tone:C.amber})}
-          ${kpi({label:'Fechadas', value:data.fechadas, icon:ICONS.check, tone:C.cyan, delta:delta(data,prevData,'fechadas')})}
-          ${kpi({label:'Perdidas', value:data.perdidas, icon:ICONS.x, tone:C.red})}
-          ${kpi({label:'Taxa de conversão', value:data.taxaConversao+'%', tone:C.amber})}
-          ${kpi({label:'Ticket médio', value:fmtBRL(data.ticketMedio)})}
-          ${kpi({label:'Valor vendido', value:fmtBRL(data.valorVendido), tone:C.cyan, delta:delta(data,prevData,'valorVendido')})}
-          ${kpi({label:'Valor em negociação', value:fmtBRL(data.valorNegociacao), tone:C.amber})}
-        </div>
-
-        <div class="section-label">${ICONS.dollar}<span>FINANCEIRO</span><div class="section-rule"></div></div>
-        <div class="kpi-grid">
-          ${kpi({label:'Receita do mês', value:fmtBRL(data.receita), tone:C.cyan, delta:delta(data,prevData,'receita')})}
-          ${kpi({label:'Receita acumulada (ano)', value:fmtBRL(ytdReceita)})}
-          ${kpi({label:'Parcelas pagas', value:data.parcelasPagas, icon:ICONS.check, tone:C.cyan})}
-          ${kpi({label:'Parcelas pendentes', value:data.parcelasPendentes, icon:ICONS.clock, tone:C.amber})}
-          ${kpi({label:'Parcelas vencidas', value:data.parcelasVencidas, icon:ICONS.alert, tone:C.red})}
-        </div>
-
-        <div class="section-label">${ICONS.box}<span>OPERACIONAL</span><div class="section-rule"></div></div>
-        <div class="kpi-grid">
-          ${kpi({label:'Projetos ativos', value:data.projetosAtivos})}
-          ${kpi({label:'Aguardando contrato', value:data.aguardandoContrato, tone:C.amber})}
-          ${kpi({label:'Em produção', value:data.emProducao, tone:C.violet})}
-          ${kpi({label:'Concluídos', value:data.concluidos, tone:C.cyan})}
-        </div>
-
-        <div class="section-label">${ICONS.trending}<span>GRÁFICOS</span><div class="section-rule"></div></div>
-
-        <div class="charts-row two">
-          <div class="panel">
-            <div class="panel-title disp">Vendas por mês</div>
-            <div class="panel-sub">Valor vendido (R$) — mês selecionado em destaque</div>
-            <canvas id="barCanvas" height="90"></canvas>
-          </div>
-          <div class="panel">
-            <div class="panel-title disp">Serviços mais vendidos</div>
-            <div class="panel-sub">${data.mesFull} — participação (%)</div>
-            <div class="servicos-wrap">
-              <canvas id="donutCanvas" style="max-width:45%;"></canvas>
-              <div class="servicos-legend">
-                ${data.servicos.map((s,i)=>{
-                  const color=[C.amber,C.cyan,C.violet,'#8b909c'][i];
-                  return `<div class="servico-row"><span class="servico-dot" style="background:${color}"></span><span class="servico-nome">${s.nome}</span><span class="servico-val num">${s.valor}%</span></div>`;
-                }).join('')}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="charts-row three">
-          <div class="panel">
-            <div class="panel-title disp">Evolução do faturamento</div>
-            <div class="panel-sub">Receita mensal (R$)</div>
-            <canvas id="lineCanvas" height="130"></canvas>
-          </div>
-          <div class="panel">
-            <div class="panel-title disp">Conversão comercial</div>
-            <div class="panel-sub">${data.mesFull} — funil de propostas</div>
-            <div style="padding-top:8px;">
-              ${funil.map(f=>`
-                <div class="funil-item">
-                  <div class="funil-top"><span class="l">${f.label}</span><span class="v num">${f.value}</span></div>
-                  <div class="funil-bar-bg"><div class="funil-bar-fill" style="width:${(f.value/funilMax)*100}%; background:${f.color}"></div></div>
-                </div>`).join('')}
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-title disp">Vendas por cliente</div>
-            <div class="panel-sub">${data.mesFull} — top clientes</div>
-            <div style="padding-top:6px;">
-              ${data.topClientes.map(c=>`
-                <div class="cliente-row">${ICONS.building}<span class="cliente-nome">${c.nome}</span><span class="cliente-val num">${fmtBRL(c.valor)}</span></div>`).join('')}
-            </div>
-          </div>
-        </div>
-      `;
-
-      // ---- wire up scrubber interactions ----
-      root.querySelector('#prevBtn').onclick = () => { selected = Math.max(0, selected-1); render(); };
-      root.querySelector('#nextBtn').onclick = () => { selected = Math.min(11, selected+1); render(); };
-      root.querySelectorAll('.frame').forEach(el=>{
-        el.onclick = () => { selected = parseInt(el.dataset.i,10); render(); };
-      });
-
-      // ---- charts ----
-      const renderVersion = ++chartRenderVersion;
-      setTimeout(() => {
-        if(renderVersion !== chartRenderVersion) return;
-
-        if(barChart){ barChart.destroy(); barChart = null; }
-        if(lineChart){ lineChart.destroy(); lineChart = null; }
-        if(donutChart){ donutChart.destroy(); donutChart = null; }
-
-        const barCanvas = root.querySelector('#barCanvas');
-        const lineCanvas = root.querySelector('#lineCanvas');
-        const donutCanvas = root.querySelector('#donutCanvas');
-
-        if(!barCanvas || !lineCanvas || !donutCanvas || typeof window.Chart === 'undefined') return;
-
-        barCanvas.style.display = 'block';
-        lineCanvas.style.display = 'block';
-        donutCanvas.style.display = 'block';
-        barCanvas.style.width = '100%';
-        barCanvas.style.height = '220px';
-        lineCanvas.style.width = '100%';
-        lineCanvas.style.height = '180px';
-        donutCanvas.style.width = '100%';
-        donutCanvas.style.height = '220px';
-
-        const barCtx = barCanvas.getContext('2d');
-        if(!barCtx) return;
-        barChart = new window.Chart(barCtx, {
+      if (barCanvas) {
+        barCanvas.style.cssText = 'width:100%;height:220px;';
+        barChart = new window.Chart(barCanvas.getContext('2d'), {
           type: 'bar',
           data: {
             labels: MESES,
             datasets: [{
-              data: monthlyData.map(m=>m.valorVendido),
-              backgroundColor: monthlyData.map((m,i)=> i===selected ? C.amber : '#333a48'),
+              data: monthlyMetrics.map(m => m.valorVendido),
+              backgroundColor: monthlyMetrics.map((_,i) => i===selected ? C.amber : '#333a48'),
               borderRadius: 4,
               maxBarThickness: 34,
             }]
           },
           options: {
-            responsive:true,
-            maintainAspectRatio:false,
-            plugins:{ legend:{display:false}, tooltip:{
-              backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text,
-              callbacks:{ label: ctx => fmtBRLFull(ctx.parsed.y) }
-            }},
-            scales:{
-              x:{ grid:{display:false}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono', size:11}} },
-              y:{ grid:{color:C.lineSoft}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono', size:10}, callback:v=>fmtBRL(v)} }
+            responsive:true, maintainAspectRatio:false,
+            plugins: { legend:{display:false}, tooltip:{ backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text, callbacks:{ label: ctx => fmtBRLFull(ctx.parsed.y) } } },
+            scales: {
+              x: { grid:{display:false}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:11}} },
+              y: { grid:{color:C.lineSoft}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:10}, callback:v => fmtBRL(v)} }
             },
-            onClick:(evt,elements)=>{ if(elements.length){ selected=elements[0].index; render(); } }
+            onClick: (_,els) => { if (els.length) { selected = els[0].index; render(); } }
           }
         });
+      }
 
-        const lineCtx = lineCanvas.getContext('2d');
-        lineChart = new window.Chart(lineCtx, {
+      if (lineCanvas) {
+        lineCanvas.style.cssText = 'width:100%;height:180px;';
+        lineChart = new window.Chart(lineCanvas.getContext('2d'), {
           type: 'line',
           data: {
             labels: MESES,
             datasets: [{
-              data: monthlyData.map(m=>m.receita),
-              borderColor: C.cyan, backgroundColor: C.cyan+'22',
-              fill:true, tension:0.35, pointRadius:2.5, pointBackgroundColor:C.cyan,
+              data: monthlyMetrics.map(m => m.total),
+              borderColor: C.cyan, backgroundColor: C.cyan + '22',
+              fill:true, tension:0.35, pointRadius:3, pointBackgroundColor:C.cyan,
             }]
           },
-          options:{
-            responsive:true,
-            maintainAspectRatio:false,
-            plugins:{ legend:{display:false}, tooltip:{
-              backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text,
-              callbacks:{ label: ctx => fmtBRLFull(ctx.parsed.y) }
-            }},
-            scales:{
-              x:{ grid:{display:false}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono', size:10} } },
-              y:{ grid:{color:C.lineSoft}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono', size:10}, callback:v=>fmtBRL(v)} }
+          options: {
+            responsive:true, maintainAspectRatio:false,
+            plugins: { legend:{display:false}, tooltip:{ backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text } },
+            scales: {
+              x: { grid:{display:false}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:10}} },
+              y: { grid:{color:C.lineSoft}, ticks:{color:C.mutedDim, font:{family:'JetBrains Mono',size:10}} }
             }
           }
         });
+      }
 
-        const donutCtx = donutCanvas.getContext('2d');
-        donutChart = new window.Chart(donutCtx, {
-          type:'doughnut',
-          data:{
-            labels: data.servicos.map(s=>s.nome),
-            datasets:[{
-              data: data.servicos.map(s=>s.valor),
-              backgroundColor:[C.amber, C.cyan, C.violet, '#5c6270'],
-              borderWidth:0,
-            }]
-          },
-          options:{
-            responsive:true,
-            maintainAspectRatio:false,
-            cutout:'62%',
-            plugins:{ legend:{display:false}, tooltip:{
-              backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text,
-            }}
+      const donutData   = statusValues.filter(v => v > 0);
+      const donutLabels = statusLabels.filter((_,i) => statusValues[i] > 0);
+      const donutColors = statusColors.filter((_,i) => statusValues[i] > 0);
+      if (donutCanvas && donutData.length > 0) {
+        donutCanvas.style.cssText = 'width:100%;height:220px;';
+        donutChart = new window.Chart(donutCanvas.getContext('2d'), {
+          type: 'doughnut',
+          data: { labels:donutLabels, datasets:[{ data:donutData, backgroundColor:donutColors, borderWidth:0 }] },
+          options: {
+            responsive:true, maintainAspectRatio:false, cutout:'62%',
+            plugins: { legend:{display:false}, tooltip:{ backgroundColor:C.panelHi, borderColor:C.line, borderWidth:1, titleColor:C.text, bodyColor:C.text } }
           }
         });
-      }, 40);
-    }
+      }
+    }, 40);
+  }
 
+  // ── Carregamento do Supabase ───────────────────────────────────────────────
+
+  async function carregarDashboard() {
+    root.innerHTML = `
+      <div style="padding:60px;text-align:center;color:var(--ink-soft,#6B7280);">
+        <div style="font-size:18px;margin-bottom:8px;">Carregando dashboard...</div>
+        <div style="font-size:13px;opacity:0.7;">Buscando dados no Supabase</div>
+      </div>`;
+
+    try {
+      console.log('[Dashboard] Iniciando carregamento de dados...');
+
+      const supabase = window.supabaseClient;
+      if (!supabase) {
+        throw new Error('window.supabaseClient não disponível. Verifique o carregamento do supabase.js');
+      }
+
+      const [propostasResp, clientesResp, projetosResp, contratosResp] = await Promise.all([
+        supabase.from('proposals').select('*'),
+        supabase.from('clients').select('*'),
+        supabase.from('projects').select('*'),
+        supabase.from('contracts').select('*'),
+      ]);
+
+      const erro = propostasResp.error || clientesResp.error || projetosResp.error || contratosResp.error;
+      if (erro) {
+        console.error('[Dashboard] Erro ao carregar dados:', erro);
+        root.innerHTML = `
+          <div style="padding:40px;text-align:center;color:#EF4444;">
+            <div style="font-size:18px;margin-bottom:8px;">Erro ao carregar dashboard</div>
+            <div style="font-size:13px;margin-bottom:16px;">${erro.message}</div>
+            <button onclick="window.carregarDashboard()" style="padding:8px 20px;cursor:pointer;border:1px solid #EF4444;border-radius:6px;background:transparent;color:#EF4444;">Tentar novamente</button>
+          </div>`;
+        alert('Erro ao carregar dashboard: ' + erro.message);
+        return;
+      }
+
+      const todasPropostas = (propostasResp.data || []).map(normalizarProposta);
+      const clientes       = clientesResp.data  || [];
+      const projetos       = projetosResp.data  || [];
+      const contratos      = contratosResp.data || [];
+
+      console.log('[Dashboard] ✅ Dados carregados com sucesso:', {
+        propostas:  todasPropostas,
+        clientes:   clientes,
+        projetos:   projetos,
+        contratos:  contratos,
+      });
+
+      // Agrupar propostas por mês do ANO atual
+      const monthlyMetrics = MESES.map((_,i) => {
+        const propostasMes = todasPropostas.filter(p => getMesIndex(p) === i);
+        return calcularMetricas(propostasMes);
+      });
+
+      console.log('[Dashboard] Métricas mensais:', monthlyMetrics);
+
+      globalData = { monthlyMetrics, todasPropostas, totalClientes:clientes.length, totalProjetos:projetos.length, totalContratos:contratos.length };
+
+      atualizarDashboard({ propostas:todasPropostas, clientes, projetos, contratos });
+
+    } catch (error) {
+      console.error('[Dashboard] Erro inesperado:', error);
+      root.innerHTML = `
+        <div style="padding:40px;text-align:center;color:#EF4444;">
+          <div style="font-size:18px;margin-bottom:8px;">Erro inesperado no dashboard</div>
+          <div style="font-size:13px;">${error.message}</div>
+        </div>`;
+      alert('Erro inesperado no dashboard: ' + error.message);
+    }
+  }
+
+  function atualizarDashboard({ propostas, clientes, projetos, contratos }) {
+    console.log('[Dashboard] atualizarDashboard() chamada com:', { propostas:propostas.length, clientes:clientes.length, projetos:projetos.length, contratos:contratos.length });
     render();
-  })();
+  }
+
+  window.carregarDashboard = carregarDashboard;
+  document.addEventListener('DOMContentLoaded', carregarDashboard);
   </script>
 </body>
 </html>
