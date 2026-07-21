@@ -83,20 +83,26 @@
       </div>
     </main>
   </div>
-  <script>
-  document.getElementById('btnSaveProj').onclick = function(){
+  <script type="module">
+  import { db, dbMessage } from './supabase.js';
+
+  document.getElementById('btnSaveProj').onclick = async function(){
     const name = document.getElementById('fldProjName').value.trim();
     const serv = document.getElementById('fldProjServ').value.trim();
     const propNum = document.getElementById('fldProjPropNum').value.trim();
     if(!name){ alert('Nome do projeto é obrigatório'); return; }
-    const key = 'crm_projects';
-    let list = [];
-    try{ list = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ list = []; }
-    list.unshift({id: Date.now(), name, serv, propostaNum: propNum});
-    localStorage.setItem(key, JSON.stringify(list));
-    alert('Projeto cadastrado');
-    try{ window.opener && window.opener.postMessage({type:'crm:project_added', project:{name, propostaNum:propNum}}, '*'); }catch(e){}
-    history.back();
+
+    try {
+      await db.insertProject({
+        name,
+        servicos: serv,
+        propostaNum: propNum
+      });
+      alert('Projeto cadastrado');
+      history.back();
+    } catch (error) {
+      dbMessage('Falha ao salvar projeto', 'error');
+    }
   };
   </script>
 </body>

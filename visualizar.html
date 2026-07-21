@@ -88,5 +88,67 @@
       </div>
     </main>
   </div>
+  <script type="module">
+  import { db, dbMessage } from './supabase.js';
+
+  function getQueryParams() {
+    return Object.fromEntries(new URLSearchParams(window.location.search));
+  }
+
+  async function renderRecord() {
+    const params = getQueryParams();
+    const content = document.querySelector('.page-body');
+    if (!params.type || !params.id) {
+      content.innerHTML = '<div class="empty-state">Registro não especificado. Use o botão Voltar para retornar.</div>';
+      return;
+    }
+
+    try {
+      if (params.type === 'client') {
+        const client = await db.fetchClientById(Number(params.id));
+        content.innerHTML = `
+          <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
+            <div class="page-card" style="padding:18px;">
+              <h3 style="margin-top:0;">Empresa</h3>
+              <p><strong>Cliente:</strong> ${client.name || ''}</p>
+              <p><strong>Razão Social:</strong> ${client.razaoSocial || ''}</p>
+              <p><strong>CNPJ:</strong> ${client.cnpj || ''}</p>
+              <p><strong>Endereço:</strong> ${client.endereco || ''}</p>
+            </div>
+            <div class="page-card" style="padding:18px;">
+              <h3 style="margin-top:0;">Dados do Projeto</h3>
+              <p><strong>Projeto:</strong> ${client.projeto || ''}</p>
+              <p><strong>Serviços:</strong> ${client.servicos || ''}</p>
+              <p><strong>Nº da Proposta:</strong> ${client.propostaNum || client.proposta_num || ''}</p>
+            </div>
+          </div>`;
+      } else if (params.type === 'project') {
+        const project = await db.fetchProjectById(Number(params.id));
+        content.innerHTML = `
+          <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
+            <div class="page-card" style="padding:18px;">
+              <h3 style="margin-top:0;">Projeto</h3>
+              <p><strong>Nome do Projeto:</strong> ${project.name || ''}</p>
+              <p><strong>Serviços:</strong> ${project.servicos || ''}</p>
+              <p><strong>Nº da Proposta:</strong> ${project.propostaNum || project.proposta_num || ''}</p>
+            </div>
+            <div class="page-card" style="padding:18px;">
+              <h3 style="margin-top:0;">Detalhes</h3>
+              <p><strong>Cliente:</strong> ${project.cliente || ''}</p>
+              <p><strong>Responsável:</strong> ${project.responsavel || ''}</p>
+              <p><strong>Status:</strong> ${project.status || ''}</p>
+            </div>
+          </div>`;
+      } else {
+        content.innerHTML = '<div class="empty-state">Tipo de registro inválido.</div>';
+      }
+    } catch (error) {
+      dbMessage('Erro ao carregar registro', 'error');
+      content.innerHTML = '<div class="empty-state">Erro ao carregar registro.</div>';
+    }
+  }
+
+  renderRecord();
+  </script>
 </body>
 </html>

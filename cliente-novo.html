@@ -41,9 +41,9 @@
                   <h2 class="page-title" style="font-size:18px; margin:0;">Projeto</h2>
                 </div>
                 <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
-                  <div class="field"><label>Nome do Projeto</label><input type="text" placeholder="Nome do projeto"></div>
-                  <div class="field"><label>Serviços</label><input type="text" placeholder="Serviços incluídos"></div>
-                  <div class="field"><label>Nº da Proposta</label><input type="text" placeholder="Nº da proposta"></div>
+                  <div class="field"><label>Nome do Projeto</label><input id="fldCliProjectName" type="text" placeholder="Nome do projeto"></div>
+                  <div class="field"><label>Serviços</label><input id="fldCliProjectServ" type="text" placeholder="Serviços incluídos"></div>
+                  <div class="field"><label>Nº da Proposta</label><input id="fldCliProjectPropNum" type="text" placeholder="Nº da proposta"></div>
                 </div>
               </div>
             </div>
@@ -53,21 +53,28 @@
       </div>
     </main>
   </div>
-  <script>
-  document.getElementById('btnSaveClient').onclick = function(){
+  <script type="module">
+  import { db, dbMessage } from './supabase.js';
+
+  document.getElementById('btnSaveClient').onclick = async function(){
     const name = document.getElementById('fldCliName').value.trim();
     const razao = document.getElementById('fldCliRazao').value.trim();
     const cnpj = document.getElementById('fldCliCNPJ').value.trim();
     const endereco = document.getElementById('fldCliEndereco').value.trim();
     if(!name){ alert('Nome do cliente é obrigatório'); return; }
-    const key = 'crm_clients';
-    let list = [];
-    try{ list = JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ list = []; }
-    list.unshift({id: Date.now(), name, razao, cnpj, endereco});
-    localStorage.setItem(key, JSON.stringify(list));
-    alert('Cliente cadastrado');
-    try{ window.opener && window.opener.postMessage({type:'crm:client_added', client:{name, cnpj}}, '*'); }catch(e){}
-    history.back();
+
+    try {
+      await db.insertClient({
+        name,
+        razaoSocial: razao,
+        cnpj,
+        endereco
+      });
+      alert('Cliente cadastrado');
+      history.back();
+    } catch (error) {
+      dbMessage('Falha ao salvar cliente', 'error');
+    }
   };
   </script>
 </body>

@@ -57,26 +57,7 @@
                     <th>Ações</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    <td>Residencial Vista Verde</td>
-                    <td>Construtora Horizonte</td>
-                    <td>João Silva</td>
-                    <td>R$ 18.000</td>
-                    <td>Boleto</td>
-                    <td>Em Produção</td>
-                    <td><div style="display:flex;gap:8px;"><a class="btn-secondary" href="visualizar.html">Visualizar</a><a class="btn" href="projeto-novo.html">Editar</a><button class="btn-secondary">Excluir</button></div></td>
-                  </tr>
-                  <tr>
-                    <td>Tour Virtual Shopping</td>
-                    <td>Grupo Andrade</td>
-                    <td>Maria Souza</td>
-                    <td>R$ 25.000</td>
-                    <td>Transferência</td>
-                    <td>Concluído</td>
-                    <td><div style="display:flex;gap:8px;"><a class="btn-secondary" href="visualizar.html">Visualizar</a><a class="btn" href="projeto-novo.html">Editar</a><button class="btn-secondary">Excluir</button></div></td>
-                  </tr>
-                </tbody>
+                <tbody id="projectTableBody"></tbody>
               </table>
             </div>
           </div>
@@ -84,5 +65,53 @@
       </div>
     </main>
   </div>
+  <script type="module">
+  import { db, dbMessage } from './supabase.js';
+
+  async function renderProjects() {
+    try {
+      const projects = await db.fetchProjects();
+      const tbody = document.getElementById('projectTableBody');
+      tbody.innerHTML = '';
+      if (!projects || projects.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Nenhum projeto encontrado.</div></td></tr>';
+        return;
+      }
+      projects.forEach(project => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${project.name || ''}</td>
+          <td>${project.cliente || ''}</td>
+          <td>${project.responsavel || ''}</td>
+          <td>${project.valorContrato ? 'R$ ' + Number(project.valorContrato).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''}</td>
+          <td>${project.formaPagamento || ''}</td>
+          <td>${project.status || ''}</td>
+          <td>
+            <div style="display:flex;gap:8px;">
+              <a class="btn-secondary" href="visualizar.html?type=project&id=${project.id}">Visualizar</a>
+              <a class="btn" href="projeto-novo.html">Editar</a>
+              <button class="btn-secondary" type="button" data-id="${project.id}">Excluir</button>
+            </div>
+          </td>
+        `;
+        const deleteButton = tr.querySelector('button');
+        deleteButton.onclick = async () => {
+          if (!confirm('Excluir projeto?')) return;
+          try {
+            await db.deleteProject(project.id);
+            renderProjects();
+          } catch (error) {
+            dbMessage('Falha ao excluir projeto', 'error');
+          }
+        };
+        tbody.appendChild(tr);
+      });
+    } catch (error) {
+      dbMessage('Erro ao carregar projetos', 'error');
+    }
+  }
+
+  renderProjects();
+  </script>
 </body>
 </html>

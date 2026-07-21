@@ -125,6 +125,36 @@ textarea{min-height:120px; resize:vertical;}
 .dashboard-main .section-rule{background:var(--border);} 
 .dashboard-main .funil-bar-bg{background:var(--surface-alt);} 
 
+.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:24px; z-index:1000;}
+.modal.open{display:flex;}
+.modal-backdrop{position:absolute; inset:0; background:rgba(15,23,42,0.45); backdrop-filter:blur(1px);}
+.modal-panel{position:relative; width:clamp(900px,95vw,1200px); max-width:100%; max-height:min(100vh, 100%); background:var(--surface); border-radius:24px; box-shadow:0 24px 80px rgba(15,23,42,0.14); overflow:hidden; display:flex; flex-direction:column; min-height:80vh;}
+.modal-header{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:24px 28px; border-bottom:1px solid var(--border);}
+.modal-header h3{margin:0; font-size:24px; font-weight:700;}
+.modal-header button{width:36px; height:36px; border:none; background:var(--surface-alt); color:var(--text); border-radius:12px; cursor:pointer; font-size:16px;}
+.modal-body{padding:24px 28px; overflow:auto; max-height:calc(100vh - 170px);}
+.modal-footer{display:flex; justify-content:flex-end; gap:12px; padding:20px 28px 24px; border-top:1px solid var(--border); background:var(--surface);}
+.proposal-grid{display:grid; grid-template-columns:1.05fr .95fr; gap:16px;}
+.proposal-column{display:flex; flex-direction:column; gap:16px;}
+.field{display:flex; flex-direction:column; gap:10px;}
+.field label{display:block; font-size:13px; font-weight:700; color:var(--text); line-height:1.4;}
+.field input, .field textarea, .field select{min-height:44px;}
+.field textarea{min-height:130px;}
+.field-observations{grid-column:1 / -1;}
+.search-results{border:1px solid var(--border); border-radius:12px; background:var(--surface-alt); margin-top:6px; max-height:220px; overflow:auto;}
+.search-results .no-result, .search-results .result-item{padding:10px 12px; font-size:13px; color:var(--text);}
+.search-results .result-item{cursor:pointer;}
+.search-results .result-item:hover{background:rgba(37,99,235,0.08);}
+.search-results .no-result button{border:none; background:transparent; color:var(--accent); font-weight:700; cursor:pointer; padding:0; margin-top:8px;}
+@media (max-width:1060px){
+  .proposal-grid{grid-template-columns:1fr;}
+}
+@media (max-width:720px){
+  .modal-panel{border-radius:18px; min-height:auto; max-height:calc(100vh - 40px);}
+  .modal-body{padding:18px;}
+  .modal-header, .modal-footer{padding:18px;}
+}
+
 @media (max-width:900px){
   .form-grid{grid-template-columns:1fr;}
   .dashboard-main, .page-content{padding:18px;}

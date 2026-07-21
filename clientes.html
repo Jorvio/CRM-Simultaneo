@@ -46,41 +46,58 @@
                       <th>Ações</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    <tr>
-                      <td>João Silva</td>
-                      <td>Residencial Vista Verde</td>
-                      <td>Renderização 3D</td>
-                      <td>PRP-0231</td>
-                      <td>Silva Engenharia</td>
-                      <td>12.345.678/0001-99</td>
-                      <td>
-                        <div style="display:flex;gap:8px;">
-                          <a class="btn-secondary" href="visualizar.html">Visualizar</a>
-                          <a class="btn" href="cliente-novo.html">Editar</a>
-                          <button class="btn-secondary">Excluir</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>Maria Souza</td>
-                      <td>Tour Virtual Shopping</td>
-                      <td>Tour Virtual</td>
-                      <td>PRP-0235</td>
-                      <td>Construtora Horizonte</td>
-                      <td>98.765.432/0001-11</td>
-                      <td>
-                        <div style="display:flex;gap:8px;">
-                          <a class="btn-secondary" href="visualizar.html">Visualizar</a>
-                          <a class="btn" href="cliente-novo.html">Editar</a>
-                          <button class="btn-secondary">Excluir</button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
+                  <tbody id="clientTableBody"></tbody>
                 </table>
               </div>
           </div>
+          <script type="module">
+          import { db, dbMessage } from './supabase.js';
+
+          async function renderClients() {
+            try {
+              const clients = await db.fetchClients();
+              const tbody = document.getElementById('clientTableBody');
+              tbody.innerHTML = '';
+              if (!clients || clients.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Nenhum cliente cadastrado.</div></td></tr>';
+                return;
+              }
+              clients.forEach(client => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td>${client.name || ''}</td>
+                  <td>${client.projeto || ''}</td>
+                  <td>${client.servico || ''}</td>
+                  <td>${client.propostaNum || client.proposta_num || ''}</td>
+                  <td>${client.razaoSocial || ''}</td>
+                  <td>${client.cnpj || ''}</td>
+                  <td>
+                    <div style="display:flex;gap:8px;">
+                      <a class="btn-secondary" href="visualizar.html?type=client&id=${client.id}">Visualizar</a>
+                      <a class="btn" href="cliente-novo.html">Editar</a>
+                      <button class="btn-secondary" type="button" data-id="${client.id}">Excluir</button>
+                    </div>
+                  </td>
+                `;
+                const deleteButton = tr.querySelector('button');
+                deleteButton.onclick = async () => {
+                  if (!confirm('Excluir cliente?')) return;
+                  try {
+                    await db.deleteClient(client.id);
+                    renderClients();
+                  } catch (error) {
+                    dbMessage('Falha ao excluir cliente', 'error');
+                  }
+                };
+                tbody.appendChild(tr);
+              });
+            } catch (error) {
+              dbMessage('Erro ao carregar clientes', 'error');
+            }
+          }
+
+          renderClients();
+          </script>
         </div>
       </div>
     </main>

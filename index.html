@@ -98,7 +98,8 @@
 
   <div class="toast" id="toast"></div>
 
-  <script>
+  <script type="module">
+  import { db, dbMessage } from './supabase.js';
   const columns = [
     {key:'numero', label:'Nº Proposta', type:'text', width:110},
     {key:'cliente', label:'Cliente', type:'link-client', width:150},
@@ -118,7 +119,7 @@
   const statusPropostaOptions = ['Aberta','Negociando','Fechada','Perdida','Pausada'];
   const statusProjetoOptions = ['—','Aguardando dados para contrato','Contrato em elaboração','Aguardando assinatura','Contrato assinado','Em produção','Projeto em andamento','Entrega parcial','Aprovação','Cobrança enviada','Projeto finalizado'];
 
-  let data = [
+  const sampleData = [
     {id:1, numero:'PRP-0231', cliente:'Construtora Aurora', projeto:'Shopping Curitiba', contato:'Marcos Lima', pontoContato:'Diretoria', dataOrcamento:'2026-05-02', dataFechamento:'2026-06-10', valorExterior:4200, valorReais:22800, statusProposta:'Fechada', statusProjeto:'Em produção', obs:'Cliente pediu revisão de fachada noturna'},
     {id:2, numero:'PRP-0232', cliente:'Grupo Vitalle', projeto:'Residencial Bosque Verde', contato:'Ana Beatriz', pontoContato:'Marketing', dataOrcamento:'2026-05-14', dataFechamento:'', valorExterior:3100, valorReais:16850, statusProposta:'Negociando', statusProjeto:'—', obs:''},
     {id:3, numero:'PRP-0233', cliente:'Construtora Aurora', projeto:'Edifício Horizonte', contato:'Marcos Lima', pontoContato:'Diretoria', dataOrcamento:'2026-04-20', dataFechamento:'2026-05-30', valorExterior:5600, valorReais:30450, statusProposta:'Fechada', statusProjeto:'Aguardando assinatura', obs:'Tour virtual incluso'},
@@ -129,6 +130,7 @@
     {id:8, numero:'PRP-0238', cliente:'Nova Era Incorporadora', projeto:'Parque das Águas', contato:'Camila Rocha', pontoContato:'Diretoria', dataOrcamento:'2026-07-02', dataFechamento:'2026-07-15', valorExterior:6100, valorReais:33150, statusProposta:'Fechada', statusProjeto:'Aguardando dados para contrato', obs:''},
   ];
 
+  let data = sampleData.slice();
   let filterText = '';
   let activeStatuses = new Set();
   let sortKey = null;
@@ -312,8 +314,12 @@
       const input = td.querySelector('input');
       input.focus();
       input.select();
-      const commit = () => {
+      const commit = async () => {
         row[col.key] = input.value;
+        if(col.key === 'dataFechamento'){ row.mesFechamento = monthLabel(row.dataFechamento); }
+        if(row.id){
+          try { await db.updateProposal(row.id, {[col.key]: row[col.key], ...(col.key==='dataFechamento'?{mesFechamento:row.mesFechamento}: {})}); } catch(e){ dbMessage('Erro ao atualizar proposta', 'error'); }
+        }
         render();
       };
       input.onblur = commit;
@@ -326,8 +332,12 @@
     td.innerHTML = `<select>${options.map(o=>`<option value="${o}" ${o===row[col.key]?'selected':''}>${o}</option>`).join('')}</select>`;
     const select = td.querySelector('select');
     select.focus();
-    select.onchange = () => {
+    select.onchange = async () => {
       row[col.key] = select.value;
+      if(row.id){
+        if(col.key==='dataFechamento'){ row.mesFechamento = monthLabel(row.dataFechamento); }
+        try { await db.updateProposal(row.id, {[col.key]: row[col.key]}); } catch(e){ dbMessage('Erro ao atualizar proposta', 'error'); }
+      }
       render();
     };
     select.onblur = () => render();
@@ -400,22 +410,26 @@
   <div class="modal" id="proposalModal" aria-hidden="true">
     <div class="modal-backdrop" id="modalBackdrop"></div>
     <div class="modal-panel">
-      <div class="modal-header"><h3>Nova Proposta</h3><button id="modalClose">✕</button></div>
+      <div class="modal-header"><h3>Nova Proposta</h3><button id="modalClose" aria-label="Fechar modal">✕</button></div>
       <div class="modal-body">
-        <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px;">
-          <div class="field"><label>Nº Proposta *</label><input id="fldNumero" type="text"></div>
-          <div class="field"><label>Cliente *</label><input id="fldCliente" type="text" placeholder="Pesquisar por nome, CPF ou CNPJ"><div id="clienteResults" class="search-results"></div></div>
-          <div class="field"><label>Projeto *</label><input id="fldProjeto" type="text" placeholder="Pesquisar por nome do projeto ou nº da proposta"><div id="projetoResults" class="search-results"></div></div>
-          <div class="field"><label>Contato *</label><input id="fldContato" type="text"></div>
-          <div class="field"><label>Ponto de Contato *</label><input id="fldPonto" type="text"></div>
-          <div class="field"><label>Data Orçamento *</label><input id="fldOrcamento" type="date"></div>
-          <div class="field"><label>Data Fechamento *</label><input id="fldFechamento" type="date"></div>
-          <div class="field"><label>Mês Fecham.</label><input id="fldMesFech" type="text" disabled></div>
-          <div class="field"><label>Valor Exterior *</label><input id="fldValorExt" type="number" step="0.01"></div>
-          <div class="field"><label>Valor R$ *</label><input id="fldValorBr" type="number" step="0.01"></div>
-          <div class="field"><label>Status Proposta *</label><select id="fldStatusProposta">${statusPropostaOptions.map(s=>`<option>${s}</option>`).join('')}</select></div>
-          <div class="field"><label>Status Projeto *</label><select id="fldStatusProjeto">${statusProjetoOptions.map(s=>`<option>${s}</option>`).join('')}</select></div>
-          <div class="field" style="grid-column:1 / -1"><label>Observações</label><textarea id="fldObs" rows="3"></textarea></div>
+        <div class="proposal-grid">
+          <div class="proposal-column">
+            <div class="field"><label for="fldNumero">Nº Proposta *</label><input id="fldNumero" type="text"></div>
+            <div class="field"><label for="fldProjeto">Projeto *</label><input id="fldProjeto" type="text" placeholder="Pesquisar por nome do projeto ou nº da proposta"><div id="projetoResults" class="search-results"></div></div>
+            <div class="field"><label for="fldPonto">Ponto de Contato *</label><input id="fldPonto" type="text"></div>
+            <div class="field"><label for="fldFechamento">Data Fechamento *</label><input id="fldFechamento" type="date"></div>
+            <div class="field"><label for="fldValorExt">Valor Exterior *</label><input id="fldValorExt" type="number" step="0.01"></div>
+            <div class="field"><label for="fldStatusProposta">Status Proposta *</label><select id="fldStatusProposta">${statusPropostaOptions.map(s=>`<option>${s}</option>`).join('')}</select></div>
+            <div class="field field-observations"><label for="fldObs">Observações</label><textarea id="fldObs" rows="4"></textarea></div>
+          </div>
+          <div class="proposal-column">
+            <div class="field"><label for="fldCliente">Cliente *</label><input id="fldCliente" type="text" placeholder="Pesquisar por nome, CPF ou CNPJ"><div id="clienteResults" class="search-results"></div></div>
+            <div class="field"><label for="fldContato">Contato *</label><input id="fldContato" type="text"></div>
+            <div class="field"><label for="fldOrcamento">Data Orçamento *</label><input id="fldOrcamento" type="date"></div>
+            <div class="field"><label for="fldMesFech">Mês Fecham.</label><input id="fldMesFech" type="text" disabled></div>
+            <div class="field"><label for="fldValorBr">Valor R$ *</label><input id="fldValorBr" type="number" step="0.01"></div>
+            <div class="field"><label for="fldStatusProjeto">Status Projeto *</label><select id="fldStatusProjeto">${statusProjetoOptions.map(s=>`<option>${s}</option>`).join('')}</select></div>
+          </div>
         </div>
       </div>
       <div class="modal-footer"><button class="btn-secondary" id="btnCancelModal">Cancelar</button><button class="btn-primary" id="btnSaveModal">Salvar Proposta</button></div>
@@ -426,6 +440,8 @@
 
   const proposalModal = document.getElementById('proposalModal');
   const modalBackdrop = document.getElementById('modalBackdrop');
+
+  modalBackdrop.onclick = closeProposalModal;
 
   function openProposalModal(){
     // prefill defaults
@@ -442,40 +458,57 @@
     document.getElementById('fldObs').value = '';
     proposalModal.setAttribute('aria-hidden','false');
     proposalModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
     document.getElementById('fldCliente').focus();
   }
 
-  function closeProposalModal(){ proposalModal.setAttribute('aria-hidden','true'); proposalModal.classList.remove('open'); }
+  function closeProposalModal(){
+    proposalModal.setAttribute('aria-hidden','true');
+    proposalModal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
 
   document.getElementById('modalClose').onclick = closeProposalModal;
   document.getElementById('btnCancelModal').onclick = closeProposalModal;
 
-  // helpers: clients/projects persisted in localStorage
-  function loadStore(key){ try{ return JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){return [];} }
-  function saveStore(key, arr){ localStorage.setItem(key, JSON.stringify(arr)); }
-
-  // seed stores from existing table data (first load)
-  (function seedStores(){
-    const clients = loadStore('crm_clients');
-    if(clients.length === 0){
-      const names = Array.from(new Set(data.map(d=>d.cliente))).map((name,i)=>({id:i+1,name,cnpj:'',cpf:''}));
-      if(names.length) saveStore('crm_clients', names);
+  async function loadClients(){
+    if(window.clientCache && window.clientCache.length) return window.clientCache;
+    try {
+      const clients = await db.fetchClients();
+      window.clientCache = (clients||[]).map(c => ({id:c.id, name:c.name||c.razaoSocial||c.cliente||'', cpf:c.cpf||'', cnpj:c.cnpj||''}));
+      return window.clientCache;
+    } catch (e) {
+      dbMessage('Falha ao carregar clientes', 'error');
+      return [];
     }
-    const projects = loadStore('crm_projects');
-    if(projects.length === 0){
-      const prjs = Array.from(new Set(data.map(d=>d.projeto))).map((name,i)=>({id:i+1,name,propostaNum:''}));
-      if(prjs.length) saveStore('crm_projects', prjs);
-    }
-  })();
+  }
 
-  function searchClients(q){
-    if(!q) return []; const list = loadStore('crm_clients');
+  async function loadProjects(){
+    if(window.projectCache && window.projectCache.length) return window.projectCache;
+    try {
+      const projects = await db.fetchProjects();
+      window.projectCache = (projects||[]).map(p => ({id:p.id, name:p.name||p.projeto||'', propostaNum:p.propostaNum||p.proposta_num||''}));
+      return window.projectCache;
+    } catch (e) {
+      dbMessage('Falha ao carregar projetos', 'error');
+      return [];
+    }
+  }
+
+  async function searchClients(q){
+    if(!q) return [];
+    const list = await loadClients();
     q = q.toLowerCase();
     return list.filter(c => (c.name||'').toLowerCase().includes(q) || (c.cpf||'').toLowerCase().includes(q) || (c.cnpj||'').toLowerCase().includes(q));
   }
-  function searchProjects(q){ if(!q) return []; const list = loadStore('crm_projects'); q=q.toLowerCase(); return list.filter(p => (p.name||'').toLowerCase().includes(q) || (p.propostaNum||'').toLowerCase().includes(q)); }
 
-  // wire client/project search inputs
+  async function searchProjects(q){
+    if(!q) return [];
+    const list = await loadProjects();
+    q = q.toLowerCase();
+    return list.filter(p => (p.name||'').toLowerCase().includes(q) || (p.propostaNum||'').toLowerCase().includes(q));
+  }
+
   const fldCliente = document.getElementById('fldCliente');
   const fldProjeto = document.getElementById('fldProjeto');
   const clienteResults = document.getElementById('clienteResults');
@@ -499,15 +532,47 @@
     });
   }
 
-  fldCliente.addEventListener('input', ()=>{ renderSearchResults(clienteResults, searchClients(fldCliente.value), 'Cliente'); });
-  fldProjeto.addEventListener('input', ()=>{ renderSearchResults(projetoResults, searchProjects(fldProjeto.value), 'Projeto'); });
+  fldCliente.addEventListener('input', async ()=>{ renderSearchResults(clienteResults, await searchClients(fldCliente.value), 'Cliente'); });
+  fldProjeto.addEventListener('input', async ()=>{ renderSearchResults(projetoResults, await searchProjects(fldProjeto.value), 'Projeto'); });
 
-  // auto fill month from fechamento
   const fldFech = document.getElementById('fldFechamento');
   fldFech.addEventListener('change', ()=>{ document.getElementById('fldMesFech').value = monthLabel(fldFech.value); });
 
+  async function loadData(){
+    try{
+      const proposals = await db.fetchProposals();
+      if(Array.isArray(proposals) && proposals.length){
+        data = proposals.map(normalizeProposalRow);
+      }
+    } catch(e){
+      dbMessage('Não foi possível carregar propostas do Supabase', 'error');
+    }
+    render();
+  }
+
+  function normalizeProposalRow(row){
+    return {
+      id: row.id,
+      numero: row.numero || row.propostaNumero || row.proposta_num || '',
+      cliente: row.cliente || row.clienteName || row.name || '',
+      projeto: row.projeto || row.projetoName || row.name || '',
+      contato: row.contato || '',
+      pontoContato: row.pontoContato || row.ponto_contato || '',
+      dataOrcamento: row.dataOrcamento || row.data_orcamento || '',
+      dataFechamento: row.dataFechamento || row.data_fechamento || '',
+      mesFechamento: row.mesFechamento || row.mes_fechamento || monthLabel(row.dataFechamento || row.data_fechamento || ''),
+      valorExterior: Number(row.valorExterior || row.valor_exterior || 0),
+      valorReais: Number(row.valorReais || row.valor_reais || 0),
+      statusProposta: row.statusProposta || row.status_proposta || 'Aberta',
+      statusProjeto: row.statusProjeto || row.status_projeto || '—',
+      obs: row.obs || row.observacoes || ''
+    };
+  }
+
+  loadData();
+
   // handle save
-  document.getElementById('btnSaveModal').onclick = ()=>{
+  document.getElementById('btnSaveModal').onclick = async ()=>{
     const numero = document.getElementById('fldNumero').value.trim();
     const cliente = document.getElementById('fldCliente').value.trim();
     const projeto = document.getElementById('fldProjeto').value.trim();
@@ -521,28 +586,25 @@
     const statusPrj = document.getElementById('fldStatusProjeto').value;
     const obs = document.getElementById('fldObs').value.trim();
 
-    // validation
     const required = { 'Nº Proposta':numero, 'Cliente':cliente, 'Projeto':projeto, 'Contato':contato, 'Ponto de Contato':ponto, 'Data Orçamento':orc, 'Data Fechamento':fech };
     for(const k in required){ if(!required[k]){ showToast(`${k} é obrigatório`); return; } }
 
-    const newRow = {
-      id: nextId++, numero, cliente, projeto, contato, pontoContato: ponto,
+    const payload = {
+      numero, cliente, projeto, contato, pontoContato: ponto,
       dataOrcamento: orc, dataFechamento: fech, mesFechamento: monthLabel(fech), valorExterior:valorExt, valorReais:valorBr,
       statusProposta: statusP, statusProjeto: statusPrj, obs
     };
 
-    data.unshift(newRow);
-    // also ensure client/project persisted for future searches
-    const clients = loadStore('crm_clients'); if(!clients.find(c=>c.name===cliente)){ clients.unshift({id:Date.now(), name:cliente}); saveStore('crm_clients', clients); }
-    const projects = loadStore('crm_projects'); if(!projects.find(p=>p.name===projeto)){ projects.unshift({id:Date.now(), name:projeto}); saveStore('crm_projects', projects); }
-
-    render();
-    closeProposalModal();
-    showToast('Proposta salva e adicionada ao funil');
+    try {
+      const inserted = await db.insertProposal(payload);
+      data.unshift(normalizeProposalRow(inserted));
+      render();
+      closeProposalModal();
+      showToast('Proposta salva e adicionada ao funil');
+    } catch (e) {
+      dbMessage('Falha ao salvar proposta', 'error');
+    }
   };
-
-  // listen to storage events so new clients/projects are picked up when created in other pages
-  window.addEventListener('storage', (e)=>{ if(e.key==='crm_clients' || e.key==='crm_projects'){ /* no-op: searches read from storage when used */ } });
   </script>
 </body>
 </html>
