@@ -5,6 +5,13 @@ const SUPABASE_KEY = 'sb_publishable_URJREuSZM4oeQMzr_B3ljg_yhuWGC-B';
 
 console.log('[Supabase] Inicializando cliente...');
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseRead = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  }
+});
 console.log('[Supabase] Cliente criado:', supabase);
 
 async function testarConexao() {
@@ -33,7 +40,7 @@ function sanitizeResponsavelPayload(payload = {}) {
   return safePayload;
 }
 
-window.supabaseClient = supabase;
+window.supabaseClient = supabaseRead;
 window.testarConexao = testarConexao;
 
 window.db = {
@@ -41,12 +48,12 @@ window.db = {
 
   async fetchClients() {
     console.log('[db] fetchClients');
-    return exec(supabase.from('clients').select('*').order('id', { ascending: true }));
+    return exec(supabaseRead.from('clients').select('*').order('id', { ascending: true }));
   },
   async fetchProjects() {
     console.log('[db] fetchProjects');
     return exec(
-      supabase
+      supabaseRead
         .from('projects')
         .select(`
           *,
@@ -69,16 +76,16 @@ window.db = {
   },
   async fetchResponsaveis() {
     console.log('[db] fetchResponsaveis');
-    return exec(supabase.from('responsaveis').select('*').order('id', { ascending: true }));
+    return exec(supabaseRead.from('responsaveis').select('*').order('id', { ascending: true }));
   },
   async fetchContracts() {
     console.log('[db] fetchContracts');
-    return exec(supabase.from('contracts').select('*').order('id', { ascending: true }));
+    return exec(supabaseRead.from('contracts').select('*').order('id', { ascending: true }));
   },
   async fetchProposals() {
     console.log('[db] fetchProposals');
     return exec(
-      supabase
+      supabaseRead
         .from('proposals')
         .select(`
           id,
@@ -116,12 +123,12 @@ window.db = {
   },
   async fetchClientById(id) {
     console.log('[db] fetchClientById', id);
-    return exec(supabase.from('clients').select('*').eq('id', id).single());
+    return exec(supabaseRead.from('clients').select('*').eq('id', id).single());
   },
   async fetchProjectById(id) {
     console.log('[db] fetchProjectById', id);
     return exec(
-      supabase
+      supabaseRead
         .from('projects')
         .select(`
           *,
@@ -146,7 +153,7 @@ window.db = {
   async fetchProjectsByClient(clientId) {
     console.log('[db] fetchProjectsByClient', clientId);
     return exec(
-      supabase
+      supabaseRead
         .from('projects')
         .select('id, name, client_id')
         .eq('client_id', clientId)
@@ -156,7 +163,7 @@ window.db = {
   async fetchProposalsByProject(projectId) {
     console.log('[db] fetchProposalsByProject', projectId);
     return exec(
-      supabase
+      supabaseRead
         .from('proposals')
         .select(`
           id,
@@ -177,7 +184,7 @@ window.db = {
   },
   async fetchProposalById(id) {
     console.log('[db] fetchProposalById', id);
-    return exec(supabase.from('proposals').select('*').eq('id', id).single());
+    return exec(supabaseRead.from('proposals').select('*').eq('id', id).single());
   },
   async insertClient(payload) {
     console.log('[db] insertClient — payload enviado:', JSON.stringify(payload));
@@ -242,7 +249,7 @@ window.db = {
   async checkRls() {
     const results = {};
     for (const table of ['clients', 'projects', 'responsaveis', 'contracts', 'proposals']) {
-      const { data, error } = await supabase.from(table).select('id').limit(1);
+      const { data, error } = await supabaseRead.from(table).select('id').limit(1);
       results[table] = error ? `ERRO: ${error.message}` : 'ok';
       console.log(`[RLS] ${table}:`, results[table]);
     }
