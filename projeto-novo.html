@@ -92,7 +92,7 @@
     const propNum = document.getElementById('fldProjPropNum').value.trim();
     if(!name){ alert('Nome do projeto é obrigatório'); return; }
 
-    const payload = { name, servicos: serv, propostaNum: propNum };
+    const payload = { name, services: serv || null, proposal_number: propNum || null };
     console.log('[btnSaveProj] Salvando projeto no Supabase:', payload);
     try {
       const result = await db.insertProject(payload);

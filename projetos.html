@@ -49,10 +49,10 @@
                 <thead>
                   <tr>
                     <th>Projeto</th>
-                    <th>Cliente</th>
-                    <th>Responsável</th>
-                    <th>Valor Contrato</th>
-                    <th>Forma Pagamento</th>
+                    <th>Client ID</th>
+                    <th>Responsible ID</th>
+                    <th>Services</th>
+                    <th>Nº Proposta</th>
                     <th>Status</th>
                     <th>Ações</th>
                   </tr>
@@ -81,10 +81,10 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${project.name || ''}</td>
-          <td>${project.cliente || ''}</td>
-          <td>${project.responsavel || ''}</td>
-          <td>${project.valorContrato ? 'R$ ' + Number(project.valorContrato).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''}</td>
-          <td>${project.formaPagamento || ''}</td>
+          <td>${project.client_id ?? ''}</td>
+          <td>${project.responsible_id ?? ''}</td>
+          <td>${project.services || ''}</td>
+          <td>${project.proposal_number || ''}</td>
           <td>${project.status || ''}</td>
           <td>
             <div style="display:flex;gap:8px;">

@@ -96,9 +96,9 @@
             </div>
             <div class="page-card" style="padding:18px;">
               <h3 style="margin-top:0;">Dados do Projeto</h3>
-              <p><strong>Projeto:</strong> ${client.projeto || ''}</p>
-              <p><strong>Serviços:</strong> ${client.servicos || ''}</p>
-              <p><strong>Nº da Proposta:</strong> ${client.propostaNum || client.proposta_num || ''}</p>
+              <p><strong>Projeto:</strong> —</p>
+              <p><strong>Serviços:</strong> —</p>
+              <p><strong>Nº da Proposta:</strong> —</p>
             </div>
           </div>`;
       } else if (params.type === 'project') {
@@ -108,13 +108,13 @@
             <div class="page-card" style="padding:18px;">
               <h3 style="margin-top:0;">Projeto</h3>
               <p><strong>Nome do Projeto:</strong> ${project.name || ''}</p>
-              <p><strong>Serviços:</strong> ${project.servicos || ''}</p>
-              <p><strong>Nº da Proposta:</strong> ${project.propostaNum || project.proposta_num || ''}</p>
+              <p><strong>Serviços:</strong> ${project.services || ''}</p>
+              <p><strong>Nº da Proposta:</strong> ${project.proposal_number || ''}</p>
             </div>
             <div class="page-card" style="padding:18px;">
               <h3 style="margin-top:0;">Detalhes</h3>
-              <p><strong>Cliente:</strong> ${project.cliente || ''}</p>
-              <p><strong>Responsável:</strong> ${project.responsavel || ''}</p>
+              <p><strong>Client ID:</strong> ${project.client_id ?? ''}</p>
+              <p><strong>Responsible ID:</strong> ${project.responsible_id ?? ''}</p>
               <p><strong>Status:</strong> ${project.status || ''}</p>
             </div>
           </div>`;

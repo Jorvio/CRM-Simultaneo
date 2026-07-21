@@ -125,6 +125,22 @@
   let sortKey = null;
   let sortDir = 1;
   let nextId = 9;
+  let selectedClientId = null;
+  let selectedProjectId = null;
+  const proposalFieldMap = {
+    numero: 'proposal_number',
+    cliente: 'client_id',
+    projeto: 'project_id',
+    contato: 'contact_name',
+    pontoContato: 'point_of_contact',
+    dataOrcamento: 'budget_date',
+    dataFechamento: 'closing_date',
+    valorExterior: 'value_usd',
+    valorReais: 'value_brl',
+    statusProposta: 'proposal_status',
+    statusProjeto: 'project_status',
+    obs: 'notes'
+  };
 
   function monthLabel(dateStr){
     if(!dateStr) return '—';
@@ -158,6 +174,36 @@
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(()=>t.classList.remove('show'), 1800);
+  }
+  function montarPayloadProposta(row, changedKey) {
+    const payload = {};
+
+    if (changedKey) {
+      const dbField = proposalFieldMap[changedKey];
+      if (!dbField) return payload;
+      payload[dbField] = row[changedKey];
+      if (changedKey === 'dataFechamento') {
+        payload.closing_month = monthLabel(row.dataFechamento);
+      }
+      return payload;
+    }
+
+    payload.proposal_number = row.numero;
+    payload.client_id = row.client_id || null;
+    payload.project_id = row.project_id || null;
+    payload.contact_id = row.contact_id || null;
+    payload.contact_name = row.contato || null;
+    payload.point_of_contact = row.pontoContato || null;
+    payload.budget_date = row.dataOrcamento || null;
+    payload.closing_date = row.dataFechamento || null;
+    payload.closing_month = monthLabel(row.dataFechamento);
+    payload.value_usd = Number(row.valorExterior || 0);
+    payload.value_brl = Number(row.valorReais || 0);
+    payload.proposal_status = row.statusProposta || null;
+    payload.project_status = row.statusProjeto || null;
+    payload.notes = row.obs || null;
+
+    return payload;
   }
 
   function renderHeader(){
@@ -307,7 +353,10 @@
         row[col.key] = input.value;
         if(col.key === 'dataFechamento'){ row.mesFechamento = monthLabel(row.dataFechamento); }
         if(row.id){
-          try { await db.updateProposal(row.id, {[col.key]: row[col.key], ...(col.key==='dataFechamento'?{mesFechamento:row.mesFechamento}: {})}); } catch(e){ console.error('[updateProposal] Erro:', e); alert(`Erro ao atualizar proposta: ${e.message || JSON.stringify(e)}`); }
+          try {
+            const payload = montarPayloadProposta(row, col.key);
+            await db.updateProposal(row.id, payload);
+          } catch(e){ console.error('[updateProposal] Erro:', e); alert(`Erro ao atualizar proposta: ${e.message || JSON.stringify(e)}`); }
         }
         render();
       };
@@ -325,7 +374,10 @@
       row[col.key] = select.value;
       if(row.id){
         if(col.key==='dataFechamento'){ row.mesFechamento = monthLabel(row.dataFechamento); }
-        try { await db.updateProposal(row.id, {[col.key]: row[col.key]}); } catch(e){ console.error('[updateProposal select] Erro:', e); alert(`Erro ao atualizar: ${e.message || JSON.stringify(e)}`); }
+        try {
+          const payload = montarPayloadProposta(row, col.key);
+          await db.updateProposal(row.id, payload);
+        } catch(e){ console.error('[updateProposal select] Erro:', e); alert(`Erro ao atualizar: ${e.message || JSON.stringify(e)}`); }
       }
       render();
     };
@@ -445,6 +497,8 @@
     document.getElementById('fldValorExt').value = '';
     document.getElementById('fldValorBr').value = '';
     document.getElementById('fldObs').value = '';
+    selectedClientId = null;
+    selectedProjectId = null;
     proposalModal.setAttribute('aria-hidden','false');
     proposalModal.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -483,7 +537,7 @@
     if(window.projectCache && window.projectCache.length) return window.projectCache;
     try {
       const projects = await db.fetchProjects();
-      window.projectCache = (projects||[]).map(p => ({id:p.id, name:p.name||p.projeto||'', propostaNum:p.propostaNum||p.proposta_num||''}));
+      window.projectCache = (projects||[]).map(p => ({id:p.id, name:p.name||'', proposal_number:p.proposal_number||''}));
       return window.projectCache;
     } catch (e) {
       dbMessage('Falha ao carregar projetos', 'error');
@@ -502,7 +556,7 @@
     if(!q) return [];
     const list = await loadProjects();
     q = q.toLowerCase();
-    return list.filter(p => (p.name||'').toLowerCase().includes(q) || (p.propostaNum||'').toLowerCase().includes(q));
+    return list.filter(p => (p.name||'').toLowerCase().includes(q) || (p.proposal_number||'').toLowerCase().includes(q));
   }
 
   const fldCliente = document.getElementById('fldCliente');
@@ -519,17 +573,29 @@
       return;
     }
     items.slice(0,8).forEach(it=>{
-      const r = document.createElement('div'); r.className='result-item'; r.textContent = it.name || it.projeto || '';
+      const r = document.createElement('div'); r.className='result-item'; r.textContent = it.name || '';
       r.onclick = ()=>{
-        if(type==='Cliente') fldCliente.value = it.name; else fldProjeto.value = it.name;
+        if(type==='Cliente') {
+          fldCliente.value = it.name;
+          selectedClientId = it.id;
+        } else {
+          fldProjeto.value = it.name;
+          selectedProjectId = it.id;
+        }
         container.innerHTML = '';
       };
       container.appendChild(r);
     });
   }
 
-  fldCliente.addEventListener('input', async ()=>{ renderSearchResults(clienteResults, await searchClients(fldCliente.value), 'Cliente'); });
-  fldProjeto.addEventListener('input', async ()=>{ renderSearchResults(projetoResults, await searchProjects(fldProjeto.value), 'Projeto'); });
+  fldCliente.addEventListener('input', async ()=>{
+    selectedClientId = null;
+    renderSearchResults(clienteResults, await searchClients(fldCliente.value), 'Cliente');
+  });
+  fldProjeto.addEventListener('input', async ()=>{
+    selectedProjectId = null;
+    renderSearchResults(projetoResults, await searchProjects(fldProjeto.value), 'Projeto');
+  });
 
   const fldFech = document.getElementById('fldFechamento');
   fldFech.addEventListener('change', ()=>{ document.getElementById('fldMesFech').value = monthLabel(fldFech.value); });
@@ -550,19 +616,22 @@
   function normalizeProposalRow(row){
     return {
       id: row.id,
-      numero: row.numero || row.propostaNumero || row.proposta_num || '',
-      cliente: row.cliente || row.clienteName || row.name || '',
-      projeto: row.projeto || row.projetoName || row.name || '',
-      contato: row.contato || '',
-      pontoContato: row.pontoContato || row.ponto_contato || '',
-      dataOrcamento: row.dataOrcamento || row.data_orcamento || '',
-      dataFechamento: row.dataFechamento || row.data_fechamento || '',
-      mesFechamento: row.mesFechamento || row.mes_fechamento || monthLabel(row.dataFechamento || row.data_fechamento || ''),
-      valorExterior: Number(row.valorExterior || row.valor_exterior || 0),
-      valorReais: Number(row.valorReais || row.valor_reais || 0),
-      statusProposta: row.statusProposta || row.status_proposta || 'Aberta',
-      statusProjeto: row.statusProjeto || row.status_projeto || '—',
-      obs: row.obs || row.observacoes || ''
+      numero: row.proposal_number || row.numero || '',
+      cliente: row.client_id != null ? String(row.client_id) : '',
+      projeto: row.project_id != null ? String(row.project_id) : '',
+      contact_id: row.contact_id || null,
+      contato: row.contact_name || row.contato || '',
+      pontoContato: row.point_of_contact || row.pontoContato || '',
+      dataOrcamento: row.budget_date || row.dataOrcamento || '',
+      dataFechamento: row.closing_date || row.dataFechamento || '',
+      mesFechamento: row.closing_month || row.mesFechamento || monthLabel(row.closing_date || row.dataFechamento || ''),
+      valorExterior: Number(row.value_usd != null ? row.value_usd : (row.valorExterior || 0)),
+      valorReais: Number(row.value_brl != null ? row.value_brl : (row.valorReais || 0)),
+      statusProposta: row.proposal_status || row.statusProposta || 'Aberta',
+      statusProjeto: row.project_status || row.statusProjeto || '—',
+      obs: row.notes || row.obs || '',
+      client_id: row.client_id || null,
+      project_id: row.project_id || null
     };
   }
 
@@ -587,10 +656,23 @@
     for(const k in required){ if(!required[k]){ showToast(`${k} é obrigatório`); return; } }
 
     const payload = {
-      numero, cliente, projeto, contato, pontoContato: ponto,
-      dataOrcamento: orc, dataFechamento: fech, mesFechamento: monthLabel(fech), valorExterior:valorExt, valorReais:valorBr,
-      statusProposta: statusP, statusProjeto: statusPrj, obs
-    };
+    const payload = montarPayloadProposta({
+      numero,
+      cliente,
+      projeto,
+      client_id: selectedClientId,
+      project_id: selectedProjectId,
+      contact_id: null,
+      contato,
+      pontoContato: ponto,
+      dataOrcamento: orc,
+      dataFechamento: fech,
+      valorExterior: valorExt,
+      valorReais: valorBr,
+      statusProposta: statusP,
+      statusProjeto: statusPrj,
+      obs
+    });
 
     console.log('[btnSaveModal] Salvando proposta no Supabase:', payload);
     try {

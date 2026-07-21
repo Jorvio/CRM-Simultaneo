@@ -200,17 +200,17 @@
   function normalizarProposta(p) {
     return {
       id:             p.id,
-      numero:         p.numero          || p.proposta_num   || p.propostaNum   || '',
-      cliente:        p.cliente         || p.clienteName    || '',
-      projeto:        p.projeto         || p.projetoName    || '',
-      contato:        p.contato         || '',
-      dataOrcamento:  p.data_orcamento  || p.dataOrcamento  || p.created_at    || '',
-      dataFechamento: p.data_fechamento || p.dataFechamento || '',
-      valorReais:     converterValor(p.valor_reais    != null ? p.valor_reais    : p.valorReais),
-      valorExterior:  converterValor(p.valor_exterior != null ? p.valor_exterior : p.valorExterior),
-      statusProposta: p.status_proposta || p.statusProposta || 'Aberta',
-      statusProjeto:  p.status_projeto  || p.statusProjeto  || '—',
-      obs:            p.obs             || '',
+      numero:         p.proposal_number || p.numero || '',
+      cliente:        p.client_id != null ? String(p.client_id) : '',
+      projeto:        p.project_id != null ? String(p.project_id) : '',
+      contato:        p.contact_name    || p.contato || '',
+      dataOrcamento:  p.budget_date     || p.dataOrcamento  || p.created_at || '',
+      dataFechamento: p.closing_date    || p.dataFechamento || '',
+      valorReais:     converterValor(p.value_brl != null ? p.value_brl : p.valorReais),
+      valorExterior:  converterValor(p.value_usd != null ? p.value_usd : p.valorExterior),
+      statusProposta: p.proposal_status || p.statusProposta || 'Aberta',
+      statusProjeto:  p.project_status  || p.statusProjeto  || '—',
+      obs:            p.notes           || p.obs || '',
       created_at:     p.created_at      || '',
     };
   }
