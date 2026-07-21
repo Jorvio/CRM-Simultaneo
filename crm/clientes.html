@@ -31,7 +31,7 @@
               <h1 class="page-title">Clientes</h1>
               <div class="page-subtext">Gestão de clientes e relacionamento comercial</div>
             </div>
-            <button class="btn-primary" onclick="location.href='cliente-novo.html'">+ Novo Cliente</button>
+            <button class="btn-primary" id="btnNovoCliente" onclick="location.href='cliente-novo.html'">+ Novo Cliente</button>
           </div>
           <div class="page-body">
             <div class="table-wrap">
@@ -54,7 +54,19 @@
           <script type="module">
           import './js/auth-guard.js';
           import './js/user-menu.js';
-          import { db, dbMessage } from './js/supabase.js';
+          import { db, dbMessage, loadCurrentUserPermissions } from './js/supabase.js';
+
+          const access = await loadCurrentUserPermissions().catch(() => null);
+          if (!access) {
+            window.location.href = 'login.html';
+            throw new Error('Usuário não autenticado');
+          }
+
+          const permissions = access.permissions;
+          const btnNovoCliente = document.getElementById('btnNovoCliente');
+          if (btnNovoCliente && !permissions.podeAdicionar) {
+            btnNovoCliente.style.display = 'none';
+          }
 
           async function renderClients() {
             try {
@@ -78,13 +90,18 @@
                   <td>
                     <div style="display:flex;gap:8px;">
                       <a class="btn-secondary" href="visualizar.html?type=client&id=${client.id}">Visualizar</a>
-                      <a class="btn" href="cliente-novo.html?id=${client.id}">Editar</a>
-                      <button class="btn-secondary" type="button" data-id="${client.id}">Excluir</button>
+                      ${permissions.podeEditar ? `<a class="btn" href="cliente-novo.html?id=${client.id}">Editar</a>` : ''}
+                      ${permissions.podeExcluir ? `<button class="btn-secondary" type="button" data-id="${client.id}">Excluir</button>` : ''}
                     </div>
                   </td>
                 `;
-                const deleteButton = tr.querySelector('button');
-                deleteButton.onclick = async () => {
+                const deleteButton = tr.querySelector('button[data-id]');
+                if (deleteButton) {
+                  deleteButton.onclick = async () => {
+                  if (!permissions.podeExcluir) {
+                    alert('Seu usuário não possui permissão para excluir clientes.');
+                    return;
+                  }
                   if (!confirm('Excluir cliente?')) return;
                   try {
                     await db.deleteClient(client.id);
@@ -93,7 +110,8 @@
                     console.error('[deleteClient] Erro:', error);
                     alert(`Erro ao excluir cliente:\n${error.message || JSON.stringify(error)}`);
                   }
-                };
+                  };
+                }
                 tbody.appendChild(tr);
               });
             } catch (error) {

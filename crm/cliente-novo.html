@@ -56,7 +56,7 @@
   <script type="module">
   import './js/auth-guard.js';
   import './js/user-menu.js';
-  import { supabase, db } from './js/supabase.js';
+  import { db, loadCurrentUserPermissions } from './js/supabase.js';
 
   const params = new URLSearchParams(window.location.search);
   const clientId = params.get('id');
@@ -187,77 +187,79 @@
     };
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData?.session;
-      if (!session) {
-        alert('Sua sessão expirou. Faça login novamente.');
-        window.location.href = 'login.html?msg=not-authenticated';
+      const { perfil } = await loadCurrentUserPermissions();
+      const roleName = String(perfil?.role_name || '').trim().toLowerCase();
+
+      const perfilAtivo =
+        perfil?.account_status === 'active';
+
+      const podeAdicionar =
+        perfilAtivo &&
+        ['master', 'editor'].includes(roleName);
+
+      const podeEditar =
+        perfilAtivo &&
+        roleName === 'master';
+
+      if (!clientId && !podeAdicionar) {
+        alert('Seu usuário não possui permissão para salvar clientes.');
         return;
       }
 
-      const operacao = clientId
-        ? supabase.from('clients').update(clientData).eq('id', Number(clientId)).select().single()
-        : supabase.from('clients').insert([clientData]).select().single();
-
-      const { data, error } = await operacao;
-
-      if (error) {
-        console.error('Erro completo ao salvar cliente:', error);
-
-        const mensagemErro = [
-          error.message,
-          error.details,
-          error.hint
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-
-        if (error.code === '23505') {
-          if (
-            mensagemErro.includes('clients_cnpj_unique_idx') ||
-            mensagemErro.includes('cnpj')
-          ) {
-            alert('CNPJ já cadastrado.');
-            return;
-          }
-
-          if (
-            mensagemErro.includes('clients_cpf_unique_idx') ||
-            mensagemErro.includes('cpf')
-          ) {
-            alert('CPF já cadastrado.');
-            return;
-          }
-
-          alert('Este cliente já está cadastrado.');
-          return;
-        }
-
-        if (error.code === '42501') {
-          alert('Seu usuário não possui permissão para salvar clientes.');
-          return;
-        }
-
-        if (
-          mensagemErro.includes('jwt') ||
-          mensagemErro.includes('token') ||
-          mensagemErro.includes('session')
-        ) {
-          alert('Sua sessão expirou. Faça login novamente.');
-          window.location.href = 'login.html?msg=not-authenticated';
-          return;
-        }
-
-        alert(`Não foi possível salvar o cliente.\n${error.message || 'Tente novamente.'}`);
+      if (clientId && !podeEditar) {
+        alert('Seu usuário não possui permissão para editar clientes.');
         return;
       }
+
+      const data = clientId
+        ? await db.updateClient(Number(clientId), clientData)
+        : await db.insertClient(clientData);
 
       console.log('Cliente cadastrado:', data);
       alert(clientId ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
       history.back();
     } catch (error) {
       console.error('[btnSaveClient] Erro ao salvar cliente:', error);
+      const mensagemErro = [
+        error?.message,
+        error?.details,
+        error?.hint
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      if (error?.code === '23505') {
+        if (
+          mensagemErro.includes('clients_cnpj_unique_idx') ||
+          mensagemErro.includes('cnpj')
+        ) {
+          alert('CNPJ já cadastrado.');
+          return;
+        }
+
+        if (
+          mensagemErro.includes('clients_cpf_unique_idx') ||
+          mensagemErro.includes('cpf')
+        ) {
+          alert('CPF já cadastrado.');
+          return;
+        }
+
+        alert('Este cliente já está cadastrado.');
+        return;
+      }
+
+      if (error?.code === 'PERMISSION_DENIED' || error?.code === '42501') {
+        alert('Seu usuário não possui permissão para salvar clientes.');
+        return;
+      }
+
+      if (error?.code === 'AUTH_REQUIRED' || error?.code === 'PROFILE_NOT_FOUND') {
+        window.location.href = 'login.html';
+        return;
+      }
+
       alert(`Não foi possível salvar o cliente.\n${error.message || 'Tente novamente.'}`);
     }
   };

@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { supabase, loadCurrentUserPermissions } from './supabase.js';
 
 const PUBLIC_PAGES = new Set([
   'login.html',
@@ -46,32 +46,21 @@ export function getCachedProfile() {
 }
 
 export async function loadSessionProfile() {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const session = sessionData?.session;
-  if (!session?.user) {
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (!user || userError) {
     return { session: null, profile: null };
   }
 
-  const { data: perfil, error: perfilError } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      full_name,
-      email,
-      avatar_url,
-      role_name,
-      account_status,
-      can_manage_users,
-      must_change_password
-    `)
-    .eq('id', session.user.id)
-    .single();
-
-  if (perfilError || !perfil) {
-    return { session, profile: null };
+  try {
+    const { perfil } = await loadCurrentUserPermissions();
+    return { session: { user }, profile: perfil };
+  } catch {
+    return { session: { user }, profile: null };
   }
-
-  return { session, profile: perfil };
 }
 
 async function invalidateWithMessage(message) {

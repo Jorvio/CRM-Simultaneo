@@ -88,9 +88,28 @@
   <script type="module">
   import './js/auth-guard.js';
   import './js/user-menu.js';
-  import { db, dbMessage } from './js/supabase.js';
+  import { db, dbMessage, loadCurrentUserPermissions } from './js/supabase.js';
   const params = new URLSearchParams(window.location.search);
   const projectId = params.get('id');
+
+  const access = await loadCurrentUserPermissions().catch(() => null);
+  if (!access) {
+    window.location.href = 'login.html';
+    throw new Error('Usuário não autenticado');
+  }
+  const permissions = access.permissions;
+
+  if (projectId && !permissions.podeEditar) {
+    alert('Seu usuário não possui permissão para editar projetos.');
+    window.location.href = 'projetos.html';
+    throw new Error('Sem permissão de edição');
+  }
+
+  if (!projectId && !permissions.podeAdicionar) {
+    alert('Seu usuário não possui permissão para cadastrar projetos.');
+    window.location.href = 'projetos.html';
+    throw new Error('Sem permissão de cadastro');
+  }
 
   async function carregarClientes() {
     const select = document.getElementById('fldProjClient');
@@ -202,6 +221,16 @@
     const statusProjeto = document.getElementById('fldProjStatus').value.trim();
     if(!clientId){ alert('Selecione um cliente para o projeto.'); return; }
     if(!name){ alert('Nome do projeto é obrigatório'); return; }
+
+    if (projectId && !permissions.podeEditar) {
+      alert('Seu usuário não possui permissão para editar projetos.');
+      return;
+    }
+
+    if (!projectId && !permissions.podeAdicionar) {
+      alert('Seu usuário não possui permissão para cadastrar projetos.');
+      return;
+    }
 
     try {
       const responsibleId = await obterOuCriarResponsavel();
