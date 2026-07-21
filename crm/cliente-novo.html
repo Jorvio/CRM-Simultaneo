@@ -186,11 +186,19 @@
       address: endereco
     };
 
-    const operacao = clientId
-      ? supabase.from('clients').update(clientData).eq('id', Number(clientId)).select().single()
-      : supabase.from('clients').insert([clientData]).select().single();
-
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      if (!session) {
+        alert('Sua sessão expirou. Faça login novamente.');
+        window.location.href = 'login.html?msg=not-authenticated';
+        return;
+      }
+
+      const operacao = clientId
+        ? supabase.from('clients').update(clientData).eq('id', Number(clientId)).select().single()
+        : supabase.from('clients').insert([clientData]).select().single();
+
       const { data, error } = await operacao;
 
       if (error) {
@@ -226,7 +234,22 @@
           return;
         }
 
-        alert('Não foi possível salvar o cliente. Tente novamente.');
+        if (error.code === '42501') {
+          alert('Seu usuário não possui permissão para salvar clientes.');
+          return;
+        }
+
+        if (
+          mensagemErro.includes('jwt') ||
+          mensagemErro.includes('token') ||
+          mensagemErro.includes('session')
+        ) {
+          alert('Sua sessão expirou. Faça login novamente.');
+          window.location.href = 'login.html?msg=not-authenticated';
+          return;
+        }
+
+        alert(`Não foi possível salvar o cliente.\n${error.message || 'Tente novamente.'}`);
         return;
       }
 
@@ -235,7 +258,7 @@
       history.back();
     } catch (error) {
       console.error('[btnSaveClient] Erro ao salvar cliente:', error);
-      alert('Não foi possível salvar o cliente. Tente novamente.');
+      alert(`Não foi possível salvar o cliente.\n${error.message || 'Tente novamente.'}`);
     }
   };
 
