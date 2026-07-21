@@ -1,4 +1,4 @@
-import { supabase } from '../../bd/supabase.js';
+import { supabase } from './supabase.js';
 import { requireAuth } from './auth-guard.js';
 
 function byId(id) {

@@ -1,4 +1,4 @@
-import { supabase } from '../../bd/supabase.js';
+import { supabase } from './supabase.js';
 import { getCachedProfile, requireAuth, signOutAndGoLogin } from './auth-guard.js';
 
 function initials(name, email) {

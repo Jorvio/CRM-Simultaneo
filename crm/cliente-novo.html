@@ -56,7 +56,7 @@
   <script type="module">
   import './js/auth-guard.js';
   import './js/user-menu.js';
-  import { supabase, db } from '../bd/supabase.js';
+  import { supabase, db } from './js/supabase.js';
 
   const params = new URLSearchParams(window.location.search);
   const clientId = params.get('id');

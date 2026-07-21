@@ -1,4 +1,4 @@
-import { supabase } from '../../bd/supabase.js';
+import { supabase } from './supabase.js';
 
 const PUBLIC_PAGES = new Set([
   'login.html',

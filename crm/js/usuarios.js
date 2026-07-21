@@ -1,4 +1,4 @@
-import { supabase } from '../../bd/supabase.js';
+import { supabase } from './supabase.js';
 import { requireAuth, getCachedProfile } from './auth-guard.js';
 
 const ADMIN_EMAIL = 'juana.virgesint@gmail.com';
