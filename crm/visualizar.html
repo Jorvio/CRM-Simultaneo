@@ -13,7 +13,7 @@
       <div class="sidebar-brand"><div class="brand-icon">CRM</div><div class="brand-text"><span>CRM</span><small>Simultâneo</small></div></div>
       <nav class="sidebar-nav">
         <a class="nav-item" href="dashboard.html"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
-        <a class="nav-item" href="index.html"><span class="nav-icon">📈</span><span class="nav-label">Funil</span></a>
+        <a class="nav-item" href="funil.html"><span class="nav-icon">📈</span><span class="nav-label">Funil</span></a>
         <a class="nav-item" href="clientes.html"><span class="nav-icon">👥</span><span class="nav-label">Clientes</span></a>
         <a class="nav-item" href="projetos.html"><span class="nav-icon">📁</span><span class="nav-label">Projetos</span></a>
       </nav>
@@ -136,7 +136,7 @@
                     </div>
                     <div style="display:flex; gap:8px;">
                       <a class="btn-secondary" href="visualizar.html?type=proposal&id=${p.id}">Visualizar</a>
-                      <a class="btn" href="index.html?proposalId=${p.id}">Editar</a>
+                      <a class="btn" href="funil.html?proposalId=${p.id}">Editar</a>
                     </div>
                   </div>
                 </div>
@@ -162,13 +162,13 @@
           <div class="page-card" style="padding:18px; margin-top:20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
               <h3 style="margin:0;">Propostas</h3>
-              <a class="btn-primary" href="index.html?newProposal=1&clientId=${project.client_id || ''}&projectId=${project.id}">Nova Proposta</a>
+              <a class="btn-primary" href="funil.html?newProposal=1&clientId=${project.client_id || ''}&projectId=${project.id}">Nova Proposta</a>
             </div>
             ${blocoPropostas}
           </div>`;
       } else if (params.type === 'proposal') {
         const proposal = await db.fetchProposalById(Number(params.id));
-        editClientLink.href = 'index.html';
+        editClientLink.href = 'funil.html';
         content.innerHTML = `
           <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
             <div class="page-card" style="padding:18px;">
