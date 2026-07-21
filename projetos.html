@@ -66,14 +66,7 @@
     </main>
   </div>
   <script type="module">
-  import { db, dbMessage } from './supabase.js';
-
-  function formatarData(dataIso) {
-    if (!dataIso) return '—';
-    const [y, m, d] = String(dataIso).split('T')[0].split('-');
-    if (!y || !m || !d) return '—';
-    return `${d}/${m}/${y}`;
-  }
+  import { supabase, db } from './supabase.js';
 
   function formatarMoeda(valor) {
     if (valor == null || valor === '') return '—';
@@ -97,10 +90,8 @@
     const linhas = propostas.map((p) => `
       <tr>
         <td>${escaparHtml(p.proposal_number || '—')}</td>
-        <td>${formatarData(p.budget_date || p.closing_date || p.created_at)}</td>
-        <td>${formatarMoeda(p.value_brl)}</td>
         <td>${escaparHtml(p.proposal_status || '—')}</td>
-        <td>${escaparHtml(p.contact_name || '—')}</td>
+        <td>${formatarMoeda(p.value_brl)}</td>
         <td>
           <a class="btn-secondary" href="visualizar.html?type=proposal&id=${p.id}">Visualizar</a>
           <a class="btn" href="index.html?proposalId=${p.id}">Editar</a>
@@ -114,10 +105,8 @@
           <thead>
             <tr>
               <th>Número da proposta</th>
-              <th>Data</th>
-              <th>Valor</th>
               <th>Status</th>
-              <th>Contato</th>
+              <th>Valor</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -129,30 +118,66 @@
 
   async function renderProjects() {
     try {
-      const projects = await db.fetchProjects();
+      const { data: projetos, error } = await supabase
+        .from('projects')
+        .select(`
+          id,
+          client_id,
+          responsible_id,
+          name,
+          services,
+          status,
+          created_at,
+
+          cliente:clients!projects_client_id_fkey (
+            id,
+            name,
+            legal_name
+          ),
+
+          responsavel:responsaveis!projects_responsible_id_fkey (
+            id,
+            nome_completo
+          ),
+
+          propostas:proposals!proposals_project_id_fkey (
+            id,
+            proposal_number,
+            proposal_status,
+            value_brl
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro completo ao carregar projetos:', error);
+        alert('Não foi possível carregar os projetos.');
+        return;
+      }
+
       const tbody = document.getElementById('projectTableBody');
       tbody.innerHTML = '';
-      if (!projects || projects.length === 0) {
+      if (!projetos || projetos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Nenhum projeto encontrado.</div></td></tr>';
         return;
       }
 
-      for (const project of projects) {
-        const propostas = await db.fetchProposalsByProject(project.id);
-        const nomeCliente = project.client?.legal_name || project.client?.name || 'Cliente não vinculado';
+      for (const projeto of projetos) {
+        const nomeCliente = projeto.cliente?.name || 'Não informado';
+        const nomeResponsavel = projeto.responsavel?.nome_completo || 'Não informado';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${project.name || ''}</td>
+          <td>${projeto.name || ''}</td>
           <td>${nomeCliente}</td>
-          <td>${project.responsavel?.nome_completo || 'Sem responsável'}</td>
-          <td>${project.services || ''}</td>
-          <td>${renderPropostasDoProjeto(propostas)}</td>
-          <td>${project.status || ''}</td>
+          <td>${nomeResponsavel}</td>
+          <td>${projeto.services || ''}</td>
+          <td>${renderPropostasDoProjeto(projeto.propostas)}</td>
+          <td>${projeto.status || ''}</td>
           <td>
             <div style="display:flex;gap:8px;">
-              <a class="btn-secondary" href="visualizar.html?type=project&id=${project.id}">Visualizar</a>
-              <a class="btn" href="projeto-novo.html?id=${project.id}">Editar</a>
-              <button class="btn-secondary" type="button" data-id="${project.id}">Excluir</button>
+              <a class="btn-secondary" href="visualizar.html?type=project&id=${projeto.id}">Visualizar</a>
+              <a class="btn" href="projeto-novo.html?id=${projeto.id}">Editar</a>
+              <button class="btn-secondary" type="button" data-id="${projeto.id}">Excluir</button>
             </div>
           </td>
         `;
@@ -160,7 +185,7 @@
         deleteButton.onclick = async () => {
           if (!confirm('Excluir projeto?')) return;
           try {
-            await db.deleteProject(project.id);
+            await db.deleteProject(projeto.id);
             renderProjects();
           } catch (error) {
             console.error('[deleteProject] Erro:', error);
@@ -170,8 +195,8 @@
         tbody.appendChild(tr);
       }
     } catch (error) {
-      console.error('[renderProjects] Erro ao carregar projetos:', error);
-      alert(`Erro ao carregar projetos:\n${error.message || JSON.stringify(error)}`);
+      console.error('Erro completo ao carregar projetos:', error);
+      alert('Não foi possível carregar os projetos.');
     }
   }
 
