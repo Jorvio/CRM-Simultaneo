@@ -1,5 +1,4 @@
 import { supabase } from './supabase.js';
-import { requireAuth } from './auth-guard.js';
 
 function byId(id) {
   return document.getElementById(id);
@@ -44,48 +43,6 @@ function readLoginMessage() {
   if (map[msgCode]) {
     showMessage('loginMessage', map[msgCode], 'info');
   }
-}
-
-async function loadProfileAndRedirect(user) {
-  const { data: perfil, error: perfilError } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      full_name,
-      email,
-      avatar_url,
-      role_name,
-      account_status,
-      can_manage_users,
-      must_change_password
-    `)
-    .eq('id', user.id)
-    .single();
-
-  if (perfilError || !perfil) {
-    await supabase.auth.signOut();
-    showMessage('loginMessage', 'Seu perfil de acesso não foi configurado.');
-    return;
-  }
-
-  if (perfil.account_status === 'blocked') {
-    await supabase.auth.signOut();
-    showMessage('loginMessage', 'Seu acesso está bloqueado. Procure a administradora.');
-    return;
-  }
-
-  if (perfil.account_status === 'pending') {
-    await supabase.auth.signOut();
-    showMessage('loginMessage', 'Seu acesso ainda não foi liberado.');
-    return;
-  }
-
-  if (perfil.must_change_password) {
-    window.location.href = 'primeiro-acesso.html';
-    return;
-  }
-
-  window.location.href = 'dashboard.html';
 }
 
 function togglePassword(buttonId, inputId) {
@@ -158,7 +115,7 @@ async function initLoginPage() {
         return;
       }
 
-      await loadProfileAndRedirect(data.user);
+      window.location.href = './dashboard.html';
     } catch (error) {
       console.error(error);
       showMessage('loginMessage', 'Não foi possível entrar. Tente novamente.');

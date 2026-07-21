@@ -47,19 +47,19 @@ export function getCachedProfile() {
 
 export async function loadSessionProfile() {
   const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser();
+    data: { session },
+    error
+  } = await supabase.auth.getSession();
 
-  if (!user || userError) {
+  if (error || !session) {
     return { session: null, profile: null };
   }
 
   try {
     const { perfil } = await loadCurrentUserPermissions();
-    return { session: { user }, profile: perfil };
+    return { session, profile: perfil };
   } catch {
-    return { session: { user }, profile: null };
+    return { session, profile: null };
   }
 }
 

@@ -203,18 +203,6 @@ async function assertPermission(action) {
   }
 }
 
-async function testarConexao() {
-  console.log('[Supabase] Testando conexão com a tabela clients...');
-  const { data, error } = await supabase.from('clients').select('*').limit(1);
-  if (error) {
-    console.error('[Supabase] FALHA NA CONEXÃO:', error);
-    alert(`Falha na conexão com o banco de dados:\n${error.message}`);
-    return false;
-  }
-  console.log('[Supabase] Conexão OK. Retorno:', data);
-  return true;
-}
-
 async function exec(promise) {
   const { data, error } = await promise;
   if (error) {
@@ -240,6 +228,40 @@ async function exec(promise) {
 function sanitizeResponsavelPayload(payload = {}) {
   const { project_id, ...safePayload } = payload;
   return safePayload;
+}
+
+async function testarConexao() {
+  const {
+    data: { session },
+    error: sessionError
+  } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    console.error('[Supabase] Erro ao verificar sessão:', sessionError);
+
+    return false;
+  }
+
+  if (!session) {
+    console.warn('[Supabase] Teste não executado porque não existe sessão.');
+
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id')
+    .limit(1);
+
+  if (error) {
+    console.error('[Supabase] Falha no teste manual:', error);
+
+    return false;
+  }
+
+  console.log('[Supabase] Teste manual concluído:', data);
+
+  return true;
 }
 
 window.testarConexao = testarConexao;
@@ -517,9 +539,6 @@ window.dbMessage = function(message, type = 'info') {
     console.log('[dbMessage]', message);
   }
 };
-
-// Testa conexão automaticamente ao carregar a página
-document.addEventListener('DOMContentLoaded', testarConexao);
 
 export { supabase, testarConexao };
 export const db = window.db;
