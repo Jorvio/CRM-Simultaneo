@@ -121,20 +121,13 @@ function buildPermissions(perfil) {
   };
 }
 
-async function loadCurrentProfile() {
-  const session = await obterSessaoObrigatoria();
-  if (!session?.user) {
-    const error = new Error('Usuario nao autenticado.');
-    error.code = 'AUTH_REQUIRED';
-    throw error;
-  }
+let cachedProfile = null;
+let cachedPermissions = null;
+let cachedUserId = null;
 
-  const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser();
-
-  if (!user || userError) {
+async function loadCurrentProfile(session) {
+  const activeSession = session || await obterSessaoObrigatoria();
+  if (!activeSession?.user) {
     const error = new Error('Usuario nao autenticado.');
     error.code = 'AUTH_REQUIRED';
     throw error;
@@ -151,10 +144,11 @@ async function loadCurrentProfile() {
       can_manage_users,
       must_change_password
     `)
-    .eq('id', user.id)
+    .eq('id', activeSession.user.id)
     .single();
 
   if (perfilError || !perfil) {
+    console.error('[Supabase] Erro ao carregar perfil:', perfilError);
     const error = new Error('Perfil de acesso nao encontrado.');
     error.code = 'PROFILE_NOT_FOUND';
     throw error;
@@ -163,9 +157,24 @@ async function loadCurrentProfile() {
   return perfil;
 }
 
-export async function loadCurrentUserPermissions() {
-  const perfil = await loadCurrentProfile();
+export async function loadCurrentUserPermissions({ force = false } = {}) {
+  const session = await obterSessaoObrigatoria();
+  if (!session?.user) {
+    const error = new Error('Usuario nao autenticado.');
+    error.code = 'AUTH_REQUIRED';
+    throw error;
+  }
+
+  if (!force && cachedPermissions && cachedUserId === session.user.id) {
+    return { perfil: cachedProfile, permissions: cachedPermissions };
+  }
+
+  const perfil = await loadCurrentProfile(session);
   const permissions = buildPermissions(perfil);
+
+  cachedProfile = perfil;
+  cachedPermissions = permissions;
+  cachedUserId = session.user.id;
 
   window.crmCurrentProfile = perfil;
   window.crmCurrentPermissions = permissions;
@@ -209,7 +218,20 @@ async function testarConexao() {
 async function exec(promise) {
   const { data, error } = await promise;
   if (error) {
-    console.error('[Supabase] Erro na operação:', error);
+    console.error('[Supabase] Erro na operação:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    });
+
+    const redirected = await handleUnauthorized(error);
+    if (redirected) {
+      const authError = new Error('Sessão expirada. Faça login novamente.');
+      authError.code = 'AUTH_REQUIRED';
+      throw authError;
+    }
+
     throw error;  // lança o objeto completo, não só a mensagem
   }
   return data;
@@ -231,41 +253,29 @@ window.db = {
     if (!session) return [];
     await assertPermission('select');
 
-    const { data, error } = await supabase
-      .from('clients')
-      .select(`
-        id,
-        name,
-        legal_name,
-        cpf,
-        cnpj,
-        address,
-        client_type,
-        created_at,
-        updated_at
-      `)
-      .order('name', { ascending: true });
-
-    if (error) {
-      console.error('[Supabase] Erro completo ao carregar clientes:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        userId: session.user.id,
-        email: session.user.email
-      });
-
-      const redirected = await handleUnauthorized(error);
-      if (redirected) return [];
-      throw error;
-    }
-
-    return Array.isArray(data) ? data : [];
+    return exec(
+      supabase
+        .from('clients')
+        .select(`
+          id,
+          name,
+          legal_name,
+          cpf,
+          cnpj,
+          address,
+          client_type,
+          created_at,
+          updated_at
+        `)
+        .order('name', { ascending: true })
+    );
   },
   async fetchProjects() {
-    await assertPermission('select');
     console.log('[db] fetchProjects');
+    const session = await obterSessaoObrigatoria();
+    if (!session) return [];
+    await assertPermission('select');
+
     return exec(
       supabase
         .from('projects')
@@ -304,57 +314,42 @@ window.db = {
     if (!session) return [];
     await assertPermission('select');
 
-    const { data, error } = await supabase
-      .from('proposals')
-      .select(`
-        id,
-        project_id,
-        client_id,
-        proposal_number,
-        contact_id,
-        contact_name,
-        point_of_contact,
-        budget_date,
-        closing_date,
-        closing_month,
-        value_usd,
-        value_brl,
-        proposal_status,
-        project_status,
-        notes,
-        created_at,
-        updated_at,
-
-        cliente:clients!proposals_client_id_fkey (
+    return exec(
+      supabase
+        .from('proposals')
+        .select(`
           id,
-          name,
-          legal_name
-        ),
+          project_id,
+          client_id,
+          proposal_number,
+          contact_id,
+          contact_name,
+          point_of_contact,
+          budget_date,
+          closing_date,
+          closing_month,
+          value_usd,
+          value_brl,
+          proposal_status,
+          project_status,
+          notes,
+          created_at,
+          updated_at,
 
-        projeto:projects!proposals_project_id_fkey (
-          id,
-          name,
-          client_id
-        )
-      `)
-      .order('created_at', { ascending: false });
+          cliente:clients!proposals_client_id_fkey (
+            id,
+            name,
+            legal_name
+          ),
 
-    if (error) {
-      console.error('[Supabase] Erro completo ao carregar propostas:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        userId: session.user.id,
-        email: session.user.email
-      });
-
-      const redirected = await handleUnauthorized(error);
-      if (redirected) return [];
-      throw error;
-    }
-
-    return Array.isArray(data) ? data : [];
+          projeto:projects!proposals_project_id_fkey (
+            id,
+            name,
+            client_id
+          )
+        `)
+        .order('created_at', { ascending: false })
+    );
   },
   async fetchClientById(id) {
     await assertPermission('select');
