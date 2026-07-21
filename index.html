@@ -72,10 +72,10 @@
               <input id="searchInput" placeholder="Pesquisar cliente, projeto, contato...">
             </div>
             <div class="status-filters" id="statusFilters"></div>
-            <button class="btn-add" id="btnAdd">
+            <a class="btn-add" id="btnNovaProposta" href="index.html?newProposal=1">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Nova proposta
-            </button>
+            </a>
           </div>
         </div>
 
@@ -124,9 +124,11 @@
   let activeStatuses = new Set();
   let sortKey = null;
   let sortDir = 1;
+  let proposalsLoadError = false;
   let selectedClientId = null;
   let selectedProjectId = null;
   let editingProposalId = null;
+  const queryParams = new URLSearchParams(window.location.search);
   const clientNameById = new Map();
   const projectNameById = new Map();
   const proposalFieldMap = {
@@ -251,9 +253,11 @@
   function renderSummary(){
     const wrap = document.getElementById('summaryPills');
     const total = data.length;
-    const abertas = data.filter(d=>d.statusProposta==='Aberta').length;
-    const fechadas = data.filter(d=>d.statusProposta==='Fechada').length;
-    const valorFechado = data.filter(d=>d.statusProposta==='Fechada').reduce((a,d)=>a+Number(d.valorReais||0),0);
+    const abertas = data.filter((proposta) => String(proposta.statusProposta || '').toLowerCase() === 'aberta').length;
+    const fechadas = data.filter((proposta) => String(proposta.statusProposta || '').toLowerCase() === 'fechada').length;
+    const valorFechado = data
+      .filter((proposta) => String(proposta.statusProposta || '').toLowerCase() === 'fechada')
+      .reduce((totalAtual, proposta) => totalAtual + Number(proposta.valorReais || 0), 0);
     const conv = total ? Math.round((fechadas/total)*100) : 0;
     const pills = [
       {num: total, lbl:'Propostas'},
@@ -405,11 +409,24 @@
     body.innerHTML = '';
     const rows = getFiltered();
 
+    if (proposalsLoadError) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = columns.length + 1;
+      td.innerHTML = `<div class="empty-state">Não foi possível carregar as propostas.</div>`;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+
     if(rows.length === 0){
       const tr = document.createElement('tr');
       const td = document.createElement('td');
       td.colSpan = columns.length + 1;
-      td.innerHTML = `<div class="empty-state">Nenhuma proposta encontrada para esse filtro.</div>`;
+      const mensagem = data.length === 0
+        ? 'Nenhuma proposta encontrada para esse filtro.'
+        : 'Sem propostas para o filtro atual.';
+      td.innerHTML = `<div class="empty-state">${mensagem}</div>`;
       tr.appendChild(td);
       body.appendChild(tr);
     } else {
@@ -482,9 +499,6 @@
     filterText = e.target.value;
     renderTable();
   });
-
-  // Open modal to create a new proposal
-  document.getElementById('btnAdd').onclick = async () => openProposalModal();
 
   render();
 
@@ -563,6 +577,18 @@
       document.getElementById('fldObs').value = '';
       selectedClientId = null;
       selectedProjectId = null;
+
+      const preselectedClientId = Number(queryParams.get('clientId'));
+      const preselectedProjectId = Number(queryParams.get('projectId'));
+      if (preselectedClientId) {
+        selectedClientId = preselectedClientId;
+        document.getElementById('fldCliente').value = String(preselectedClientId);
+        await renderProjectSelectByClient(preselectedClientId);
+        if (preselectedProjectId) {
+          selectedProjectId = preselectedProjectId;
+          document.getElementById('fldProjeto').value = String(preselectedProjectId);
+        }
+      }
     }
 
     proposalModal.setAttribute('aria-hidden','false');
@@ -669,34 +695,42 @@
   async function loadData(){
     try{
       const proposals = await db.fetchProposals();
+      proposalsLoadError = false;
       if(Array.isArray(proposals) && proposals.length){
         data = proposals.map(normalizeProposalRow);
       } else {
         data = [];
       }
     } catch(e){
-      console.error('[loadData] Erro ao carregar propostas:', e);
-      alert(`Erro ao carregar propostas: ${e.message || JSON.stringify(e)}`);
+      console.error('Erro completo ao carregar propostas:', e);
+      proposalsLoadError = true;
+      data = [];
+      alert('Não foi possível carregar as propostas.');
     }
     render();
 
-    const proposalId = Number(new URLSearchParams(window.location.search).get('proposalId'));
+    const proposalId = Number(queryParams.get('proposalId'));
     if (proposalId) {
       const row = data.find((item) => Number(item.id) === proposalId);
       if (row) {
         await openProposalModal(row);
       }
     }
+
+    const openNewProposal = queryParams.get('newProposal') === '1';
+    if (openNewProposal) {
+      await openProposalModal();
+    }
   }
 
   function normalizeProposalRow(row){
-    const clientName = row.client?.legal_name || row.client?.name || (row.client_id != null ? `Cliente #${row.client_id}` : '');
-    const projectName = row.project?.name || (row.project_id != null ? `Projeto #${row.project_id}` : '');
+    const clientName = row.cliente?.name || row.cliente?.legal_name || 'Não informado';
+    const projectName = row.projeto?.name || 'Não informado';
 
-    if (row.client_id != null && clientName) {
+    if (row.client_id != null && clientName !== 'Não informado') {
       clientNameById.set(Number(row.client_id), clientName);
     }
-    if (row.project_id != null && projectName) {
+    if (row.project_id != null && projectName !== 'Não informado') {
       projectNameById.set(Number(row.project_id), projectName);
     }
 
@@ -706,16 +740,16 @@
       cliente: clientName,
       projeto: projectName,
       contact_id: row.contact_id || null,
-      contato: row.contact_name || row.contato || '',
-      pontoContato: row.point_of_contact || row.pontoContato || '',
+      contato: row.contact_name || row.contato || 'Não informado',
+      pontoContato: row.point_of_contact || row.pontoContato || 'Não informado',
       dataOrcamento: row.budget_date || row.dataOrcamento || '',
       dataFechamento: row.closing_date || row.dataFechamento || '',
-      mesFechamento: row.closing_month || row.mesFechamento || monthLabel(row.closing_date || row.dataFechamento || ''),
-      valorExterior: Number(row.value_usd != null ? row.value_usd : (row.valorExterior || 0)),
-      valorReais: Number(row.value_brl != null ? row.value_brl : (row.valorReais || 0)),
-      statusProposta: row.proposal_status || row.statusProposta || 'Aberta',
-      statusProjeto: row.project_status || row.statusProjeto || '—',
-      obs: row.notes || row.obs || '',
+      mesFechamento: row.closing_month || row.mesFechamento || 'Não informado',
+      valorExterior: row.value_usd != null ? Number(row.value_usd) : (row.valorExterior != null ? Number(row.valorExterior) : null),
+      valorReais: row.value_brl != null ? Number(row.value_brl) : (row.valorReais != null ? Number(row.valorReais) : null),
+      statusProposta: row.proposal_status || row.statusProposta || 'Não informado',
+      statusProjeto: row.project_status || row.statusProjeto || 'Não informado',
+      obs: row.notes || row.obs || 'Não informado',
       client_id: row.client_id || null,
       project_id: row.project_id || null
     };

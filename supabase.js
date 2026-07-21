@@ -81,20 +81,37 @@ window.db = {
       supabase
         .from('proposals')
         .select(`
-          *,
-          client:clients (
+          id,
+          project_id,
+          client_id,
+          proposal_number,
+          contact_id,
+          contact_name,
+          point_of_contact,
+          budget_date,
+          closing_date,
+          closing_month,
+          value_usd,
+          value_brl,
+          proposal_status,
+          project_status,
+          notes,
+          created_at,
+
+          cliente:clients!proposals_client_id_fkey (
             id,
             name,
             legal_name,
             client_type
           ),
-          project:projects (
+
+          projeto:projects!proposals_project_id_fkey (
             id,
             name,
             client_id
           )
         `)
-        .order('id', { ascending: false })
+        .order('created_at', { ascending: false })
     );
   },
   async fetchClientById(id) {

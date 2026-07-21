@@ -115,39 +115,29 @@
       } else if (params.type === 'project') {
         const project = await db.fetchProjectById(Number(params.id));
         const propostas = await db.fetchProposalsByProject(Number(params.id));
-        const nomeCliente = project.client?.legal_name || project.client?.name || 'Cliente não vinculado';
+        const nomeCliente = project.client?.legal_name || project.client?.name || 'Não informado';
+        const nomeResponsavel = project.responsavel?.nome_completo || 'Não informado';
 
         const blocoPropostas = !propostas || propostas.length === 0
           ? '<div class="empty-state">Este projeto ainda não possui propostas cadastradas.</div>'
           : `
-            <div style="overflow-x:auto; margin-top:16px;">
-              <table style="width:100%; border-collapse:collapse; min-width:760px;">
-                <thead>
-                  <tr>
-                    <th style="text-align:left;">Número da proposta</th>
-                    <th style="text-align:left;">Data</th>
-                    <th style="text-align:left;">Valor</th>
-                    <th style="text-align:left;">Status</th>
-                    <th style="text-align:left;">Contato</th>
-                    <th style="text-align:left;">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${propostas.map((p) => `
-                    <tr>
-                      <td>${p.proposal_number || '—'}</td>
-                      <td>${formatarData(p.budget_date || p.closing_date || p.created_at)}</td>
-                      <td>${formatarMoeda(p.value_brl)}</td>
-                      <td>${p.proposal_status || '—'}</td>
-                      <td>${p.contact_name || '—'}</td>
-                      <td style="display:flex; gap:8px;">
-                        <a class="btn-secondary" href="visualizar.html?type=proposal&id=${p.id}">Visualizar</a>
-                        <a class="btn" href="index.html?proposalId=${p.id}">Editar</a>
-                      </td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
+            <div style="display:grid; gap:12px; margin-top:16px;">
+              ${propostas.map((p) => `
+                <div class="page-card" style="padding:14px; border:1px solid var(--border);">
+                  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                    <div>
+                      <p style="margin:0 0 8px 0;"><strong>Proposta Nº ${p.proposal_number || 'Não informado'}</strong></p>
+                      <p style="margin:0 0 4px 0;"><strong>Status:</strong> ${p.proposal_status || 'Não informado'}</p>
+                      <p style="margin:0 0 4px 0;"><strong>Valor:</strong> ${formatarMoeda(p.value_brl)}</p>
+                      <p style="margin:0;"><strong>Data:</strong> ${formatarData(p.budget_date || p.closing_date || p.created_at)}</p>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                      <a class="btn-secondary" href="visualizar.html?type=proposal&id=${p.id}">Visualizar</a>
+                      <a class="btn" href="index.html?proposalId=${p.id}">Editar</a>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
             </div>
           `;
 
@@ -161,16 +151,16 @@
               <p><strong>Status:</strong> ${project.status || '—'}</p>
             </div>
             <div class="page-card" style="padding:18px;">
-              <h3 style="margin-top:0;">Detalhes</h3>
+              <h3 style="margin-top:0;">Informações relacionadas</h3>
               <p><strong>Cliente:</strong> ${nomeCliente}</p>
-              <p><strong>Responsável:</strong> ${project.responsavel?.nome_completo || 'Sem responsável'}</p>
-              <p><strong>CPF Responsável:</strong> ${formatarCPF(project.responsavel?.cpf || '')}</p>
-              <p><strong>E-mail Responsável:</strong> ${project.responsavel?.email || ''}</p>
-              <p><strong>Telefone Responsável:</strong> ${project.responsavel?.telefone || ''}</p>
+              <p><strong>Responsável:</strong> ${nomeResponsavel}</p>
             </div>
           </div>
           <div class="page-card" style="padding:18px; margin-top:20px;">
-            <h3 style="margin-top:0;">Propostas do projeto</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+              <h3 style="margin:0;">Propostas</h3>
+              <a class="btn-primary" href="index.html?newProposal=1&clientId=${project.client_id || ''}&projectId=${project.id}">Nova Proposta</a>
+            </div>
             ${blocoPropostas}
           </div>`;
       } else if (params.type === 'proposal') {
