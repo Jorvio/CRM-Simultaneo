@@ -22,11 +22,12 @@
     <main class="page-content">
       <div class="app">
         <div class="page-card">
-          <div class="page-header"><div><h1 class="page-title">Cadastrar Projeto</h1><div class="page-subtext">Inclua dados do responsável, financeiro e contrato</div></div></div>
+          <div class="page-header"><div><h1 class="page-title">Cadastrar Projeto</h1><div class="page-subtext">Vincule o projeto a um cliente e inclua os dados complementares</div></div></div>
           <div class="page-body">
             <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+              <div class="field"><label>Cliente *</label><select id="fldProjClient" required><option value="">Selecione um cliente</option></select></div>
               <div class="field"><label>Nome do Projeto</label><input id="fldProjName" type="text" placeholder="Nome do projeto"></div>
-              <div class="field"><label>Nº da Proposta</label><input id="fldProjPropNum" type="text" placeholder="Nº da proposta"></div>
+              <div class="field"><label>Status do Projeto</label><input id="fldProjStatus" type="text" placeholder="Ex: Em andamento"></div>
               <div class="field" style="grid-column:1 / -1"><label>Serviços</label><input id="fldProjServ" type="text" placeholder="Serviços incluídos"></div>
             </div>
             <div class="card-grid">
@@ -35,15 +36,15 @@
                   <h2 class="page-title" style="font-size:18px; margin:0;">Responsável</h2>
                 </div>
                 <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
-                  <div class="field"><label>Nome Completo</label><input type="text" placeholder="Nome completo"></div>
-                  <div class="field"><label>CPF</label><input type="text" placeholder="000.000.000-00"></div>
-                  <div class="field"><label>RG - Órgão Emissor</label><input type="text" placeholder="RG e órgão emissor"></div>
-                  <div class="field"><label>Profissão</label><input type="text" placeholder="Profissão"></div>
-                  <div class="field"><label>Estado Civil</label><input type="text" placeholder="Estado civil"></div>
-                  <div class="field"><label>Endereço Completo Responsável</label><textarea placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
-                  <div class="field"><label>E-mail</label><input type="email" placeholder="email@empresa.com"></div>
-                  <div class="field"><label>Telefone</label><input type="text" placeholder="(47) 99999-9999"></div>
-                  <div class="field"><label>E-mail em cópia</label><input type="email" placeholder="email.copia@empresa.com"></div>
+                  <div class="field"><label>Nome Completo</label><input id="fldRespNome" type="text" placeholder="Nome completo"></div>
+                  <div class="field"><label>CPF</label><input id="fldRespCpf" type="text" placeholder="000.000.000-00"></div>
+                  <div class="field"><label>RG - Órgão Emissor</label><input id="fldRespRg" type="text" placeholder="RG e órgão emissor"></div>
+                  <div class="field"><label>Profissão</label><input id="fldRespProfissao" type="text" placeholder="Profissão"></div>
+                  <div class="field"><label>Estado Civil</label><input id="fldRespEstadoCivil" type="text" placeholder="Estado civil"></div>
+                  <div class="field"><label>Endereço Completo Responsável</label><textarea id="fldRespEndereco" placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
+                  <div class="field"><label>E-mail</label><input id="fldRespEmail" type="email" placeholder="email@empresa.com"></div>
+                  <div class="field"><label>Telefone</label><input id="fldRespTelefone" type="text" placeholder="(47) 99999-9999"></div>
+                  <div class="field"><label>E-mail em cópia</label><input id="fldRespEmailCopia" type="email" placeholder="email.copia@empresa.com"></div>
                 </div>
               </div>
               <div class="page-card" style="padding:20px;">
@@ -85,25 +86,145 @@
   </div>
   <script type="module">
   import { db, dbMessage } from './supabase.js';
+  const params = new URLSearchParams(window.location.search);
+  const projectId = params.get('id');
+
+  async function carregarClientes() {
+    const select = document.getElementById('fldProjClient');
+    try {
+      const clients = await db.fetchClients();
+      select.innerHTML = '<option value="">Selecione um cliente</option>';
+      (clients || []).forEach((client) => {
+        const option = document.createElement('option');
+        option.value = String(client.id);
+        const label = client.legal_name || client.name || `Cliente #${client.id}`;
+        option.textContent = label;
+        select.appendChild(option);
+      });
+    } catch (error) {
+      console.error('[projeto-novo] Erro ao carregar clientes:', error);
+      alert('Não foi possível carregar os clientes. Tente novamente.');
+    }
+  }
+
+  function somenteNumeros(valor) {
+    return String(valor || '').replace(/\D/g, '');
+  }
+
+  async function obterOuCriarResponsavel() {
+    const nomeCompleto = document.getElementById('fldRespNome').value.trim();
+    const cpf = somenteNumeros(document.getElementById('fldRespCpf').value);
+    const rgOrgaoEmissor = document.getElementById('fldRespRg').value.trim();
+    const profissao = document.getElementById('fldRespProfissao').value.trim();
+    const estadoCivil = document.getElementById('fldRespEstadoCivil').value.trim();
+    const enderecoResponsavel = document.getElementById('fldRespEndereco').value.trim();
+    const email = document.getElementById('fldRespEmail').value.trim();
+    const telefone = document.getElementById('fldRespTelefone').value.trim();
+    const emailCopia = document.getElementById('fldRespEmailCopia').value.trim();
+
+    const temDadosResponsavel = [
+      nomeCompleto,
+      cpf,
+      rgOrgaoEmissor,
+      profissao,
+      estadoCivil,
+      enderecoResponsavel,
+      email,
+      telefone,
+      emailCopia
+    ].some(Boolean);
+
+    if (!temDadosResponsavel) return null;
+
+    const responsaveis = await db.fetchResponsaveis();
+    const responsavelExistente = (responsaveis || []).find((resp) => {
+      const cpfMatch = cpf && somenteNumeros(resp.cpf) === cpf;
+      const emailMatch = email && String(resp.email || '').toLowerCase() === email.toLowerCase();
+      return cpfMatch || emailMatch;
+    });
+
+    if (responsavelExistente) {
+      return responsavelExistente.id;
+    }
+
+    if (!nomeCompleto) {
+      throw new Error('Informe o nome completo do responsável para cadastrar um novo registro.');
+    }
+
+    const payloadResponsavel = {
+      nome_completo: nomeCompleto,
+      cpf: cpf || null,
+      rg_orgao_emissor: rgOrgaoEmissor || null,
+      profissao: profissao || null,
+      estado_civil: estadoCivil || null,
+      endereco_responsavel: enderecoResponsavel || null,
+      email: email || null,
+      telefone: telefone || null,
+      email_copia: emailCopia || null
+    };
+
+    const novoResponsavel = await db.insertResponsavel(payloadResponsavel);
+    return novoResponsavel.id;
+  }
+
+  async function carregarProjetoParaEdicao() {
+    if (!projectId) return;
+
+    try {
+      const project = await db.fetchProjectById(Number(projectId));
+      document.getElementById('fldProjClient').value = project.client_id ? String(project.client_id) : '';
+      document.getElementById('fldProjName').value = project.name || '';
+      document.getElementById('fldProjServ').value = project.services || '';
+      document.getElementById('fldProjStatus').value = project.status || '';
+
+      if (project.responsavel) {
+        document.getElementById('fldRespNome').value = project.responsavel.nome_completo || '';
+        document.getElementById('fldRespCpf').value = project.responsavel.cpf || '';
+        document.getElementById('fldRespEmail').value = project.responsavel.email || '';
+        document.getElementById('fldRespTelefone').value = project.responsavel.telefone || '';
+      }
+
+      document.querySelector('.page-title').textContent = 'Editar Projeto';
+      document.getElementById('btnSaveProj').textContent = 'Salvar Alterações';
+    } catch (error) {
+      console.error('[projeto-novo] Erro ao carregar projeto para edição:', error);
+      alert('Não foi possível carregar o projeto para edição.');
+    }
+  }
 
   document.getElementById('btnSaveProj').onclick = async function(){
+    const clientId = Number(document.getElementById('fldProjClient').value);
     const name = document.getElementById('fldProjName').value.trim();
     const serv = document.getElementById('fldProjServ').value.trim();
-    const propNum = document.getElementById('fldProjPropNum').value.trim();
+    const statusProjeto = document.getElementById('fldProjStatus').value.trim();
+    if(!clientId){ alert('Selecione um cliente para o projeto.'); return; }
     if(!name){ alert('Nome do projeto é obrigatório'); return; }
 
-    const payload = { name, services: serv || null, proposal_number: propNum || null };
-    console.log('[btnSaveProj] Salvando projeto no Supabase:', payload);
     try {
-      const result = await db.insertProject(payload);
-      console.log('[btnSaveProj] Projeto inserido com sucesso:', result);
-      alert('Projeto cadastrado com sucesso!');
+      const responsibleId = await obterOuCriarResponsavel();
+      const payload = {
+        client_id: clientId,
+        name,
+        services: serv || null,
+        status: statusProjeto || null,
+        responsible_id: responsibleId || null
+      };
+
+      console.log('[btnSaveProj] Salvando projeto no Supabase:', payload);
+      const result = projectId
+        ? await db.updateProject(Number(projectId), payload)
+        : await db.insertProject(payload);
+      console.log('[btnSaveProj] Projeto salvo com sucesso:', result);
+      alert(projectId ? 'Projeto atualizado com sucesso!' : 'Projeto cadastrado com sucesso!');
       history.back();
     } catch (error) {
       console.error('[btnSaveProj] Erro ao salvar projeto:', error);
       alert(`Erro ao salvar projeto:\n${error.message || JSON.stringify(error)}`);
     }
   };
+
+  await carregarClientes();
+  await carregarProjetoParaEdicao();
   </script>
 </body>
 </html>

@@ -28,6 +28,11 @@ async function exec(promise) {
   return data;
 }
 
+function sanitizeResponsavelPayload(payload = {}) {
+  const { project_id, ...safePayload } = payload;
+  return safePayload;
+}
+
 window.supabaseClient = supabase;
 window.testarConexao = testarConexao;
 
@@ -40,7 +45,27 @@ window.db = {
   },
   async fetchProjects() {
     console.log('[db] fetchProjects');
-    return exec(supabase.from('projects').select('*').order('id', { ascending: true }));
+    return exec(
+      supabase
+        .from('projects')
+        .select(`
+          *,
+          client:clients (
+            id,
+            name,
+            legal_name,
+            client_type
+          ),
+          responsavel:responsible_id (
+            id,
+            nome_completo,
+            cpf,
+            email,
+            telefone
+          )
+        `)
+        .order('id', { ascending: true })
+    );
   },
   async fetchResponsaveis() {
     console.log('[db] fetchResponsaveis');
@@ -52,7 +77,25 @@ window.db = {
   },
   async fetchProposals() {
     console.log('[db] fetchProposals');
-    return exec(supabase.from('proposals').select('*').order('id', { ascending: false }));
+    return exec(
+      supabase
+        .from('proposals')
+        .select(`
+          *,
+          client:clients (
+            id,
+            name,
+            legal_name,
+            client_type
+          ),
+          project:projects (
+            id,
+            name,
+            client_id
+          )
+        `)
+        .order('id', { ascending: false })
+    );
   },
   async fetchClientById(id) {
     console.log('[db] fetchClientById', id);
@@ -60,7 +103,60 @@ window.db = {
   },
   async fetchProjectById(id) {
     console.log('[db] fetchProjectById', id);
-    return exec(supabase.from('projects').select('*').eq('id', id).single());
+    return exec(
+      supabase
+        .from('projects')
+        .select(`
+          *,
+          client:clients (
+            id,
+            name,
+            legal_name,
+            client_type
+          ),
+          responsavel:responsible_id (
+            id,
+            nome_completo,
+            cpf,
+            email,
+            telefone
+          )
+        `)
+        .eq('id', id)
+        .single()
+    );
+  },
+  async fetchProjectsByClient(clientId) {
+    console.log('[db] fetchProjectsByClient', clientId);
+    return exec(
+      supabase
+        .from('projects')
+        .select('id, name, client_id')
+        .eq('client_id', clientId)
+        .order('name', { ascending: true })
+    );
+  },
+  async fetchProposalsByProject(projectId) {
+    console.log('[db] fetchProposalsByProject', projectId);
+    return exec(
+      supabase
+        .from('proposals')
+        .select(`
+          id,
+          proposal_number,
+          budget_date,
+          closing_date,
+          value_usd,
+          value_brl,
+          proposal_status,
+          project_status,
+          contact_name,
+          notes,
+          created_at
+        `)
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+    );
   },
   async fetchProposalById(id) {
     console.log('[db] fetchProposalById', id);
@@ -95,12 +191,14 @@ window.db = {
     return exec(supabase.from('projects').delete().eq('id', id));
   },
   async insertResponsavel(payload) {
-    console.log('[db] insertResponsavel payload:', JSON.stringify(payload));
-    return exec(supabase.from('responsaveis').insert([payload]).select().single());
+    const safePayload = sanitizeResponsavelPayload(payload);
+    console.log('[db] insertResponsavel payload:', JSON.stringify(safePayload));
+    return exec(supabase.from('responsaveis').insert([safePayload]).select().single());
   },
   async updateResponsavel(id, payload) {
+    const safePayload = sanitizeResponsavelPayload(payload);
     console.log('[db] updateResponsavel id:', id);
-    return exec(supabase.from('responsaveis').update(payload).eq('id', id).select().single());
+    return exec(supabase.from('responsaveis').update(safePayload).eq('id', id).select().single());
   },
   async insertContract(payload) {
     console.log('[db] insertContract payload:', JSON.stringify(payload));

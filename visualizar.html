@@ -69,6 +69,18 @@
       .replace(/(\d{4})(\d)/, '$1-$2');
   }
 
+  function formatarData(dataIso) {
+    if (!dataIso) return '—';
+    const [y, m, d] = String(dataIso).split('T')[0].split('-');
+    if (!y || !m || !d) return '—';
+    return `${d}/${m}/${y}`;
+  }
+
+  function formatarMoeda(valor) {
+    if (valor == null || valor === '') return '—';
+    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
   async function renderRecord() {
     const params = getQueryParams();
     const content = document.getElementById('recordContent');
@@ -95,27 +107,93 @@
               <p><strong>Endereço CNPJ:</strong> ${client.address || ''}</p>
             </div>
             <div class="page-card" style="padding:18px;">
-              <h3 style="margin-top:0;">Dados do Projeto</h3>
-              <p><strong>Projeto:</strong> —</p>
-              <p><strong>Serviços:</strong> —</p>
-              <p><strong>Nº da Proposta:</strong> —</p>
+              <h3 style="margin-top:0;">Relacionamentos</h3>
+              <p><strong>Projetos deste cliente:</strong> Consulte a aba de projetos para ver todos os vínculos.</p>
+              <p><strong>Propostas:</strong> Cada proposta pertence a um projeto e também a este cliente.</p>
             </div>
           </div>`;
       } else if (params.type === 'project') {
         const project = await db.fetchProjectById(Number(params.id));
+        const propostas = await db.fetchProposalsByProject(Number(params.id));
+        const nomeCliente = project.client?.legal_name || project.client?.name || 'Cliente não vinculado';
+
+        const blocoPropostas = !propostas || propostas.length === 0
+          ? '<div class="empty-state">Este projeto ainda não possui propostas cadastradas.</div>'
+          : `
+            <div style="overflow-x:auto; margin-top:16px;">
+              <table style="width:100%; border-collapse:collapse; min-width:760px;">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;">Número da proposta</th>
+                    <th style="text-align:left;">Data</th>
+                    <th style="text-align:left;">Valor</th>
+                    <th style="text-align:left;">Status</th>
+                    <th style="text-align:left;">Contato</th>
+                    <th style="text-align:left;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${propostas.map((p) => `
+                    <tr>
+                      <td>${p.proposal_number || '—'}</td>
+                      <td>${formatarData(p.budget_date || p.closing_date || p.created_at)}</td>
+                      <td>${formatarMoeda(p.value_brl)}</td>
+                      <td>${p.proposal_status || '—'}</td>
+                      <td>${p.contact_name || '—'}</td>
+                      <td style="display:flex; gap:8px;">
+                        <a class="btn-secondary" href="visualizar.html?type=proposal&id=${p.id}">Visualizar</a>
+                        <a class="btn" href="index.html?proposalId=${p.id}">Editar</a>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+
+        editClientLink.href = `projeto-novo.html?id=${project.id}`;
         content.innerHTML = `
           <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
             <div class="page-card" style="padding:18px;">
               <h3 style="margin-top:0;">Projeto</h3>
               <p><strong>Nome do Projeto:</strong> ${project.name || ''}</p>
               <p><strong>Serviços:</strong> ${project.services || ''}</p>
-              <p><strong>Nº da Proposta:</strong> ${project.proposal_number || ''}</p>
+              <p><strong>Status:</strong> ${project.status || '—'}</p>
             </div>
             <div class="page-card" style="padding:18px;">
               <h3 style="margin-top:0;">Detalhes</h3>
-              <p><strong>Client ID:</strong> ${project.client_id ?? ''}</p>
-              <p><strong>Responsible ID:</strong> ${project.responsible_id ?? ''}</p>
-              <p><strong>Status:</strong> ${project.status || ''}</p>
+              <p><strong>Cliente:</strong> ${nomeCliente}</p>
+              <p><strong>Responsável:</strong> ${project.responsavel?.nome_completo || 'Sem responsável'}</p>
+              <p><strong>CPF Responsável:</strong> ${formatarCPF(project.responsavel?.cpf || '')}</p>
+              <p><strong>E-mail Responsável:</strong> ${project.responsavel?.email || ''}</p>
+              <p><strong>Telefone Responsável:</strong> ${project.responsavel?.telefone || ''}</p>
+            </div>
+          </div>
+          <div class="page-card" style="padding:18px; margin-top:20px;">
+            <h3 style="margin-top:0;">Propostas do projeto</h3>
+            ${blocoPropostas}
+          </div>`;
+      } else if (params.type === 'proposal') {
+        const proposal = await db.fetchProposalById(Number(params.id));
+        editClientLink.href = 'index.html';
+        content.innerHTML = `
+          <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
+            <div class="page-card" style="padding:18px;">
+              <h3 style="margin-top:0;">Proposta</h3>
+              <p><strong>Número:</strong> ${proposal.proposal_number || '—'}</p>
+              <p><strong>Cliente (ID):</strong> ${proposal.client_id ?? '—'}</p>
+              <p><strong>Projeto (ID):</strong> ${proposal.project_id ?? '—'}</p>
+              <p><strong>Data orçamento:</strong> ${formatarData(proposal.budget_date)}</p>
+              <p><strong>Data fechamento:</strong> ${formatarData(proposal.closing_date)}</p>
+            </div>
+            <div class="page-card" style="padding:18px;">
+              <h3 style="margin-top:0;">Comercial</h3>
+              <p><strong>Valor USD:</strong> ${proposal.value_usd ?? '—'}</p>
+              <p><strong>Valor BRL:</strong> ${formatarMoeda(proposal.value_brl)}</p>
+              <p><strong>Status proposta:</strong> ${proposal.proposal_status || '—'}</p>
+              <p><strong>Status projeto:</strong> ${proposal.project_status || '—'}</p>
+              <p><strong>Contato:</strong> ${proposal.contact_name || '—'}</p>
+              <p><strong>Observações:</strong> ${proposal.notes || '—'}</p>
             </div>
           </div>`;
       } else {

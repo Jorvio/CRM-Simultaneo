@@ -49,10 +49,10 @@
                 <thead>
                   <tr>
                     <th>Projeto</th>
-                    <th>Client ID</th>
-                    <th>Responsible ID</th>
+                    <th>Cliente</th>
+                    <th>Responsável</th>
                     <th>Services</th>
-                    <th>Nº Proposta</th>
+                    <th>Propostas</th>
                     <th>Status</th>
                     <th>Ações</th>
                   </tr>
@@ -68,6 +68,65 @@
   <script type="module">
   import { db, dbMessage } from './supabase.js';
 
+  function formatarData(dataIso) {
+    if (!dataIso) return '—';
+    const [y, m, d] = String(dataIso).split('T')[0].split('-');
+    if (!y || !m || !d) return '—';
+    return `${d}/${m}/${y}`;
+  }
+
+  function formatarMoeda(valor) {
+    if (valor == null || valor === '') return '—';
+    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function escaparHtml(valor) {
+    return String(valor ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function renderPropostasDoProjeto(propostas) {
+    if (!propostas || propostas.length === 0) {
+      return '<div class="empty-state" style="padding:10px;">Este projeto ainda não possui propostas cadastradas.</div>';
+    }
+
+    const linhas = propostas.map((p) => `
+      <tr>
+        <td>${escaparHtml(p.proposal_number || '—')}</td>
+        <td>${formatarData(p.budget_date || p.closing_date || p.created_at)}</td>
+        <td>${formatarMoeda(p.value_brl)}</td>
+        <td>${escaparHtml(p.proposal_status || '—')}</td>
+        <td>${escaparHtml(p.contact_name || '—')}</td>
+        <td>
+          <a class="btn-secondary" href="visualizar.html?type=proposal&id=${p.id}">Visualizar</a>
+          <a class="btn" href="index.html?proposalId=${p.id}">Editar</a>
+        </td>
+      </tr>
+    `).join('');
+
+    return `
+      <div style="overflow-x:auto;">
+        <table style="margin:0; width:100%; min-width:680px;">
+          <thead>
+            <tr>
+              <th>Número da proposta</th>
+              <th>Data</th>
+              <th>Valor</th>
+              <th>Status</th>
+              <th>Contato</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
   async function renderProjects() {
     try {
       const projects = await db.fetchProjects();
@@ -77,19 +136,22 @@
         tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Nenhum projeto encontrado.</div></td></tr>';
         return;
       }
-      projects.forEach(project => {
+
+      for (const project of projects) {
+        const propostas = await db.fetchProposalsByProject(project.id);
+        const nomeCliente = project.client?.legal_name || project.client?.name || 'Cliente não vinculado';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${project.name || ''}</td>
-          <td>${project.client_id ?? ''}</td>
-          <td>${project.responsible_id ?? ''}</td>
+          <td>${nomeCliente}</td>
+          <td>${project.responsavel?.nome_completo || 'Sem responsável'}</td>
           <td>${project.services || ''}</td>
-          <td>${project.proposal_number || ''}</td>
+          <td>${renderPropostasDoProjeto(propostas)}</td>
           <td>${project.status || ''}</td>
           <td>
             <div style="display:flex;gap:8px;">
               <a class="btn-secondary" href="visualizar.html?type=project&id=${project.id}">Visualizar</a>
-              <a class="btn" href="projeto-novo.html">Editar</a>
+              <a class="btn" href="projeto-novo.html?id=${project.id}">Editar</a>
               <button class="btn-secondary" type="button" data-id="${project.id}">Excluir</button>
             </div>
           </td>
@@ -106,7 +168,7 @@
           }
         };
         tbody.appendChild(tr);
-      });
+      }
     } catch (error) {
       console.error('[renderProjects] Erro ao carregar projetos:', error);
       alert(`Erro ao carregar projetos:\n${error.message || JSON.stringify(error)}`);

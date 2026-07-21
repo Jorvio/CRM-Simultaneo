@@ -142,6 +142,8 @@
   let dadosMensais    = criarDadosMensaisZerados();
   let dadosGlobais    = { totalClientes: 0, totalProjetos: 0, totalContratos: 0 };
   let todasPropostas  = [];
+  const clientNameById = new Map();
+  const projectNameById = new Map();
   let barChart = null, lineChart = null, donutChart = null;
   let chartRenderVersion = 0;
   const root = document.getElementById('dash-root');
@@ -198,11 +200,14 @@
   }
 
   function normalizarProposta(p) {
+    const clientName = p.client?.legal_name || p.client?.name || clientNameById.get(Number(p.client_id)) || (p.client_id != null ? `Cliente #${p.client_id}` : '');
+    const projectName = p.project?.name || projectNameById.get(Number(p.project_id)) || (p.project_id != null ? `Projeto #${p.project_id}` : '');
+
     return {
       id:             p.id,
       numero:         p.proposal_number || p.numero || '',
-      cliente:        p.client_id != null ? String(p.client_id) : '',
-      projeto:        p.project_id != null ? String(p.project_id) : '',
+      cliente:        clientName,
+      projeto:        projectName,
       contato:        p.contact_name    || p.contato || '',
       dataOrcamento:  p.budget_date     || p.dataOrcamento  || p.created_at || '',
       dataFechamento: p.closing_date    || p.dataFechamento || '',
@@ -585,6 +590,13 @@
         alert('Erro ao carregar dashboard: ' + erro.message);
         return;
       }
+
+      (clientesR.data || []).forEach((client) => {
+        clientNameById.set(Number(client.id), client.legal_name || client.name || `Cliente #${client.id}`);
+      });
+      (projetosR.data || []).forEach((project) => {
+        projectNameById.set(Number(project.id), project.name || `Projeto #${project.id}`);
+      });
 
       todasPropostas = (propostasR.data || []).map(normalizarProposta);
       dadosGlobais = {

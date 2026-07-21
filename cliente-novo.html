@@ -22,7 +22,7 @@
     <main class="page-content">
       <div class="app">
         <div class="page-card">
-          <div class="page-header"><div><h1 class="page-title">Cadastrar Cliente</h1><div class="page-subtext">Preencha os dados da empresa e do projeto</div></div></div>
+          <div class="page-header"><div><h1 class="page-title">Cadastrar Cliente</h1><div class="page-subtext">Preencha os dados do cliente</div></div></div>
           <div class="page-body">
             <div class="card-grid">
               <div class="page-card" style="padding:20px;">
@@ -43,16 +43,6 @@
                   <div class="field" id="fieldCpf"><label>CPF</label><input id="fldCliCPF" type="text" inputmode="numeric" placeholder="000.000.000-00" maxlength="14"></div>
                   <div class="field" id="fieldCnpj"><label>CNPJ</label><input id="fldCliCNPJ" type="text" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18"></div>
                   <div class="field"><label>Endereço Completo</label><textarea id="fldCliEndereco" placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
-                </div>
-              </div>
-              <div class="page-card" style="padding:20px;">
-                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
-                  <h2 class="page-title" style="font-size:18px; margin:0;">Projeto</h2>
-                </div>
-                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
-                  <div class="field"><label>Nome do Projeto</label><input id="fldCliProjectName" type="text" placeholder="Nome do projeto"></div>
-                  <div class="field"><label>Serviços</label><input id="fldCliProjectServ" type="text" placeholder="Serviços incluídos"></div>
-                  <div class="field"><label>Nº da Proposta</label><input id="fldCliProjectPropNum" type="text" placeholder="Nº da proposta"></div>
                 </div>
               </div>
             </div>
@@ -77,61 +67,26 @@
   const fldCliCNPJ = document.getElementById('fldCliCNPJ');
 
   function somenteNumeros(valor) {
-    return valor.replace(/\D/g, '');
+    return String(valor ?? '').replace(/\D/g, '');
   }
 
   function formatarCPF(valor) {
     const numeros = somenteNumeros(valor).slice(0, 11);
+
     return numeros
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1-$2');
   }
 
   function formatarCNPJ(valor) {
     const numeros = somenteNumeros(valor).slice(0, 14);
+
     return numeros
       .replace(/^(\d{2})(\d)/, '$1.$2')
       .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
       .replace(/\.(\d{3})(\d)/, '.$1/$2')
       .replace(/(\d{4})(\d)/, '$1-$2');
-  }
-
-  function validarCPF(cpf) {
-    if (!/^\d{11}$/.test(cpf)) return false;
-    if (/^(\d)\1{10}$/.test(cpf)) return false;
-
-    let soma = 0;
-    for (let i = 0; i < 9; i++) soma += Number(cpf[i]) * (10 - i);
-    let digito1 = 11 - (soma % 11);
-    digito1 = digito1 >= 10 ? 0 : digito1;
-    if (digito1 !== Number(cpf[9])) return false;
-
-    soma = 0;
-    for (let i = 0; i < 10; i++) soma += Number(cpf[i]) * (11 - i);
-    let digito2 = 11 - (soma % 11);
-    digito2 = digito2 >= 10 ? 0 : digito2;
-    return digito2 === Number(cpf[10]);
-  }
-
-  function validarCNPJ(cnpj) {
-    if (!/^\d{14}$/.test(cnpj)) return false;
-    if (/^(\d)\1{13}$/.test(cnpj)) return false;
-
-    const calcularDigito = (base, pesos) => {
-      let soma = 0;
-      for (let i = 0; i < pesos.length; i++) soma += Number(base[i]) * pesos[i];
-      const resto = soma % 11;
-      return resto < 2 ? 0 : 11 - resto;
-    };
-
-    const base12 = cnpj.slice(0, 12);
-    const digito1 = calcularDigito(base12, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
-    if (digito1 !== Number(cnpj[12])) return false;
-
-    const base13 = cnpj.slice(0, 13);
-    const digito2 = calcularDigito(base13, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
-    return digito2 === Number(cnpj[13]);
   }
 
   function atualizarCamposPorTipo() {
@@ -182,8 +137,10 @@
     const tipoCliente = fldCliType.value;
     const nomeCliente = document.getElementById('fldCliName').value.trim();
     const razaoSocial = document.getElementById('fldCliRazao').value.trim();
-    const cpf = somenteNumeros(fldCliCPF.value);
-    const cnpj = somenteNumeros(fldCliCNPJ.value);
+    const cpf = fldCliCPF.value;
+    const cnpj = fldCliCNPJ.value;
+    const cpfNumeros = somenteNumeros(cpf);
+    const cnpjNumeros = somenteNumeros(cnpj);
     const endereco = document.getElementById('fldCliEndereco').value.trim();
 
     if (!tipoCliente) {
@@ -192,12 +149,8 @@
     }
 
     if (tipoCliente === 'PF') {
-      if (cpf.length !== 11) {
-        alert('Digite um CPF válido com 11 números.');
-        return;
-      }
-      if (!validarCPF(cpf)) {
-        alert('Digite um CPF válido com 11 números.');
+      if (cpfNumeros.length !== 11) {
+        alert('Digite o CPF completo com 11 números.');
         return;
       }
       if (!nomeCliente) {
@@ -211,12 +164,8 @@
         alert('Razão Social é obrigatória para Pessoa Jurídica.');
         return;
       }
-      if (cnpj.length !== 14) {
-        alert('Digite um CNPJ válido com 14 números.');
-        return;
-      }
-      if (!validarCNPJ(cnpj)) {
-        alert('Digite um CNPJ válido com 14 números.');
+      if (cnpjNumeros.length !== 14) {
+        alert('Digite o CNPJ completo com 14 números.');
         return;
       }
       if (!nomeCliente) {
@@ -229,8 +178,8 @@
       client_type: tipoCliente,
       name: nomeCliente,
       legal_name: tipoCliente === 'PJ' ? razaoSocial : null,
-      cpf: tipoCliente === 'PF' ? cpf : null,
-      cnpj: tipoCliente === 'PJ' ? cnpj : null,
+      cpf: tipoCliente === 'PF' ? cpfNumeros : null,
+      cnpj: tipoCliente === 'PJ' ? cnpjNumeros : null,
       address: endereco
     };
 
@@ -243,7 +192,38 @@
 
       if (error) {
         console.error('Erro completo ao salvar cliente:', error);
-        alert(`Erro ao salvar cliente: ${error.message}`);
+
+        const mensagemErro = [
+          error.message,
+          error.details,
+          error.hint
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        if (error.code === '23505') {
+          if (
+            mensagemErro.includes('clients_cnpj_unique_idx') ||
+            mensagemErro.includes('cnpj')
+          ) {
+            alert('CNPJ já cadastrado.');
+            return;
+          }
+
+          if (
+            mensagemErro.includes('clients_cpf_unique_idx') ||
+            mensagemErro.includes('cpf')
+          ) {
+            alert('CPF já cadastrado.');
+            return;
+          }
+
+          alert('Este cliente já está cadastrado.');
+          return;
+        }
+
+        alert('Não foi possível salvar o cliente. Tente novamente.');
         return;
       }
 
@@ -252,7 +232,7 @@
       history.back();
     } catch (error) {
       console.error('[btnSaveClient] Erro ao salvar cliente:', error);
-      alert(`Erro ao salvar cliente:\n${error.message || JSON.stringify(error)}`);
+      alert('Não foi possível salvar o cliente. Tente novamente.');
     }
   };
 
