@@ -28,7 +28,7 @@
             </div>
             <div>
               <a class="btn-secondary" href="clientes.html">Voltar</a>
-              <a class="btn" href="cliente-novo.html">Editar</a>
+              <a class="btn" id="editClientLink" href="cliente-novo.html">Editar</a>
             </div>
           </div>
           <div class="page-body">
@@ -48,9 +48,31 @@
     return Object.fromEntries(new URLSearchParams(window.location.search));
   }
 
+  function somenteNumeros(valor) {
+    return String(valor || '').replace(/\D/g, '');
+  }
+
+  function formatarCPF(valor) {
+    const numeros = somenteNumeros(valor).slice(0, 11);
+    return numeros
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  }
+
+  function formatarCNPJ(valor) {
+    const numeros = somenteNumeros(valor).slice(0, 14);
+    return numeros
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+
   async function renderRecord() {
     const params = getQueryParams();
     const content = document.getElementById('recordContent');
+    const editClientLink = document.getElementById('editClientLink');
     if (!params.type || !params.id) {
       content.innerHTML = '<div class="empty-state">Registro não especificado. Use o botão Voltar para retornar.</div>';
       return;
@@ -59,14 +81,18 @@
     try {
       if (params.type === 'client') {
         const client = await db.fetchClientById(Number(params.id));
+        const tipoCliente = client.client_type === 'PF' ? 'Pessoa Física' : client.client_type === 'PJ' ? 'Pessoa Jurídica' : '';
+        editClientLink.href = `cliente-novo.html?id=${client.id}`;
         content.innerHTML = `
           <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
             <div class="page-card" style="padding:18px;">
               <h3 style="margin-top:0;">Empresa</h3>
               <p><strong>Cliente:</strong> ${client.name || ''}</p>
-              <p><strong>Razão Social:</strong> ${client.razaoSocial || ''}</p>
-              <p><strong>CNPJ:</strong> ${client.cnpj || ''}</p>
-              <p><strong>Endereço:</strong> ${client.endereco || ''}</p>
+              <p><strong>Razão Social:</strong> ${client.legal_name || ''}</p>
+              <p><strong>Tipo:</strong> ${tipoCliente}</p>
+              <p><strong>CPF:</strong> ${formatarCPF(client.cpf || '')}</p>
+              <p><strong>CNPJ:</strong> ${formatarCNPJ(client.cnpj || '')}</p>
+              <p><strong>Endereço CNPJ:</strong> ${client.address || ''}</p>
             </div>
             <div class="page-card" style="padding:18px;">
               <h3 style="margin-top:0;">Dados do Projeto</h3>

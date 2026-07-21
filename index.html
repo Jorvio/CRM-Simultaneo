@@ -464,7 +464,14 @@
     if(window.clientCache && window.clientCache.length) return window.clientCache;
     try {
       const clients = await db.fetchClients();
-      window.clientCache = (clients||[]).map(c => ({id:c.id, name:c.name||c.razaoSocial||c.cliente||'', cpf:c.cpf||'', cnpj:c.cnpj||''}));
+      window.clientCache = (clients||[]).map(c => ({
+        id: c.id,
+        name: c.name || '',
+        legal_name: c.legal_name || '',
+        cpf: c.cpf || '',
+        cnpj: c.cnpj || '',
+        address: c.address || ''
+      }));
       return window.clientCache;
     } catch (e) {
       dbMessage('Falha ao carregar clientes', 'error');

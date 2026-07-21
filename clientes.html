@@ -38,11 +38,11 @@
                   <thead>
                     <tr>
                       <th>Cliente</th>
-                      <th>Projeto</th>
-                      <th>Serviço</th>
-                      <th>Nº Proposta</th>
                       <th>Razão Social</th>
+                      <th>Tipo</th>
+                      <th>CPF</th>
                       <th>CNPJ</th>
+                      <th>Endereço CNPJ</th>
                       <th>Ações</th>
                     </tr>
                   </thead>
@@ -63,18 +63,19 @@
                 return;
               }
               clients.forEach(client => {
+                const tipoCliente = client.client_type === 'PF' ? 'Pessoa Física' : client.client_type === 'PJ' ? 'Pessoa Jurídica' : '';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                   <td>${client.name || ''}</td>
-                  <td>${client.projeto || ''}</td>
-                  <td>${client.servico || ''}</td>
-                  <td>${client.propostaNum || client.proposta_num || ''}</td>
-                  <td>${client.razaoSocial || ''}</td>
-                  <td>${client.cnpj || ''}</td>
+                  <td>${client.legal_name || ''}</td>
+                  <td>${tipoCliente}</td>
+                  <td>${formatarCPF(client.cpf || '')}</td>
+                  <td>${formatarCNPJ(client.cnpj || '')}</td>
+                  <td>${client.address || ''}</td>
                   <td>
                     <div style="display:flex;gap:8px;">
                       <a class="btn-secondary" href="visualizar.html?type=client&id=${client.id}">Visualizar</a>
-                      <a class="btn" href="cliente-novo.html">Editar</a>
+                      <a class="btn" href="cliente-novo.html?id=${client.id}">Editar</a>
                       <button class="btn-secondary" type="button" data-id="${client.id}">Excluir</button>
                     </div>
                   </td>
@@ -95,6 +96,27 @@
             } catch (error) {
               dbMessage('Erro ao carregar clientes', 'error');
             }
+          }
+
+          function somenteNumeros(valor) {
+            return String(valor || '').replace(/\D/g, '');
+          }
+
+          function formatarCPF(valor) {
+            const numeros = somenteNumeros(valor).slice(0, 11);
+            return numeros
+              .replace(/(\d{3})(\d)/, '$1.$2')
+              .replace(/(\d{3})(\d)/, '$1.$2')
+              .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+          }
+
+          function formatarCNPJ(valor) {
+            const numeros = somenteNumeros(valor).slice(0, 14);
+            return numeros
+              .replace(/^(\d{2})(\d)/, '$1.$2')
+              .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+              .replace(/\.(\d{3})(\d)/, '.$1/$2')
+              .replace(/(\d{4})(\d)/, '$1-$2');
           }
 
           renderClients();

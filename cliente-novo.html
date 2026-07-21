@@ -30,10 +30,19 @@
                   <h2 class="page-title" style="font-size:18px; margin:0;">Dados da Empresa</h2>
                 </div>
                 <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
-                  <div class="field"><label>Cliente</label><input id="fldCliName" type="text" placeholder="Nome do cliente"></div>
-                  <div class="field"><label>Razão Social</label><input id="fldCliRazao" type="text" placeholder="Razão Social"></div>
-                  <div class="field"><label>CNPJ</label><input id="fldCliCNPJ" type="text" placeholder="00.000.000/0000-00"></div>
-                  <div class="field"><label>Endereço Completo CNPJ</label><textarea id="fldCliEndereco" placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
+                  <div class="field">
+                    <label>Tipo de cliente</label>
+                    <select id="fldCliType" required>
+                      <option value="">Selecione</option>
+                      <option value="PJ">Pessoa Jurídica</option>
+                      <option value="PF">Pessoa Física</option>
+                    </select>
+                  </div>
+                  <div class="field" id="fieldClientName"><label id="labelClientName">Cliente ou Nome Fantasia</label><input id="fldCliName" type="text" placeholder="Cliente ou nome fantasia"></div>
+                  <div class="field" id="fieldLegalName"><label>Razão Social</label><input id="fldCliRazao" type="text" placeholder="Razão Social"></div>
+                  <div class="field" id="fieldCpf"><label>CPF</label><input id="fldCliCPF" type="text" inputmode="numeric" placeholder="000.000.000-00" maxlength="14"></div>
+                  <div class="field" id="fieldCnpj"><label>CNPJ</label><input id="fldCliCNPJ" type="text" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18"></div>
+                  <div class="field"><label>Endereço Completo</label><textarea id="fldCliEndereco" placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
                 </div>
               </div>
               <div class="page-card" style="padding:20px;">
@@ -54,27 +63,200 @@
     </main>
   </div>
   <script type="module">
-  import { db, dbMessage } from './supabase.js';
+  import { supabase, db } from './supabase.js';
 
-  document.getElementById('btnSaveClient').onclick = async function(){
-    const name = document.getElementById('fldCliName').value.trim();
-    const razao = document.getElementById('fldCliRazao').value.trim();
-    const cnpj = document.getElementById('fldCliCNPJ').value.trim();
-    const endereco = document.getElementById('fldCliEndereco').value.trim();
-    if(!name){ alert('Nome do cliente é obrigatório'); return; }
+  const params = new URLSearchParams(window.location.search);
+  const clientId = params.get('id');
+  const btnSaveClient = document.getElementById('btnSaveClient');
+  const fldCliType = document.getElementById('fldCliType');
+  const labelClientName = document.getElementById('labelClientName');
+  const fieldLegalName = document.getElementById('fieldLegalName');
+  const fieldCpf = document.getElementById('fieldCpf');
+  const fieldCnpj = document.getElementById('fieldCnpj');
+  const fldCliCPF = document.getElementById('fldCliCPF');
+  const fldCliCNPJ = document.getElementById('fldCliCNPJ');
 
-    const payload = { name, razaoSocial: razao, cnpj, endereco };
-    console.log('[btnSaveClient] Salvando cliente no Supabase:', payload);
+  function somenteNumeros(valor) {
+    return valor.replace(/\D/g, '');
+  }
+
+  function formatarCPF(valor) {
+    const numeros = somenteNumeros(valor).slice(0, 11);
+    return numeros
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  }
+
+  function formatarCNPJ(valor) {
+    const numeros = somenteNumeros(valor).slice(0, 14);
+    return numeros
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+
+  function validarCPF(cpf) {
+    if (!/^\d{11}$/.test(cpf)) return false;
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+    let soma = 0;
+    for (let i = 0; i < 9; i++) soma += Number(cpf[i]) * (10 - i);
+    let digito1 = 11 - (soma % 11);
+    digito1 = digito1 >= 10 ? 0 : digito1;
+    if (digito1 !== Number(cpf[9])) return false;
+
+    soma = 0;
+    for (let i = 0; i < 10; i++) soma += Number(cpf[i]) * (11 - i);
+    let digito2 = 11 - (soma % 11);
+    digito2 = digito2 >= 10 ? 0 : digito2;
+    return digito2 === Number(cpf[10]);
+  }
+
+  function validarCNPJ(cnpj) {
+    if (!/^\d{14}$/.test(cnpj)) return false;
+    if (/^(\d)\1{13}$/.test(cnpj)) return false;
+
+    const calcularDigito = (base, pesos) => {
+      let soma = 0;
+      for (let i = 0; i < pesos.length; i++) soma += Number(base[i]) * pesos[i];
+      const resto = soma % 11;
+      return resto < 2 ? 0 : 11 - resto;
+    };
+
+    const base12 = cnpj.slice(0, 12);
+    const digito1 = calcularDigito(base12, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+    if (digito1 !== Number(cnpj[12])) return false;
+
+    const base13 = cnpj.slice(0, 13);
+    const digito2 = calcularDigito(base13, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+    return digito2 === Number(cnpj[13]);
+  }
+
+  function atualizarCamposPorTipo() {
+    const tipo = fldCliType.value;
+    const isPJ = tipo === 'PJ';
+    const isPF = tipo === 'PF';
+
+    labelClientName.textContent = isPJ ? 'Cliente ou Nome Fantasia' : 'Nome Completo';
+    fieldLegalName.style.display = isPJ ? '' : 'none';
+    fieldCpf.style.display = isPF ? '' : 'none';
+    fieldCnpj.style.display = isPJ ? '' : 'none';
+
+    if (isPJ) {
+      fldCliCPF.value = '';
+    }
+    if (isPF) {
+      fldCliRazao.value = '';
+      fldCliCNPJ.value = '';
+    }
+  }
+
+  fldCliType.addEventListener('change', atualizarCamposPorTipo);
+  fldCliCPF.addEventListener('input', () => { fldCliCPF.value = formatarCPF(fldCliCPF.value); });
+  fldCliCNPJ.addEventListener('input', () => { fldCliCNPJ.value = formatarCNPJ(fldCliCNPJ.value); });
+  atualizarCamposPorTipo();
+
+  async function carregarClienteParaEdicao() {
+    if (!clientId) return;
+
     try {
-      const result = await db.insertClient(payload);
-      console.log('[btnSaveClient] Cliente inserido com sucesso:', result);
-      alert('Cliente cadastrado com sucesso!');
+      const clienteExistente = await db.fetchClientById(Number(clientId));
+      fldCliType.value = clienteExistente.client_type || '';
+      document.getElementById('fldCliName').value = clienteExistente.name || '';
+      document.getElementById('fldCliRazao').value = clienteExistente.legal_name || '';
+      fldCliCPF.value = clienteExistente.cpf ? formatarCPF(clienteExistente.cpf) : '';
+      fldCliCNPJ.value = clienteExistente.cnpj ? formatarCNPJ(clienteExistente.cnpj) : '';
+      document.getElementById('fldCliEndereco').value = clienteExistente.address || '';
+      atualizarCamposPorTipo();
+      document.querySelector('.page-title').textContent = 'Editar Cliente';
+      btnSaveClient.textContent = 'Salvar Alterações';
+    } catch (error) {
+      console.error('[cliente-novo] Erro ao carregar cliente para edição:', error);
+      alert(`Erro ao carregar cliente para edição:\n${error.message || JSON.stringify(error)}`);
+    }
+  }
+
+  btnSaveClient.onclick = async function(){
+    const tipoCliente = fldCliType.value;
+    const nomeCliente = document.getElementById('fldCliName').value.trim();
+    const razaoSocial = document.getElementById('fldCliRazao').value.trim();
+    const cpf = somenteNumeros(fldCliCPF.value);
+    const cnpj = somenteNumeros(fldCliCNPJ.value);
+    const endereco = document.getElementById('fldCliEndereco').value.trim();
+
+    if (!tipoCliente) {
+      alert('Selecione se o cliente é Pessoa Física ou Pessoa Jurídica.');
+      return;
+    }
+
+    if (tipoCliente === 'PF') {
+      if (cpf.length !== 11) {
+        alert('Digite um CPF válido com 11 números.');
+        return;
+      }
+      if (!validarCPF(cpf)) {
+        alert('Digite um CPF válido com 11 números.');
+        return;
+      }
+      if (!nomeCliente) {
+        alert('Digite o nome completo.');
+        return;
+      }
+    }
+
+    if (tipoCliente === 'PJ') {
+      if (!razaoSocial) {
+        alert('Razão Social é obrigatória para Pessoa Jurídica.');
+        return;
+      }
+      if (cnpj.length !== 14) {
+        alert('Digite um CNPJ válido com 14 números.');
+        return;
+      }
+      if (!validarCNPJ(cnpj)) {
+        alert('Digite um CNPJ válido com 14 números.');
+        return;
+      }
+      if (!nomeCliente) {
+        alert('Digite o Cliente ou Nome Fantasia.');
+        return;
+      }
+    }
+
+    const clientData = {
+      client_type: tipoCliente,
+      name: nomeCliente,
+      legal_name: tipoCliente === 'PJ' ? razaoSocial : null,
+      cpf: tipoCliente === 'PF' ? cpf : null,
+      cnpj: tipoCliente === 'PJ' ? cnpj : null,
+      address: endereco
+    };
+
+    const operacao = clientId
+      ? supabase.from('clients').update(clientData).eq('id', Number(clientId)).select().single()
+      : supabase.from('clients').insert([clientData]).select().single();
+
+    try {
+      const { data, error } = await operacao;
+
+      if (error) {
+        console.error('Erro completo ao salvar cliente:', error);
+        alert(`Erro ao salvar cliente: ${error.message}`);
+        return;
+      }
+
+      console.log('Cliente cadastrado:', data);
+      alert(clientId ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
       history.back();
     } catch (error) {
       console.error('[btnSaveClient] Erro ao salvar cliente:', error);
       alert(`Erro ao salvar cliente:\n${error.message || JSON.stringify(error)}`);
     }
   };
+
+  carregarClienteParaEdicao();
   </script>
 </body>
 </html>
