@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Funil de Vendas — CRM</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="funil.css">
+<link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">CRM</div>
+        <div class="brand-text">
+          <span>CRM</span>
+          <small>Simultâneo</small>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-item active" href="funil.html">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l3-4 3 2 4-6"></path></svg>
+          </span>
+          <span class="nav-label">Funil</span>
+        </a>
+        <a class="nav-item" href="clientes.html">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg></span>
+          <span class="nav-label">Clientes</span>
+        </a>
+        <a class="nav-item" href="projetos.html">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"></path><path d="M5 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7"></path><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span>
+          <span class="nav-label">Projetos</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c0 .7.4 1.3 1 1.5V11a2 2 0 0 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"></path></svg></span>
+          <span class="nav-label">Configurações</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="profile-avatar">J</div>
+        <div class="profile-info">
+          <span class="profile-name">João</span>
+          <span class="profile-role">Gestor</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="page-content">
+      <div class="app">
+        <div class="toolbar">
+          <div class="toolbar-top">
+            <div class="brand">
+              <div class="brand-mark">F</div>
+              <div>
+                <div class="brand-text">Funil de Vendas</div>
+                <div class="brand-sub">protótipo — módulo comercial</div>
+              </div>
+            </div>
+            <div class="summary-pills" id="summaryPills"></div>
+          </div>
+          <div class="toolbar-bottom">
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B979A" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="searchInput" placeholder="Pesquisar cliente, projeto, contato...">
+            </div>
+            <div class="status-filters" id="statusFilters"></div>
+            <a class="btn-add" id="btnNovaProposta" href="funil.html?newProposal=1">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nova proposta
+            </a>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr id="headerRow"></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+
+        <footer class="status-bar">
+          <span id="footerCount">0 propostas</span>
+          <span id="footerTotal">Total: R$ 0</span>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+  import './js/auth-guard.js';
+  import './js/user-menu.js';
+  import { db, dbMessage, loadCurrentUserPermissions } from './js/supabase.js';
+  const access = await loadCurrentUserPermissions().catch(() => null);
+  if (!access) {
+    window.location.href = 'login.html';
+    throw new Error('Usuário não autenticado');
+  }
+  const permissions = access.permissions;
+  const btnNovaProposta = document.getElementById('btnNovaProposta');
+  if (btnNovaProposta && !permissions.podeAdicionar) {
+    btnNovaProposta.style.display = 'none';
+  }
+  const columns = [
+    {key:'numero', label:'Nº Proposta', type:'text', width:110},
+    {key:'cliente', label:'Cliente', type:'link-client', width:150},
+    {key:'projeto', label:'Projeto', type:'link-project', width:150},
+    {key:'contato', label:'Contato', type:'text', width:130},
+    {key:'pontoContato', label:'Ponto de Contato', type:'text', width:130},
+    {key:'dataOrcamento', label:'Data Orçamento', type:'date', width:120},
+    {key:'dataFechamento', label:'Data Fechamento', type:'date', width:120},
+    {key:'mesFechamento', label:'Mês Fecham.', type:'computed', width:100},
+    {key:'valorExterior', label:'Valor Exterior', type:'money-usd', width:110},
+    {key:'valorReais', label:'Valor R$', type:'money-brl', width:110},
+    {key:'statusProposta', label:'Status Proposta', type:'status-proposta', width:130},
+    {key:'statusProjeto', label:'Status Projeto', type:'status-projeto', width:150},
+    {key:'obs', label:'Observações', type:'text-long', width:180},
+  ];
+
+  const statusPropostaOptions = ['Aberta','Negociando','Fechada','Perdida','Pausada'];
+  const statusProjetoOptions = ['—','Aguardando dados para contrato','Contrato em elaboração','Aguardando assinatura','Contrato assinado','Em produção','Projeto em andamento','Entrega parcial','Aprovação','Cobrança enviada','Projeto finalizado'];
+
+  let data = [];  // dados carregados do Supabase
+  let filterText = '';
+  let activeStatuses = new Set();
+  let sortKey = null;
+  let sortDir = 1;
+  let proposalsLoadError = false;
+  let selectedClientId = null;
+  let selectedProjectId = null;
+  let editingProposalId = null;
+  const queryParams = new URLSearchParams(window.location.search);
+  const clientNameById = new Map();
+  const projectNameById = new Map();
+  const proposalFieldMap = {
+    numero: 'proposal_number',
+    contato: 'contact_name',
+    pontoContato: 'point_of_contact',
+    dataOrcamento: 'budget_date',
+    dataFechamento: 'closing_date',
+    valorExterior: 'value_usd',
+    valorReais: 'value_brl',
+    statusProposta: 'proposal_status',
+    statusProjeto: 'project_status',
+    obs: 'notes'
+  };
+
+  function monthLabel(dateStr){
+    if(!dateStr) return '—';
+    const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const d = new Date(dateStr+'T00:00:00');
+    return months[d.getMonth()] + '/' + String(d.getFullYear()).slice(2);
+  }
+
+  function formatMoney(val, currency){
+    if(val === '' || val === null || val === undefined) return '—';
+    const n = Number(val);
+    return (currency==='USD' ? 'US$ ' : 'R$ ') + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function formatDate(dateStr){
+    if(!dateStr) return '—';
+    const [y,m,d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  function statusClass(status, kind){
+    if(kind==='proposta'){
+      const map = {Aberta:'aberta', Negociando:'negociando', Fechada:'fechada', Perdida:'perdida', Pausada:'pausada'};
+      return map[status] || 'pausada';
+    }
+    return 'aberta';
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 1800);
+  }
+  function montarPayloadProposta(row, changedKey) {
+    const payload = {};
+
+    if (changedKey) {
+      const dbField = proposalFieldMap[changedKey];
+      if (!dbField) return payload;
+      if (changedKey === 'valorExterior' || changedKey === 'valorReais') {
+        payload[dbField] = row[changedKey] === '' || row[changedKey] == null ? null : Number(row[changedKey]);
+      } else {
+        payload[dbField] = row[changedKey] || null;
+      }
+      if (changedKey === 'dataFechamento') {
+        payload.closing_month = row.dataFechamento ? monthLabel(row.dataFechamento) : null;
+      }
+      return payload;
+    }
+
+    payload.proposal_number = row.numero;
+    payload.client_id = row.client_id || null;
+    payload.project_id = row.project_id || null;
+    payload.contact_id = row.contact_id || null;
+    payload.contact_name = row.contato || null;
+    payload.point_of_contact = row.pontoContato || null;
+    payload.budget_date = row.dataOrcamento || null;
+    payload.closing_date = row.dataFechamento || null;
+    payload.closing_month = row.dataFechamento ? monthLabel(row.dataFechamento) : null;
+    payload.value_usd = row.valorExterior === '' || row.valorExterior == null ? null : Number(row.valorExterior);
+    payload.value_brl = row.valorReais === '' || row.valorReais == null ? null : Number(row.valorReais);
+    payload.proposal_status = row.statusProposta || null;
+    payload.project_status = row.statusProjeto || null;
+    payload.notes = row.obs || null;
+
+    return payload;
+  }
+
+  function renderHeader(){
+    const row = document.getElementById('headerRow');
+    row.innerHTML = '';
+    columns.forEach(col=>{
+      const th = document.createElement('th');
+      th.style.width = col.width+'px';
+      let arrow = '';
+      if(sortKey === col.key) arrow = `<span class="sort-arrow">${sortDir===1?'▲':'▼'}</span>`;
+      th.innerHTML = col.label + arrow;
+      th.onclick = () => {
+        if(sortKey === col.key){ sortDir *= -1; } else { sortKey = col.key; sortDir = 1; }
+        render();
+      };
+      row.appendChild(th);
+    });
+    const thActions = document.createElement('th');
+    thActions.style.width = '90px';
+    thActions.textContent = 'Ações';
+    thActions.onclick = null;
+    thActions.style.cursor = 'default';
+    row.appendChild(thActions);
+  }
+
+  function renderStatusFilters(){
+    const wrap = document.getElementById('statusFilters');
+    wrap.innerHTML = '';
+    statusPropostaOptions.forEach(s=>{
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (activeStatuses.has(s) ? ' active' : '');
+      chip.textContent = s;
+      chip.onclick = () => {
+        if(activeStatuses.has(s)) activeStatuses.delete(s); else activeStatuses.add(s);
+        render();
+      };
+      wrap.appendChild(chip);
+    });
+  }
+
+  function renderSummary(){
+    const wrap = document.getElementById('summaryPills');
+    const total = data.length;
+    const abertas = data.filter((proposta) => String(proposta.statusProposta || '').toLowerCase() === 'aberta').length;
+    const fechadas = data.filter((proposta) => String(proposta.statusProposta || '').toLowerCase() === 'fechada').length;
+    const valorFechado = data
+      .filter((proposta) => String(proposta.statusProposta || '').toLowerCase() === 'fechada')
+      .reduce((totalAtual, proposta) => totalAtual + Number(proposta.valorReais || 0), 0);
+    const conv = total ? Math.round((fechadas/total)*100) : 0;
+    const pills = [
+      {num: total, lbl:'Propostas'},
+      {num: abertas, lbl:'Abertas'},
+      {num: conv+'%', lbl:'Conversão'},
+      {num: 'R$ '+Math.round(valorFechado/1000)+'k', lbl:'Fechado'},
+    ];
+    wrap.innerHTML = pills.map(p=>`<div class="pill-stat"><span class="num">${p.num}</span><span class="lbl">${p.lbl}</span></div>`).join('');
+  }
+
+  function getFiltered(){
+    let rows = data.filter(r=>{
+      if(activeStatuses.size && !activeStatuses.has(r.statusProposta)) return false;
+      if(filterText){
+        const hay = (r.numero+' '+r.cliente+' '+r.projeto+' '+r.contato+' '+r.pontoContato+' '+r.obs).toLowerCase();
+        if(!hay.includes(filterText.toLowerCase())) return false;
+      }
+      return true;
+    });
+    if(sortKey){
+      rows = rows.slice().sort((a,b)=>{
+        let av = a[sortKey], bv = b[sortKey];
+        if(sortKey==='valorExterior' || sortKey==='valorReais'){ av=Number(av||0); bv=Number(bv||0); }
+        if(av === undefined || av === '') av = '';
+        if(bv === undefined || bv === '') bv = '';
+        if(av < bv) return -1*sortDir;
+        if(av > bv) return 1*sortDir;
+        return 0;
+      });
+    }
+    return rows;
+  }
+
+  function makeCell(row, col){
+    const td = document.createElement('td');
+    const val = row[col.key];
+
+    if(col.type === 'computed'){
+      td.innerHTML = `<span class="badge-mes">${monthLabel(row.dataFechamento)}</span>`;
+      return td;
+    }
+    if(col.type === 'link-client'){
+      td.innerHTML = `<span class="client-link">${val}</span>`;
+      td.querySelector('.client-link').onclick = ()=> {
+        if (row.client_id) {
+          window.location.href = `visualizar.html?type=client&id=${row.client_id}`;
+          return;
+        }
+        showToast('Cliente não vinculado');
+      };
+      return td;
+    }
+    if(col.type === 'link-project'){
+      td.innerHTML = `<span class="project-link">${val}</span>`;
+      td.querySelector('.project-link').onclick = ()=> {
+        if (row.project_id) {
+          window.location.href = `visualizar.html?type=project&id=${row.project_id}`;
+          return;
+        }
+        showToast('Projeto não vinculado');
+      };
+      return td;
+    }
+    if(col.type === 'money-usd' || col.type === 'money-brl'){
+      td.className = 'money-col editable';
+      td.textContent = formatMoney(val, col.type==='money-usd'?'USD':'BRL');
+      attachEdit(td, row, col, 'number');
+      return td;
+    }
+    if(col.type === 'date'){
+      td.className = 'editable';
+      td.textContent = formatDate(val);
+      attachEdit(td, row, col, 'date');
+      return td;
+    }
+    if(col.type === 'status-proposta'){
+      const cls = statusClass(val,'proposta');
+      td.innerHTML = `<span class="badge" style="color:var(--st-${cls});background:var(--st-${cls}-bg)">${val}</span>`;
+      td.className = 'editable';
+      td.onclick = ()=> openSelectEdit(td, row, col, statusPropostaOptions);
+      return td;
+    }
+    if(col.type === 'status-projeto'){
+      td.textContent = val || '—';
+      td.className = 'editable';
+      td.style.color = 'var(--ink-soft)';
+      td.style.fontSize = '12px';
+      td.onclick = ()=> openSelectEdit(td, row, col, statusProjetoOptions);
+      return td;
+    }
+    if(col.type === 'text-long'){
+      td.className = 'obs-cell editable';
+      td.textContent = val || '';
+      td.title = val || '';
+      attachEdit(td, row, col, 'text');
+      return td;
+    }
+    td.className = 'num-col editable';
+    td.textContent = val || '';
+    attachEdit(td, row, col, 'text');
+    return td;
+  }
+
+  function attachEdit(td, row, col, inputType){
+    if (!permissions.podeEditar) {
+      return;
+    }
+    td.onclick = () => {
+      if(td.querySelector('input')) return;
+      const current = row[col.key] || '';
+      td.innerHTML = `<input type="${inputType}" value="${current}">`;
+      const input = td.querySelector('input');
+      input.focus();
+      input.select();
+      const commit = async () => {
+        row[col.key] = input.value;
+        if(col.key === 'dataFechamento'){ row.mesFechamento = monthLabel(row.dataFechamento); }
+        if(row.id){
+          try {
+            const payload = montarPayloadProposta(row, col.key);
+            await db.updateProposal(row.id, payload);
+          } catch(e){ console.error('[updateProposal] Erro:', e); alert(`Erro ao atualizar proposta: ${e.message || JSON.stringify(e)}`); }
+        }
+        render();
+      };
+      input.onblur = commit;
+      input.onkeydown = (e) => { if(e.key==='Enter') input.blur(); if(e.key==='Escape'){ render(); } };
+    };
+  }
+
+  function openSelectEdit(td, row, col, options){
+    if (!permissions.podeEditar) {
+      return;
+    }
+    if(td.querySelector('select')) return;
+    td.innerHTML = `<select>${options.map(o=>`<option value="${o}" ${o===row[col.key]?'selected':''}>${o}</option>`).join('')}</select>`;
+    const select = td.querySelector('select');
+    select.focus();
+    select.onchange = async () => {
+      row[col.key] = select.value;
+      if(row.id){
+        if(col.key==='dataFechamento'){ row.mesFechamento = monthLabel(row.dataFechamento); }
+        try {
+          const payload = montarPayloadProposta(row, col.key);
+          await db.updateProposal(row.id, payload);
+        } catch(e){ console.error('[updateProposal select] Erro:', e); alert(`Erro ao atualizar: ${e.message || JSON.stringify(e)}`); }
+      }
+      render();
+    };
+    select.onblur = () => render();
+  }
+
+  function renderTable(){
+    const body = document.getElementById('tableBody');
+    body.innerHTML = '';
+    const rows = getFiltered();
+
+    if (proposalsLoadError) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = columns.length + 1;
+      td.innerHTML = `<div class="empty-state">Não foi possível carregar as propostas.</div>`;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+
+    if(rows.length === 0){
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = columns.length + 1;
+      const mensagem = data.length === 0
+        ? 'Nenhuma proposta encontrada para esse filtro.'
+        : 'Sem propostas para o filtro atual.';
+      td.innerHTML = `<div class="empty-state">${mensagem}</div>`;
+      tr.appendChild(td);
+      body.appendChild(tr);
+    } else {
+      rows.forEach(row=>{
+        const tr = document.createElement('tr');
+        columns.forEach(col=>{
+          tr.appendChild(makeCell(row, col));
+        });
+        const tdActions = document.createElement('td');
+        tdActions.innerHTML = `
+          <div class="row-actions">
+            <button title="Visualizar proposta">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg>
+            </button>
+            ${permissions.podeEditar ? `<button title="Editar proposta">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            </button>` : ''}
+            ${permissions.podeExcluir ? `<button title="Excluir proposta">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>` : ''}
+          </div>`;
+        tdActions.querySelectorAll('button').forEach((btn,i)=>{
+          if (i === 0) {
+            btn.onclick = () => {
+              if (!row.id) return;
+              window.location.href = `visualizar.html?type=proposal&id=${row.id}`;
+            };
+            return;
+          }
+
+          if (permissions.podeEditar && i === 1) {
+            btn.onclick = async () => {
+              await openProposalModal(row);
+            };
+            return;
+          }
+
+          btn.onclick = async () => {
+            if (!permissions.podeExcluir) {
+              alert('Seu usuário não possui permissão para excluir propostas.');
+              return;
+            }
+            if (!row.id) return;
+            if (!confirm('Excluir proposta?')) return;
+            try {
+              await db.deleteProposal(row.id);
+              data = data.filter((item) => item.id !== row.id);
+              render();
+              showToast('Proposta excluída com sucesso');
+            } catch (error) {
+              console.error('[deleteProposal] Erro ao excluir proposta:', error);
+              alert('Não foi possível excluir a proposta.');
+            }
+          };
+        });
+        tr.appendChild(tdActions);
+        body.appendChild(tr);
+      });
+    }
+
+    const total = rows.reduce((a,r)=>a+Number(r.valorReais||0),0);
+    document.getElementById('footerCount').textContent = `${rows.length} proposta${rows.length!==1?'s':''} exibida${rows.length!==1?'s':''} de ${data.length}`;
+    document.getElementById('footerTotal').textContent = `Total (filtro): ${formatMoney(total,'BRL')}`;
+  }
+
+  function render(){
+    renderHeader();
+    renderStatusFilters();
+    renderSummary();
+    renderTable();
+  }
+
+  document.getElementById('searchInput').addEventListener('input', (e)=>{
+    filterText = e.target.value;
+    renderTable();
+  });
+
+  render();
+
+  // --- Modal markup and logic for New Proposal ---
+  const modalHTML = `
+  <div class="modal" id="proposalModal" aria-hidden="true">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-panel">
+      <div class="modal-header"><h3>Nova Proposta</h3><button id="modalClose" aria-label="Fechar modal">✕</button></div>
+      <div class="modal-body">
+        <div class="proposal-grid">
+          <div class="proposal-column">
+            <div class="field"><label for="fldNumero">Nº Proposta *</label><input id="fldNumero" type="text"></div>
+            <div class="field"><label for="fldProjeto">Projeto *</label><select id="fldProjeto"><option value="">Selecione um cliente primeiro</option></select></div>
+            <div class="field"><label for="fldPonto">Ponto de Contato *</label><input id="fldPonto" type="text"></div>
+            <div class="field"><label for="fldFechamento">Data Fechamento *</label><input id="fldFechamento" type="date"></div>
+            <div class="field"><label for="fldValorExt">Valor Exterior *</label><input id="fldValorExt" type="number" step="0.01"></div>
+            <div class="field"><label for="fldStatusProposta">Status Proposta *</label><select id="fldStatusProposta">${statusPropostaOptions.map(s=>`<option>${s}</option>`).join('')}</select></div>
+            <div class="field field-observations"><label for="fldObs">Observações</label><textarea id="fldObs" rows="4"></textarea></div>
+          </div>
+          <div class="proposal-column">
+            <div class="field"><label for="fldCliente">Cliente *</label><select id="fldCliente"><option value="">Selecione o cliente</option></select></div>
+            <div class="field"><label for="fldContato">Contato *</label><input id="fldContato" type="text"></div>
+            <div class="field"><label for="fldOrcamento">Data Orçamento *</label><input id="fldOrcamento" type="date"></div>
+            <div class="field"><label for="fldMesFech">Mês Fecham.</label><input id="fldMesFech" type="text" disabled></div>
+            <div class="field"><label for="fldValorBr">Valor R$ *</label><input id="fldValorBr" type="number" step="0.01"></div>
+            <div class="field"><label for="fldStatusProjeto">Status Projeto *</label><select id="fldStatusProjeto">${statusProjetoOptions.map(s=>`<option>${s}</option>`).join('')}</select></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn-secondary" id="btnCancelModal">Cancelar</button><button class="btn-primary" id="btnSaveModal">Salvar Proposta</button></div>
+    </div>
+  </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+  const proposalModal = document.getElementById('proposalModal');
+  const modalBackdrop = document.getElementById('modalBackdrop');
+
+  modalBackdrop.onclick = closeProposalModal;
+
+  async function openProposalModal(existingRow = null){
+    if (existingRow && !permissions.podeEditar) {
+      alert('Seu usuário não possui permissão para editar propostas.');
+      return;
+    }
+    if (!existingRow && !permissions.podeAdicionar) {
+      alert('Seu usuário não possui permissão para adicionar propostas.');
+      return;
+    }
+
+    await renderClientSelect();
+    // prefill defaults
+    if (existingRow) {
+      editingProposalId = existingRow.id;
+      document.getElementById('fldNumero').value = existingRow.numero || '';
+      document.getElementById('fldOrcamento').value = existingRow.dataOrcamento || '';
+      document.getElementById('fldFechamento').value = existingRow.dataFechamento || '';
+      document.getElementById('fldMesFech').value = existingRow.mesFechamento || monthLabel(existingRow.dataFechamento || '');
+      document.getElementById('fldContato').value = existingRow.contato || '';
+      document.getElementById('fldPonto').value = existingRow.pontoContato || '';
+      document.getElementById('fldValorExt').value = existingRow.valorExterior ?? '';
+      document.getElementById('fldValorBr').value = existingRow.valorReais ?? '';
+      document.getElementById('fldObs').value = existingRow.obs || '';
+      document.getElementById('fldStatusProposta').value = existingRow.statusProposta || statusPropostaOptions[0];
+      document.getElementById('fldStatusProjeto').value = existingRow.statusProjeto || statusProjetoOptions[0];
+
+      selectedClientId = existingRow.client_id ? Number(existingRow.client_id) : null;
+      selectedProjectId = existingRow.project_id ? Number(existingRow.project_id) : null;
+      document.getElementById('fldCliente').value = selectedClientId ? String(selectedClientId) : '';
+      await renderProjectSelectByClient(selectedClientId);
+      document.getElementById('fldProjeto').value = selectedProjectId ? String(selectedProjectId) : '';
+    } else {
+      editingProposalId = null;
+      document.getElementById('fldNumero').value = `PRP-${Math.floor(Math.random()*9000)+1000}`;
+      document.getElementById('fldOrcamento').value = new Date().toISOString().slice(0,10);
+      document.getElementById('fldFechamento').value = '';
+      document.getElementById('fldMesFech').value = '';
+      document.getElementById('fldCliente').value = '';
+      document.getElementById('fldProjeto').innerHTML = '<option value="">Selecione um cliente primeiro</option>';
+      document.getElementById('fldContato').value = '';
+      document.getElementById('fldPonto').value = '';
+      document.getElementById('fldValorExt').value = '';
+      document.getElementById('fldValorBr').value = '';
+      document.getElementById('fldObs').value = '';
+      selectedClientId = null;
+      selectedProjectId = null;
+
+      const preselectedClientId = Number(queryParams.get('clientId'));
+      const preselectedProjectId = Number(queryParams.get('projectId'));
+      if (preselectedClientId) {
+        selectedClientId = preselectedClientId;
+        document.getElementById('fldCliente').value = String(preselectedClientId);
+        await renderProjectSelectByClient(preselectedClientId);
+        if (preselectedProjectId) {
+          selectedProjectId = preselectedProjectId;
+          document.getElementById('fldProjeto').value = String(preselectedProjectId);
+        }
+      }
+    }
+
+    proposalModal.setAttribute('aria-hidden','false');
+    proposalModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('fldNumero').focus();
+  }
+
+  function closeProposalModal(){
+    proposalModal.setAttribute('aria-hidden','true');
+    proposalModal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('modalClose').onclick = closeProposalModal;
+  document.getElementById('btnCancelModal').onclick = closeProposalModal;
+
+  async function loadClients(){
+    if(window.clientCache && window.clientCache.length) return window.clientCache;
+    try {
+      const clients = await db.fetchClients();
+      window.clientCache = (clients||[]).map(c => ({
+        id: c.id,
+        name: c.name || '',
+        legal_name: c.legal_name || '',
+        cpf: c.cpf || '',
+        cnpj: c.cnpj || '',
+        address: c.address || ''
+      }));
+      window.clientCache.forEach((client) => {
+        clientNameById.set(Number(client.id), client.legal_name || client.name || `Cliente #${client.id}`);
+      });
+      return window.clientCache;
+    } catch (e) {
+      dbMessage('Falha ao carregar clientes', 'error');
+      return [];
+    }
+  }
+
+  async function renderClientSelect(){
+    const clients = await loadClients();
+    const fldCliente = document.getElementById('fldCliente');
+    fldCliente.innerHTML = '<option value="">Selecione o cliente</option>';
+
+    clients.forEach((client) => {
+      const option = document.createElement('option');
+      option.value = String(client.id);
+      option.textContent = client.legal_name || client.name || `Cliente #${client.id}`;
+      fldCliente.appendChild(option);
+    });
+  }
+
+  async function loadProjectsByClient(clientId){
+    if(!clientId) return [];
+    try {
+      return await db.fetchProjectsByClient(clientId);
+    } catch (e) {
+      dbMessage('Falha ao carregar projetos do cliente', 'error');
+      return [];
+    }
+  }
+
+  async function renderProjectSelectByClient(clientId){
+    const fldProjeto = document.getElementById('fldProjeto');
+    selectedProjectId = null;
+
+    if(!clientId){
+      fldProjeto.innerHTML = '<option value="">Selecione um cliente primeiro</option>';
+      return;
+    }
+
+    const projects = await loadProjectsByClient(clientId);
+    fldProjeto.innerHTML = '<option value="">Selecione o projeto</option>';
+    projects.forEach((project) => {
+      projectNameById.set(Number(project.id), project.name || `Projeto #${project.id}`);
+      const option = document.createElement('option');
+      option.value = String(project.id);
+      option.textContent = project.name || `Projeto #${project.id}`;
+      fldProjeto.appendChild(option);
+    });
+
+    if(!projects.length){
+      fldProjeto.innerHTML = '<option value="">Nenhum projeto para este cliente</option>';
+    }
+  }
+
+  const fldCliente = document.getElementById('fldCliente');
+  const fldProjeto = document.getElementById('fldProjeto');
+
+  fldCliente.addEventListener('change', async ()=>{
+    selectedClientId = fldCliente.value ? Number(fldCliente.value) : null;
+    await renderProjectSelectByClient(selectedClientId);
+  });
+
+  fldProjeto.addEventListener('change', ()=>{
+    selectedProjectId = fldProjeto.value ? Number(fldProjeto.value) : null;
+  });
+
+  const fldFech = document.getElementById('fldFechamento');
+  fldFech.addEventListener('change', ()=>{ document.getElementById('fldMesFech').value = monthLabel(fldFech.value); });
+
+  await renderClientSelect();
+
+  async function loadData(){
+    try{
+      const proposals = await db.fetchProposals();
+      proposalsLoadError = false;
+      if(Array.isArray(proposals) && proposals.length){
+        data = proposals.map(normalizeProposalRow);
+      } else {
+        data = [];
+      }
+    } catch(e){
+      console.error('Erro completo ao carregar propostas:', e);
+      proposalsLoadError = true;
+      data = [];
+      alert('Não foi possível carregar as propostas.');
+    }
+    render();
+
+    const proposalId = Number(queryParams.get('proposalId'));
+    if (proposalId) {
+      const row = data.find((item) => Number(item.id) === proposalId);
+      if (row) {
+        await openProposalModal(row);
+      }
+    }
+
+    const openNewProposal = queryParams.get('newProposal') === '1';
+    if (openNewProposal) {
+      await openProposalModal();
+    }
+  }
+
+  function normalizeProposalRow(row){
+    const clientName = row.cliente?.name || row.cliente?.legal_name || 'Não informado';
+    const projectName = row.projeto?.name || 'Não informado';
+
+    if (row.client_id != null && clientName !== 'Não informado') {
+      clientNameById.set(Number(row.client_id), clientName);
+    }
+    if (row.project_id != null && projectName !== 'Não informado') {
+      projectNameById.set(Number(row.project_id), projectName);
+    }
+
+    return {
+      id: row.id,
+      numero: row.proposal_number || row.numero || '',
+      cliente: clientName,
+      projeto: projectName,
+      contact_id: row.contact_id || null,
+      contato: row.contact_name || row.contato || 'Não informado',
+      pontoContato: row.point_of_contact || row.pontoContato || 'Não informado',
+      dataOrcamento: row.budget_date || row.dataOrcamento || '',
+      dataFechamento: row.closing_date || row.dataFechamento || '',
+      mesFechamento: row.closing_month || row.mesFechamento || 'Não informado',
+      valorExterior: row.value_usd != null ? Number(row.value_usd) : (row.valorExterior != null ? Number(row.valorExterior) : null),
+      valorReais: row.value_brl != null ? Number(row.value_brl) : (row.valorReais != null ? Number(row.valorReais) : null),
+      statusProposta: row.proposal_status || row.statusProposta || 'Não informado',
+      statusProjeto: row.project_status || row.statusProjeto || 'Não informado',
+      obs: row.notes || row.obs || 'Não informado',
+      client_id: row.client_id || null,
+      project_id: row.project_id || null
+    };
+  }
+
+  loadData();
+
+  // handle save
+  document.getElementById('btnSaveModal').onclick = async ()=>{
+    const numero = document.getElementById('fldNumero').value.trim();
+    selectedClientId = fldCliente.value ? Number(fldCliente.value) : null;
+    selectedProjectId = fldProjeto.value ? Number(fldProjeto.value) : null;
+    const contato = document.getElementById('fldContato').value.trim();
+    const ponto = document.getElementById('fldPonto').value.trim();
+    const orc = document.getElementById('fldOrcamento').value;
+    const fech = document.getElementById('fldFechamento').value;
+    const valorExt = parseFloat(document.getElementById('fldValorExt').value || 0);
+    const valorBr = parseFloat(document.getElementById('fldValorBr').value || 0);
+    const statusP = document.getElementById('fldStatusProposta').value;
+    const statusPrj = document.getElementById('fldStatusProjeto').value;
+    const obs = document.getElementById('fldObs').value.trim();
+
+    const required = {
+      'Nº Proposta':numero,
+      'Cliente':selectedClientId,
+      'Projeto':selectedProjectId,
+      'Contato':contato,
+      'Ponto de Contato':ponto,
+      'Data Orçamento':orc
+    };
+    for(const k in required){ if(!required[k]){ showToast(`${k} é obrigatório`); return; } }
+
+    if (editingProposalId && !permissions.podeEditar) {
+      alert('Seu usuário não possui permissão para editar propostas.');
+      return;
+    }
+
+    if (!editingProposalId && !permissions.podeAdicionar) {
+      alert('Seu usuário não possui permissão para adicionar propostas.');
+      return;
+    }
+
+    try {
+      const projetosDoCliente = await db.fetchProjectsByClient(selectedClientId);
+      const projetoValido = (projetosDoCliente || []).some((project) => Number(project.id) === Number(selectedProjectId));
+
+      if (!projetoValido) {
+        showToast('O projeto selecionado não pertence ao cliente informado.');
+        return;
+      }
+
+    const payload = montarPayloadProposta({
+      numero,
+      cliente: clientNameById.get(selectedClientId) || '',
+      projeto: projectNameById.get(selectedProjectId) || '',
+      client_id: selectedClientId,
+      project_id: selectedProjectId,
+      contact_id: null,
+      contato,
+      pontoContato: ponto,
+      dataOrcamento: orc,
+      dataFechamento: fech,
+      valorExterior: valorExt,
+      valorReais: valorBr,
+      statusProposta: statusP,
+      statusProjeto: statusPrj,
+      obs
+    });
+
+    console.log('[btnSaveModal] Salvando proposta no Supabase:', payload);
+      if (editingProposalId) {
+        const updated = await db.updateProposal(editingProposalId, payload);
+        const idx = data.findIndex((item) => Number(item.id) === Number(editingProposalId));
+        if (idx >= 0) {
+          data[idx] = normalizeProposalRow(updated);
+        }
+      } else {
+        const inserted = await db.insertProposal(payload);
+        console.log('[btnSaveModal] Proposta inserida com sucesso:', inserted);
+        data.unshift(normalizeProposalRow(inserted));
+      }
+      render();
+      closeProposalModal();
+      showToast(editingProposalId ? 'Proposta atualizada com sucesso' : 'Proposta salva e adicionada ao funil');
+    } catch (e) {
+      console.error('[btnSaveModal] Erro ao salvar proposta:', e);
+      alert(`Erro ao salvar proposta:\n${e.message || JSON.stringify(e)}`);
+    }
+  };
+  </script>
+</body>
+</html>

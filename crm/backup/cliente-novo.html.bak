@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novo Cliente</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-icon">CRM</div><div class="brand-text"><span>CRM</span><small>Simultâneo</small></div></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span><span class="nav-label">Dashboard</span></a>
+        <a class="nav-item" href="funil.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l3-4 3 2 4-6"></path></svg></span><span class="nav-label">Funil</span></a>
+        <a class="nav-item active" href="clientes.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg></span><span class="nav-label">Clientes</span></a>
+        <a class="nav-item" href="projetos.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"></path><path d="M5 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7"></path><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span><span class="nav-label">Projetos</span></a>
+        <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c0 .7.4 1.3 1 1.5V11a2 2 0 0 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"></path></svg></span><span class="nav-label">Configurações</span></a>
+      </nav>
+      <div class="sidebar-footer"><div class="profile-avatar">J</div><div class="profile-info"><span class="profile-name">João</span><span class="profile-role">Gestor</span></div></div>
+    </aside>
+    <main class="page-content">
+      <div class="app">
+        <div class="page-card">
+          <div class="page-header"><div><h1 class="page-title">Cadastrar Cliente</h1><div class="page-subtext">Preencha os dados do cliente</div></div></div>
+          <div class="page-body">
+            <div class="card-grid">
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Dados da Empresa</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field">
+                    <label>Tipo de cliente</label>
+                    <select id="fldCliType" required>
+                      <option value="">Selecione</option>
+                      <option value="PJ">Pessoa Jurídica</option>
+                      <option value="PF">Pessoa Física</option>
+                    </select>
+                  </div>
+                  <div class="field" id="fieldClientName"><label id="labelClientName">Cliente ou Nome Fantasia</label><input id="fldCliName" type="text" placeholder="Cliente ou nome fantasia"></div>
+                  <div class="field" id="fieldLegalName"><label>Razão Social</label><input id="fldCliRazao" type="text" placeholder="Razão Social"></div>
+                  <div class="field" id="fieldCpf"><label>CPF</label><input id="fldCliCPF" type="text" inputmode="numeric" placeholder="000.000.000-00" maxlength="14"></div>
+                  <div class="field" id="fieldCnpj"><label>CNPJ</label><input id="fldCliCNPJ" type="text" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18"></div>
+                  <div class="field"><label>Endereço Completo</label><textarea id="fldCliEndereco" placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
+                </div>
+              </div>
+            </div>
+            <div class="actions"><button class="btn-primary" id="btnSaveClient">Salvar Cliente</button><button class="btn-secondary" onclick="history.back()">Cancelar</button></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module">
+  import './js/auth-guard.js';
+  import './js/user-menu.js';
+  import { db, loadCurrentUserPermissions } from './js/supabase.js';
+
+  const params = new URLSearchParams(window.location.search);
+  const clientId = params.get('id');
+  const btnSaveClient = document.getElementById('btnSaveClient');
+  const fldCliType = document.getElementById('fldCliType');
+  const labelClientName = document.getElementById('labelClientName');
+  const fieldLegalName = document.getElementById('fieldLegalName');
+  const fieldCpf = document.getElementById('fieldCpf');
+  const fieldCnpj = document.getElementById('fieldCnpj');
+  const fldCliCPF = document.getElementById('fldCliCPF');
+  const fldCliCNPJ = document.getElementById('fldCliCNPJ');
+
+  function somenteNumeros(valor) {
+    return String(valor ?? '').replace(/\D/g, '');
+  }
+
+  function formatarCPF(valor) {
+    const numeros = somenteNumeros(valor).slice(0, 11);
+
+    return numeros
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1-$2');
+  }
+
+  function formatarCNPJ(valor) {
+    const numeros = somenteNumeros(valor).slice(0, 14);
+
+    return numeros
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+
+  function atualizarCamposPorTipo() {
+    const tipo = fldCliType.value;
+    const isPJ = tipo === 'PJ';
+    const isPF = tipo === 'PF';
+
+    labelClientName.textContent = isPJ ? 'Cliente ou Nome Fantasia' : 'Nome Completo';
+    fieldLegalName.style.display = isPJ ? '' : 'none';
+    fieldCpf.style.display = isPF ? '' : 'none';
+    fieldCnpj.style.display = isPJ ? '' : 'none';
+
+    if (isPJ) {
+      fldCliCPF.value = '';
+    }
+    if (isPF) {
+      fldCliRazao.value = '';
+      fldCliCNPJ.value = '';
+    }
+  }
+
+  fldCliType.addEventListener('change', atualizarCamposPorTipo);
+  fldCliCPF.addEventListener('input', () => { fldCliCPF.value = formatarCPF(fldCliCPF.value); });
+  fldCliCNPJ.addEventListener('input', () => { fldCliCNPJ.value = formatarCNPJ(fldCliCNPJ.value); });
+  atualizarCamposPorTipo();
+
+  async function carregarClienteParaEdicao() {
+    if (!clientId) return;
+
+    try {
+      const clienteExistente = await db.fetchClientById(Number(clientId));
+      fldCliType.value = clienteExistente.client_type || '';
+      document.getElementById('fldCliName').value = clienteExistente.name || '';
+      document.getElementById('fldCliRazao').value = clienteExistente.legal_name || '';
+      fldCliCPF.value = clienteExistente.cpf ? formatarCPF(clienteExistente.cpf) : '';
+      fldCliCNPJ.value = clienteExistente.cnpj ? formatarCNPJ(clienteExistente.cnpj) : '';
+      document.getElementById('fldCliEndereco').value = clienteExistente.address || '';
+      atualizarCamposPorTipo();
+      document.querySelector('.page-title').textContent = 'Editar Cliente';
+      btnSaveClient.textContent = 'Salvar Alterações';
+    } catch (error) {
+      console.error('[cliente-novo] Erro ao carregar cliente para edição:', error);
+      alert(`Erro ao carregar cliente para edição:\n${error.message || JSON.stringify(error)}`);
+    }
+  }
+
+  btnSaveClient.onclick = async function(){
+    const tipoCliente = fldCliType.value;
+    const nomeCliente = document.getElementById('fldCliName').value.trim();
+    const razaoSocial = document.getElementById('fldCliRazao').value.trim();
+    const cpf = fldCliCPF.value;
+    const cnpj = fldCliCNPJ.value;
+    const cpfNumeros = somenteNumeros(cpf);
+    const cnpjNumeros = somenteNumeros(cnpj);
+    const endereco = document.getElementById('fldCliEndereco').value.trim();
+
+    if (!tipoCliente) {
+      alert('Selecione se o cliente é Pessoa Física ou Pessoa Jurídica.');
+      return;
+    }
+
+    if (tipoCliente === 'PF') {
+      if (cpfNumeros.length !== 11) {
+        alert('Digite o CPF completo com 11 números.');
+        return;
+      }
+      if (!nomeCliente) {
+        alert('Digite o nome completo.');
+        return;
+      }
+    }
+
+    if (tipoCliente === 'PJ') {
+      if (!razaoSocial) {
+        alert('Razão Social é obrigatória para Pessoa Jurídica.');
+        return;
+      }
+      if (cnpjNumeros.length !== 14) {
+        alert('Digite o CNPJ completo com 14 números.');
+        return;
+      }
+      if (!nomeCliente) {
+        alert('Digite o Cliente ou Nome Fantasia.');
+        return;
+      }
+    }
+
+    const clientData = {
+      client_type: tipoCliente,
+      name: nomeCliente,
+      legal_name: tipoCliente === 'PJ' ? razaoSocial : null,
+      cpf: tipoCliente === 'PF' ? cpfNumeros : null,
+      cnpj: tipoCliente === 'PJ' ? cnpjNumeros : null,
+      address: endereco
+    };
+
+    try {
+      const { perfil } = await loadCurrentUserPermissions();
+      const roleName = String(perfil?.role_name || '').trim().toLowerCase();
+
+      const perfilAtivo =
+        perfil?.account_status === 'active';
+
+      const podeAdicionar =
+        perfilAtivo &&
+        ['master', 'editor'].includes(roleName);
+
+      const podeEditar =
+        perfilAtivo &&
+        roleName === 'master';
+
+      if (!clientId && !podeAdicionar) {
+        alert('Seu usuário não possui permissão para salvar clientes.');
+        return;
+      }
+
+      if (clientId && !podeEditar) {
+        alert('Seu usuário não possui permissão para editar clientes.');
+        return;
+      }
+
+      const data = clientId
+        ? await db.updateClient(Number(clientId), clientData)
+        : await db.insertClient(clientData);
+
+      console.log('Cliente cadastrado:', data);
+      alert(clientId ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
+      history.back();
+    } catch (error) {
+      console.error('[btnSaveClient] Erro ao salvar cliente:', error);
+      const mensagemErro = [
+        error?.message,
+        error?.details,
+        error?.hint
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      if (error?.code === '23505') {
+        if (
+          mensagemErro.includes('clients_cnpj_unique_idx') ||
+          mensagemErro.includes('cnpj')
+        ) {
+          alert('CNPJ já cadastrado.');
+          return;
+        }
+
+        if (
+          mensagemErro.includes('clients_cpf_unique_idx') ||
+          mensagemErro.includes('cpf')
+        ) {
+          alert('CPF já cadastrado.');
+          return;
+        }
+
+        alert('Este cliente já está cadastrado.');
+        return;
+      }
+
+      if (error?.code === 'PERMISSION_DENIED' || error?.code === '42501') {
+        alert('Seu usuário não possui permissão para salvar clientes.');
+        return;
+      }
+
+      if (error?.code === 'AUTH_REQUIRED' || error?.code === 'PROFILE_NOT_FOUND') {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      alert(`Não foi possível salvar o cliente.\n${error.message || 'Tente novamente.'}`);
+    }
+  };
+
+  carregarClienteParaEdicao();
+  </script>
+</body>
+</html>
