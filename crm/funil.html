@@ -43,7 +43,7 @@
     }
 
     .page-shell { min-height: 100vh; background: var(--bg); display: flex; }
-    .page-content { flex: 1; margin-left: 70px; min-height: 100vh; padding: 24px; }
+    .page-content { flex: 1; min-height: 100vh; padding: 24px; margin-left: 70px; }
 
     .header {
       background: var(--surface);
@@ -389,7 +389,17 @@
 </head>
 <body>
   <div class="page-shell">
-    <aside class="sidebar" id="sidebar"></aside>
+    <aside class="sidebar">
+      <div class="sidebar-brand"></div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <div class="profile-avatar">—</div>
+        <div class="profile-info">
+          <span class="profile-name">Carregando…</span>
+          <span class="profile-role">—</span>
+        </div>
+      </div>
+    </aside>
 
     <main class="page-content">
       <div class="header">
