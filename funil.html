@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Funil de Vendas — CRM Simultâneo</title>
+  <link rel="icon" type="image/png" href="./assets/favicon.png?v=20260722-1">
+  <link rel="apple-touch-icon" href="./assets/favicon.png?v=20260722-1">
+  <meta name="theme-color" content="#ffb800">
+  <link rel="stylesheet" href="shared.css?v=20260722-9">
+  <link rel="stylesheet" href="css/auth.css">
+  <style>
+    :root {
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --surface-alt: #F9FAFB;
+      --border: #E5E7EB;
+      --text: #111827;
+      --text-soft: #6B7280;
+      --text-faint: #9CA3AF;
+      --accent: #2563EB;
+      --accent-soft: #DBEAFE;
+      --st-aberta: #2563EB;
+      --st-aberta-bg: #DBEAFE;
+      --st-negociando: #D97706;
+      --st-negociando-bg: #FEF3C7;
+      --st-fechada: #047857;
+      --st-fechada-bg: #D1FAE5;
+      --st-perdida: #DC2626;
+      --st-perdida-bg: #FEE2E2;
+      --st-pausada: #6B7280;
+      --st-pausada-bg: #F3F4F6;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      overflow-x: hidden;
+    }
+
+    .page-shell { min-height: 100vh; background: var(--bg); display: flex; }
+    .page-content { flex: 1; margin-left: 70px; min-height: 100vh; padding: 24px; }
+    .app { display: flex; flex-direction: column; min-height: 100vh; gap: 16px; }
+
+    .header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 16px 0;
+    }
+
+    .header-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .header-text h1 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+
+    .header-text p {
+      margin: 2px 0 0 0;
+      font-size: 11px;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      flex: 1;
+      min-width: 220px;
+      max-width: 340px;
+    }
+
+    .search-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-soft);
+    }
+
+    .search-box svg {
+      flex-shrink: 0;
+      color: var(--text-soft);
+    }
+
+    .toolbar-buttons {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+    }
+
+    .btn.secondary {
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn.secondary:hover {
+      background: var(--border);
+    }
+
+    .filter-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      display: none;
+      gap: 20px;
+      flex-wrap: wrap;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+
+    .filter-panel.show {
+      display: flex;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 0 1 auto;
+    }
+
+    .filter-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .filter-group input,
+    .filter-group select {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .checkbox-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .checkbox-item input {
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+    }
+
+    .checkbox-item label {
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+    }
+
+    .card.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .card-number {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.8;
+    }
+
+    .card-value {
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 8px;
+      opacity: 0.9;
+    }
+
+    .table-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 300px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+
+    .table-scroll {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--surface-alt);
+      border-bottom: 2px solid var(--border);
+    }
+
+    thead th {
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      user-select: none;
+      cursor: pointer;
+      border-right: 1px solid var(--border);
+      transition: background 0.15s ease;
+    }
+
+    thead th:hover {
+      background: #f0f1f3;
+    }
+
+    thead th:last-child {
+      border-right: none;
+    }
+
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      vertical-align: middle;
+      color: var(--text);
+    }
+
+    tbody tr {
+      transition: background 0.1s ease;
+    }
+
+    tbody tr:hover {
+      background: var(--surface-alt);
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(15, 23, 42, 0.01);
+    }
+
+    tbody td:last-child {
+      border-right: none;
+    }
+
+    .sort-indicator {
+      display: inline-block;
+      margin-left: 6px;
+      font-size: 10px;
+      opacity: 0.6;
+    }
+
+    .checkbox-col {
+      width: 40px;
+      text-align: center;
+    }
+
+    .checkbox-col input {
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+    }
+
+    .editable {
+      cursor: text;
+      transition: background 0.1s ease;
+    }
+
+    .editable:hover {
+      background: var(--accent-soft);
+    }
+
+    .editable input,
+    .editable select {
+      width: 100%;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 6px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      outline: none;
+      background: white;
+    }
+
+    .number-cell {
+      font-family: var(--font-mono);
+      color: var(--text-soft);
+      text-align: right;
+    }
+
+    .money-cell {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .date-cell {
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .status-cell {
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge.aberta { color: var(--st-aberta); background: var(--st-aberta-bg); }
+    .badge.negociando { color: var(--st-negociando); background: var(--st-negociando-bg); }
+    .badge.fechada { color: var(--st-fechada); background: var(--st-fechada-bg); }
+    .badge.perdida { color: var(--st-perdida); background: var(--st-perdida-bg); }
+    .badge.pausada { color: var(--st-pausada); background: var(--st-pausada-bg); }
+
+    .link-cell {
+      color: var(--accent);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .link-cell:hover {
+      text-decoration: underline;
+    }
+
+    .actions-cell {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    tbody tr:hover .actions-cell {
+      opacity: 1;
+    }
+
+    .actions-cell button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      color: var(--text-faint);
+      font-size: 11px;
+      font-weight: 500;
+      transition: all 0.1s ease;
+    }
+
+    .actions-cell button:hover {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .table-footer {
+      background: var(--surface-alt);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .pagination {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .pagination button {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.1s ease;
+    }
+
+    .pagination button:hover:not(:disabled) {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pagination select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+    }
+
+    .state-loading,
+    .state-error,
+    .state-empty {
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-faint);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .state-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-soft);
+      margin-bottom: 6px;
+    }
+
+    .state-message {
+      font-size: 12px;
+      color: var(--text-faint);
+      margin-bottom: 16px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px rgba(15, 23, 42, 0.15);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 24px;
+      color: var(--text-faint);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+    }
+
+    .modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--text);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+      opacity: 0;
+      transform: translateY(20px);
+      pointer-events: none;
+      transition: all 0.2s ease;
+      z-index: 2000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    @media (max-width: 768px) {
+      .page-content { margin-left: 0; padding: 12px; }
+      .toolbar { flex-direction: column; }
+      .search-box { width: 100%; max-width: 100%; }
+      .toolbar-buttons { width: 100%; margin-left: 0; }
+      .summary-cards { grid-template-columns: repeat(2, 1fr); }
+      .table-scroll { max-height: 400px; }
+      table { font-size: 11px; }
+      thead th { padding: 8px 6px; font-size: 10px; }
+      tbody td { padding: 6px; font-size: 11px; }
+      .filter-panel { flex-direction: column; }
+      .filter-group { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">CRM</div>
+        <div class="brand-text">
+          <span>CRM</span>
+          <small>Simultâneo</small>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-item active" href="funil.html">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l3-4 3 2 4-6"></path></svg></span>
+          <span class="nav-label">Funil</span>
+        </a>
+        <a class="nav-item" href="clientes.html">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg></span>
+          <span class="nav-label">Clientes</span>
+        </a>
+        <a class="nav-item" href="projetos.html">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"></path><path d="M5 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7"></path><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span>
+          <span class="nav-label">Projetos</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c0 .7.4 1.3 1 1.5V11a2 2 0 0 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"></path></svg></span>
+          <span class="nav-label">Configurações</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="profile-avatar" id="profileAvatar">J</div>
+        <div class="profile-info">
+          <span class="profile-name" id="profileName">João</span>
+          <span class="profile-role" id="profileRole">Gestor</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="page-content">
+      <div class="app">
+        <div class="header">
+          <div class="header-title">
+            <div class="header-icon">⨂</div>
+            <div class="header-text">
+              <h1>Funil de Vendas</h1>
+              <p>Gestão de Propostas e Oportunidades</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-box" role="search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="searchInput" type="text" placeholder="Pesquisar propostas, clientes, projetos..." aria-label="Pesquisar">
+          </div>
+          <div class="toolbar-buttons">
+            <button id="btnFilters" class="btn secondary" title="Mostrar filtros"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>Filtros</button>
+            <button id="btnColumns" class="btn secondary" title="Configurar colunas"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>Colunas</button>
+            <button id="btnExport" class="btn secondary" title="Exportar dados"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v4M8 21h8M3 3h18v10a6 6 0 01-6 6H9a6 6 0 01-6-6V3z"></path></svg>Exportar</button>
+            <a id="btnNovaProposta" href="./proposta.html?returnTo=funil.html" class="btn" title="Criar nova proposta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nova Proposta</a>
+          </div>
+        </div>
+
+        <div id="filterPanel" class="filter-panel" role="region" aria-label="Filtros de propostas">
+          <div class="filter-group">
+            <label for="filterClient">Cliente</label>
+            <input id="filterClient" type="text" placeholder="Pesquisar cliente...">
+          </div>
+          <div class="filter-group">
+            <label for="filterProject">Projeto</label>
+            <input id="filterProject" type="text" placeholder="Pesquisar projeto...">
+          </div>
+          <div class="filter-group">
+            <label for="filterProposalStatus">Status Proposta</label>
+            <select id="filterProposalStatus" multiple><option value="">Todos</option><option value="Aberta">Aberta</option><option value="Negociando">Negociando</option><option value="Fechada">Fechada</option><option value="Perdida">Perdida</option><option value="Pausada">Pausada</option></select>
+          </div>
+          <div class="filter-group">
+            <label for="filterProjectStatus">Status Projeto</label>
+            <input id="filterProjectStatus" type="text" placeholder="Pesquisar status...">
+          </div>
+          <div class="filter-group">
+            <label for="filterPaymentMethod">Forma de Pagamento</label>
+            <input id="filterPaymentMethod" type="text" placeholder="Pesquisar...">
+          </div>
+          <div class="filter-group">
+            <label>Período</label>
+            <select id="filterDateType"><option value="budget_date">Data Orçamento</option><option value="closing_date">Data Fechamento</option><option value="payment_due_date">Vencimento</option><option value="created_at">Criação</option></select>
+          </div>
+          <div class="filter-group">
+            <label for="filterDateFrom">De</label>
+            <input id="filterDateFrom" type="date">
+          </div>
+          <div class="filter-group">
+            <label for="filterDateTo">Até</label>
+            <input id="filterDateTo" type="date">
+          </div>
+          <div class="filter-group">
+            <label for="filterValueMin">Valor Mín (BRL)</label>
+            <input id="filterValueMin" type="number" placeholder="0">
+          </div>
+          <div class="filter-group">
+            <label for="filterValueMax">Valor Máx (BRL)</label>
+            <input id="filterValueMax" type="number" placeholder="999999">
+          </div>
+          <div class="filter-group">
+            <label>Checkboxes</label>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input id="filterWithDueDate" type="checkbox">
+                <label for="filterWithDueDate">Com Vencimento</label>
+              </div>
+              <div class="checkbox-item">
+                <input id="filterWithoutDueDate" type="checkbox">
+                <label for="filterWithoutDueDate">Sem Vencimento</label>
+              </div>
+            </div>
+          </div>
+          <div style="flex: 0 1 100%; display: flex; gap: 8px;">
+            <button id="btnFilterClear" class="btn secondary" style="flex: 1;">Limpar Filtros</button>
+            <button id="btnFilterApply" class="btn" style="flex: 1;">Aplicar</button>
+          </div>
+        </div>
+
+        <div id="summaryCards" class="summary-cards" role="region" aria-label="Resumo de propostas por status"></div>
+
+        <div class="table-container" role="region" aria-label="Grade de propostas">
+          <div id="tableState" class="table-scroll"></div>
+          <div class="table-footer" role="contentinfo">
+            <div id="footerInfo" style="flex: 1;">0 propostas</div>
+            <div class="pagination">
+              <button id="btnPrevPage" aria-label="Página anterior">←</button>
+              <span id="pageInfo">Página 1 de 1</span>
+              <button id="btnNextPage" aria-label="Próxima página">→</button>
+              <select id="pageSize" aria-label="Registros por página">
+                <option value="10">10 por página</option>
+                <option value="25" selected>25 por página</option>
+                <option value="50">50 por página</option>
+                <option value="100">100 por página</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="columnsModal" class="modal" role="dialog" aria-labelledby="columnsTitle" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="columnsTitle">Configurar Colunas</h2>
+        <button class="modal-close" aria-label="Fechar" onclick="document.getElementById('columnsModal').classList.remove('show')">&times;</button>
+      </div>
+      <div id="columnsListModal" class="modal-body"></div>
+      <div class="modal-footer">
+        <button id="btnColumnsReset" class="btn secondary">Restaurar Padrão</button>
+        <button id="btnColumnsClose" class="btn" onclick="document.getElementById('columnsModal').classList.remove('show')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="exportModal" class="modal" role="dialog" aria-labelledby="exportTitle" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="exportTitle">Exportar Dados</h2>
+        <button class="modal-close" aria-label="Fechar" onclick="document.getElementById('exportModal').classList.remove('show')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <button id="btnExportAll" class="btn" style="width: 100%;">Exportar Tudo</button>
+        <button id="btnExportFiltered" class="btn" style="width: 100%;">Exportar Filtrados</button>
+        <button id="btnExportSelected" class="btn" style="width: 100%;">Exportar Selecionados</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+  <script type="module" src="./js/funil.js?v=20260722-9"></script>
+</body>
+</html>

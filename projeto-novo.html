@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novo Projeto</title><link rel="icon" type="image/png" href="./assets/favicon.png?v=20260722-1">
+<link rel="apple-touch-icon" href="./assets/favicon.png?v=20260722-1">
+<meta name="theme-color" content="#ffb800"><link rel="stylesheet" href="shared.css?v=20260722-9">
+<link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-icon">CRM</div><div class="brand-text"><span>CRM</span><small>Simultâneo</small></div></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span><span class="nav-label">Dashboard</span></a>
+        <a class="nav-item" href="funil.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l3-4 3 2 4-6"></path></svg></span><span class="nav-label">Funil</span></a>
+        <a class="nav-item" href="clientes.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg></span><span class="nav-label">Clientes</span></a>
+        <a class="nav-item active" href="projetos.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"></path><path d="M5 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7"></path><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span><span class="nav-label">Projetos</span></a>
+        <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c0 .7.4 1.3 1 1.5V11a2 2 0 0 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"></path></svg></span><span class="nav-label">Configurações</span></a>
+      </nav>
+      <div class="sidebar-footer"><div class="profile-avatar">J</div><div class="profile-info"><span class="profile-name">João</span><span class="profile-role">Gestor</span></div></div>
+    </aside>
+    <main class="page-content">
+      <div class="app">
+        <div class="page-card">
+          <div class="page-header"><div><h1 class="page-title">Cadastrar Projeto</h1><div class="page-subtext">Vincule o projeto a um cliente e inclua os dados complementares</div></div></div>
+          <div class="page-body">
+            <div class="form-grid" style="grid-template-columns:1fr; gap:12px; margin-bottom:12px;">
+              <div class="field search-field"><label for="fldProjClientSearch">Cliente</label><input id="fldProjClientSearch" type="text" autocomplete="off" placeholder="Busque pelo nome do cliente"><input id="fldProjClientId" type="hidden"><div id="fldProjClientResults" class="search-results" hidden></div></div>
+              <div class="field"><label for="fldProjName">Nome do Projeto *</label><input id="fldProjName" type="text" placeholder="Nome do projeto" required></div>
+              <div class="field"><label>Serviços</label><input id="fldProjServ" type="text" placeholder="Serviços incluídos"></div>
+              <div class="field"><label>Status do Projeto</label><input id="fldProjStatus" type="text" placeholder="Ex: Em andamento"></div>
+            </div>
+            <div class="card-grid">
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Responsável</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field"><label>Nome Completo</label><input id="fldRespNome" type="text" placeholder="Nome completo"></div>
+                  <div class="field"><label>CPF</label><input id="fldRespCpf" type="text" placeholder="000.000.000-00"></div>
+                  <div class="field"><label>RG - Órgão Emissor</label><input id="fldRespRg" type="text" placeholder="RG e órgão emissor"></div>
+                  <div class="field"><label>Profissão</label><input id="fldRespProfissao" type="text" placeholder="Profissão"></div>
+                  <div class="field"><label>Estado Civil</label><input id="fldRespEstadoCivil" type="text" placeholder="Estado civil"></div>
+                  <div class="field"><label>Endereço Completo Responsável</label><textarea id="fldRespEndereco" placeholder="Rua, número, bairro, cidade, estado, CEP"></textarea></div>
+                  <div class="field"><label>E-mail</label><input id="fldRespEmail" type="email" placeholder="email@empresa.com"></div>
+                  <div class="field"><label>Telefone</label><input id="fldRespTelefone" type="text" placeholder="(47) 99999-9999"></div>
+                  <div class="field"><label>E-mail em cópia</label><input id="fldRespEmailCopia" type="email" placeholder="email.copia@empresa.com"></div>
+                </div>
+              </div>
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Financeiro</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field"><label>Forma de pagamento</label><input id="fldPaymentMethod" type="text" placeholder="Ex: Boleto, Cartão, Transferência"></div>
+                  <div class="field"><label>Forma de parcelamento</label><input id="fldInstallmentTerms" type="text" placeholder="Ex: 3x, 6x, 12x"></div>
+                  <div class="field"><label>Dia de vencimento das parcelas</label><input id="fldInstallmentDueDay" type="text" placeholder="Dia do mês"></div>
+                  <div class="field"><label>Valor total do contrato</label><input id="fldContractTotal" type="text" placeholder="R$ 0,00"></div>
+                  <div class="field"><label>Valor das parcelas</label><input id="fldInstallmentValue" type="text" placeholder="R$ 0,00"></div>
+                </div>
+              </div>
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Contrato</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field"><label>Envio do contrato</label><input id="fldContractDeliveryMethod" type="text" placeholder="Ex: Por e-mail, correio, assinatura digital"></div>
+                  <div class="field"><label>Envio de cobranças</label><input id="fldBillingDeliveryMethod" type="text" placeholder="Ex: Mensal, quinzenal"></div>
+                </div>
+              </div>
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Acompanhamento do Projeto</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field"><label>Solicitação de arquivos de projeto</label><input id="fldProjectFilesRequest" type="text" placeholder="Ex: Modelos, plantas, texturas"></div>
+                  <div class="field"><label>Entregas e aprovações</label><textarea id="fldDeliveriesApprovals" placeholder="Fases de entrega e aprovação"></textarea></div>
+                </div>
+              </div>
+            </div>
+            <div class="actions"><button class="btn-primary" id="btnSaveProj">Salvar Projeto</button><button class="btn-secondary" onclick="history.back()">Cancelar</button></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module">
+  import './js/auth-guard.js?v=20260722-9';
+  import './js/user-menu.js?v=20260722-9';
+  import './js/ui.js?v=20260722-9';
+  import { db, loadCurrentUserPermissions } from './js/supabase.js?v=20260722-9';
+
+  await window.crmAuthReady;
+  const params = new URLSearchParams(window.location.search);
+  const projectId = params.get('id');
+
+  const access = await loadCurrentUserPermissions().catch(() => null);
+  if (!access) {
+    window.location.href = './login.html';
+    throw new Error('Usuário não autenticado');
+  }
+  const permissions = access.permissions;
+
+  if (projectId && !permissions.podeEditar) {
+    showToast('Seu usuario nao possui permissao para editar projetos.', 'error');
+    window.location.href = './projetos.html';
+    throw new Error('Sem permissão de edição');
+  }
+
+  if (!projectId && !permissions.podeAdicionar) {
+    showToast('Seu usuario nao possui permissao para cadastrar projetos.', 'error');
+    window.location.href = './projetos.html';
+    throw new Error('Sem permissão de cadastro');
+  }
+
+  function normalizeSearchText(value) {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  async function carregarClientes() {
+    const clients = await db.fetchClients().catch((error) => {
+      console.error('[projeto-novo] Erro ao carregar clientes:', error);
+      showToast('Nao foi possivel carregar os clientes.', 'error');
+      return [];
+    });
+    return clients || [];
+  }
+
+  function criarCombobox({ input, hiddenInput, results, getItems, getItemLabel, getItemKeywords, onSelect, onManualChange, noResultsText }) {
+    const comboState = {
+      items: [],
+      visibleItems: [],
+      activeIndex: -1,
+      optionPrefix: `${input.id}-option`
+    };
+
+    function closeResults() {
+      comboState.visibleItems = [];
+      comboState.activeIndex = -1;
+      results.hidden = true;
+      results.replaceChildren();
+      input.setAttribute('aria-expanded', 'false');
+      input.setAttribute('aria-activedescendant', '');
+    }
+
+    function setActiveIndex(index) {
+      comboState.activeIndex = index;
+      const optionId = index >= 0 ? `${comboState.optionPrefix}-${index}` : '';
+      input.setAttribute('aria-activedescendant', optionId);
+
+      Array.from(results.children).forEach((child, childIndex) => {
+        if (child.getAttribute('role') !== 'option') return;
+        child.classList.toggle('active', childIndex === index);
+        if (childIndex === index) {
+          child.scrollIntoView({ block: 'nearest' });
+        }
+      });
+    }
+
+    function selectItem(item) {
+      hiddenInput.value = String(item.id);
+      input.value = getItemLabel(item);
+      onSelect(item);
+      closeResults();
+    }
+
+    function renderResults(filteredItems) {
+      comboState.visibleItems = filteredItems;
+      comboState.activeIndex = -1;
+      results.replaceChildren();
+      input.setAttribute('aria-activedescendant', '');
+
+      if (!filteredItems.length) {
+        const empty = document.createElement('div');
+        empty.className = 'no-result';
+        empty.textContent = noResultsText;
+        results.appendChild(empty);
+        results.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+        return;
+      }
+
+      filteredItems.forEach((item, index) => {
+        const option = document.createElement('div');
+        option.id = `${comboState.optionPrefix}-${index}`;
+        option.className = 'result-item';
+        option.setAttribute('role', 'option');
+        option.setAttribute('aria-selected', 'false');
+        option.textContent = getItemLabel(item);
+        option.addEventListener('mousedown', (event) => {
+          event.preventDefault();
+          selectItem(item);
+        });
+        results.appendChild(option);
+      });
+
+      results.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    function filtrar(query) {
+      comboState.items = getItems();
+      const normalizedQuery = normalizeSearchText(query);
+      if (!comboState.items.length) {
+        closeResults();
+        return;
+      }
+
+      const filteredItems = comboState.items.filter((item) => {
+        const keywords = getItemKeywords(item);
+        return !normalizedQuery || keywords.some((keyword) => normalizeSearchText(keyword).includes(normalizedQuery));
+      });
+
+      renderResults(filteredItems);
+    }
+
+    input.addEventListener('focus', () => {
+      filtrar(input.value);
+    });
+
+    input.addEventListener('input', () => {
+      hiddenInput.value = '';
+      onManualChange();
+      filtrar(input.value);
+    });
+
+    input.addEventListener('keydown', (event) => {
+      if (results.hidden && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        filtrar(input.value);
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (!comboState.visibleItems.length) return;
+        const nextIndex = comboState.activeIndex + 1 >= comboState.visibleItems.length ? 0 : comboState.activeIndex + 1;
+        setActiveIndex(nextIndex);
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (!comboState.visibleItems.length) return;
+        const nextIndex = comboState.activeIndex <= 0 ? comboState.visibleItems.length - 1 : comboState.activeIndex - 1;
+        setActiveIndex(nextIndex);
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        if (comboState.activeIndex >= 0 && comboState.visibleItems[comboState.activeIndex]) {
+          event.preventDefault();
+          selectItem(comboState.visibleItems[comboState.activeIndex]);
+        }
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        closeResults();
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (event.target === input || results.contains(event.target)) {
+        return;
+      }
+      closeResults();
+    });
+
+    return {
+      open() {
+        filtrar(input.value);
+      },
+      close: closeResults,
+      setSelected(item) {
+        hiddenInput.value = item ? String(item.id) : '';
+        input.value = item ? getItemLabel(item) : '';
+        closeResults();
+      }
+    };
+  }
+
+  const clientState = { clients: [], selectedClient: null };
+
+  async function inicializarClientCombobox() {
+    clientState.clients = await carregarClientes();
+    
+    const clientCombobox = criarCombobox({
+      input: document.getElementById('fldProjClientSearch'),
+      hiddenInput: document.getElementById('fldProjClientId'),
+      results: document.getElementById('fldProjClientResults'),
+      getItems: () => clientState.clients,
+      getItemLabel: (client) => client.legal_name || client.name || `Cliente #${client.id}`,
+      getItemKeywords: (client) => [client.legal_name, client.name, client.cpf, client.cnpj, String(client.id)],
+      onSelect: (client) => {
+        clientState.selectedClient = client;
+      },
+      onManualChange: () => {
+        clientState.selectedClient = null;
+      },
+      noResultsText: 'Nenhum cliente encontrado.'
+    });
+
+    return clientCombobox;
+  }
+
+  function somenteNumeros(valor) {
+    return String(valor || '').replace(/\D/g, '');
+  }
+
+  function limparMoeda(valor) {
+    const texto = String(valor || '').trim();
+    if (!texto) return null;
+    const normalizado = texto
+      .replace(/\./g, '')
+      .replace(',', '.')
+      .replace(/[^\d.-]/g, '');
+    const numero = Number(normalizado);
+    return Number.isFinite(numero) ? numero : null;
+  }
+
+  function obterTexto(id) {
+    const element = document.getElementById(id);
+    return element ? element.value.trim() : '';
+  }
+
+  function obterNumeroInteiro(id) {
+    const texto = obterTexto(id);
+    if (!texto) return null;
+    const numero = Number.parseInt(texto, 10);
+    return Number.isFinite(numero) ? numero : null;
+  }
+
+  function converterValor(valor) {
+    return limparMoeda(valor);
+  }
+
+  function obterUrlAtualRelativa() {
+    const arquivo = window.location.pathname.split('/').pop() || 'projeto-novo.html';
+    return arquivo + window.location.search + window.location.hash;
+  }
+
+  function criarUrlVisualizacao(type, id) {
+    const returnTo = encodeURIComponent(obterUrlAtualRelativa());
+    return `./visualizar.html?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}&returnTo=${returnTo}`;
+  }
+
+  async function obterOuCriarResponsavel() {
+    const nomeCompleto = document.getElementById('fldRespNome').value.trim();
+    const cpf = somenteNumeros(document.getElementById('fldRespCpf').value);
+    const rgOrgaoEmissor = document.getElementById('fldRespRg').value.trim();
+    const profissao = document.getElementById('fldRespProfissao').value.trim();
+    const estadoCivil = document.getElementById('fldRespEstadoCivil').value.trim();
+    const enderecoResponsavel = document.getElementById('fldRespEndereco').value.trim();
+    const email = document.getElementById('fldRespEmail').value.trim();
+    const telefone = document.getElementById('fldRespTelefone').value.trim();
+    const emailCopia = document.getElementById('fldRespEmailCopia').value.trim();
+
+    const temDadosResponsavel = [
+      nomeCompleto,
+      cpf,
+      rgOrgaoEmissor,
+      profissao,
+      estadoCivil,
+      enderecoResponsavel,
+      email,
+      telefone,
+      emailCopia
+    ].some(Boolean);
+
+    if (!temDadosResponsavel) return null;
+
+    const responsaveis = await db.fetchResponsaveis();
+    const responsavelExistente = (responsaveis || []).find((resp) => {
+      const cpfMatch = cpf && somenteNumeros(resp.cpf) === cpf;
+      const emailMatch = email && String(resp.email || '').toLowerCase() === email.toLowerCase();
+      return cpfMatch || emailMatch;
+    });
+
+    if (responsavelExistente) {
+      return responsavelExistente.id;
+    }
+
+    if (!nomeCompleto) {
+      throw new Error('Informe o nome completo do responsável para cadastrar um novo registro.');
+    }
+
+    const payloadResponsavel = {
+      nome_completo: nomeCompleto,
+      cpf: cpf || null,
+      rg_orgao_emissor: rgOrgaoEmissor || null,
+      profissao: profissao || null,
+      estado_civil: estadoCivil || null,
+      endereco_responsavel: enderecoResponsavel || null,
+      email: email || null,
+      telefone: telefone || null,
+      email_copia: emailCopia || null
+    };
+
+    const novoResponsavel = await db.insertResponsavel(payloadResponsavel);
+    return novoResponsavel.id;
+  }
+
+  async function carregarProjetoParaEdicao(clientCombobox) {
+    if (!projectId) return;
+
+    try {
+      const [project, contract, acompanhamento] = await Promise.all([
+        db.fetchProjectById(Number(projectId)),
+        db.fetchContractByProject(Number(projectId)).catch((error) => {
+          console.error('[projeto-novo contract]', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+          return null;
+        }),
+        db.fetchProjectFollowupByProject(Number(projectId)).catch((error) => {
+          console.error('[projeto-novo followup]', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+          return null;
+        })
+      ]);
+
+      if (project.client_id && clientState.clients.length > 0) {
+        const client = clientState.clients.find((c) => Number(c.id) === Number(project.client_id));
+        if (client) {
+          clientCombobox.setSelected(client);
+          clientState.selectedClient = client;
+        }
+      }
+      document.getElementById('fldProjName').value = project.name || '';
+      document.getElementById('fldProjServ').value = project.services || '';
+      document.getElementById('fldProjStatus').value = project.status || '';
+
+      if (project.responsavel) {
+        document.getElementById('fldRespNome').value = project.responsavel.nome_completo || '';
+        document.getElementById('fldRespCpf').value = project.responsavel.cpf || '';
+        document.getElementById('fldRespRg').value = project.responsavel.rg_orgao_emissor || '';
+        document.getElementById('fldRespProfissao').value = project.responsavel.profissao || '';
+        document.getElementById('fldRespEstadoCivil').value = project.responsavel.estado_civil || '';
+        document.getElementById('fldRespEndereco').value = project.responsavel.endereco_responsavel || '';
+        document.getElementById('fldRespEmail').value = project.responsavel.email || '';
+        document.getElementById('fldRespTelefone').value = project.responsavel.telefone || '';
+        document.getElementById('fldRespEmailCopia').value = project.responsavel.email_copia || '';
+      }
+
+      if (contract) {
+        document.getElementById('fldPaymentMethod').value = contract.payment_method || '';
+        document.getElementById('fldInstallmentTerms').value = contract.installment_terms || '';
+        document.getElementById('fldInstallmentDueDay').value = contract.installment_due_day ?? '';
+        document.getElementById('fldContractTotal').value = contract.contract_total ?? '';
+        document.getElementById('fldInstallmentValue').value = contract.installment_value ?? '';
+        document.getElementById('fldContractDeliveryMethod').value = contract.contract_delivery_method || '';
+        document.getElementById('fldBillingDeliveryMethod').value = contract.billing_delivery_method || '';
+      }
+
+      if (acompanhamento) {
+        document.getElementById('fldProjectFilesRequest').value = acompanhamento.project_files_request || '';
+        document.getElementById('fldDeliveriesApprovals').value = acompanhamento.deliveries_approvals || '';
+      }
+
+      document.querySelector('.page-title').textContent = 'Editar Projeto';
+      document.getElementById('btnSaveProj').textContent = 'Salvar Alterações';
+    } catch (error) {
+      console.error('[projeto-novo] Erro ao carregar projeto para edição:', error);
+      showToast('Nao foi possivel carregar o projeto para edicao.', 'error');
+    }
+  }
+
+  document.getElementById('btnSaveProj').onclick = async function(){
+    const clientIdValue = document.getElementById('fldProjClientId').value.trim();
+    const clientId = clientIdValue ? Number(clientIdValue) : null;
+    const name = document.getElementById('fldProjName').value.trim();
+    const services = document.getElementById('fldProjServ').value.trim();
+    const statusProjeto = document.getElementById('fldProjStatus').value.trim();
+
+    if (!name) {
+      showToast('Informe o nome do projeto.', 'error');
+      document.getElementById('fldProjName').focus();
+      return;
+    }
+
+    if (projectId && !permissions.podeEditar) {
+      showToast('Seu usuario nao possui permissao para editar projetos.', 'error');
+      return;
+    }
+
+    if (!projectId && !permissions.podeAdicionar) {
+      showToast('Seu usuario nao possui permissao para cadastrar projetos.', 'error');
+      return;
+    }
+
+    try {
+      const responsibleId = await obterOuCriarResponsavel();
+      const payloadProject = {
+        client_id: Number.isFinite(clientId) ? clientId : null,
+        name,
+        services: services || null,
+        status: statusProjeto || null,
+        responsible_id: responsibleId || null
+      };
+
+      console.log('[Projeto] Salvando projeto', payloadProject);
+      const projectSaved = projectId
+        ? await db.updateProject(Number(projectId), payloadProject)
+        : await db.insertProject(payloadProject);
+
+      const projectIdSalvo = Number(projectSaved?.id || projectId);
+      if (!Number.isFinite(projectIdSalvo)) {
+        throw new Error('Nao foi possivel determinar o ID do projeto salvo.');
+      }
+
+      const contractPayload = {
+        payment_method: obterTexto('fldPaymentMethod'),
+        installment_terms: obterTexto('fldInstallmentTerms'),
+        installment_due_day: obterNumeroInteiro('fldInstallmentDueDay'),
+        contract_total: converterValor(document.getElementById('fldContractTotal').value),
+        installment_value: converterValor(document.getElementById('fldInstallmentValue').value),
+        contract_delivery_method: obterTexto('fldContractDeliveryMethod'),
+        billing_delivery_method: obterTexto('fldBillingDeliveryMethod')
+      };
+
+      const followupPayload = {
+        project_files_request: obterTexto('fldProjectFilesRequest'),
+        deliveries_approvals: obterTexto('fldDeliveriesApprovals')
+      };
+
+      const [contratoExistente, acompanhamentoExistente] = await Promise.all([
+        db.fetchContractByProject(projectIdSalvo).catch((error) => {
+          console.error('[Projeto] Falha ao buscar contrato do projeto', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+          return null;
+        }),
+        db.fetchProjectFollowupByProject(projectIdSalvo).catch((error) => {
+          console.error('[Projeto] Falha ao buscar acompanhamento do projeto', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+          return null;
+        })
+      ]);
+
+      const possuiDadosContrato = [
+        contractPayload.payment_method,
+        contractPayload.installment_terms,
+        contractPayload.installment_due_day,
+        contractPayload.contract_total,
+        contractPayload.installment_value,
+        contractPayload.contract_delivery_method,
+        contractPayload.billing_delivery_method
+      ].some((value) => value !== null && value !== undefined && String(value).trim() !== '');
+
+      const possuiDadosAcompanhamento = [
+        followupPayload.project_files_request,
+        followupPayload.deliveries_approvals
+      ].some((value) => value !== null && value !== undefined && String(value).trim() !== '');
+
+      const normalizarContrato = (registro) => registro ? {
+        payment_method: registro.payment_method || null,
+        installment_terms: registro.installment_terms || null,
+        installment_due_day: registro.installment_due_day ?? null,
+        contract_total: registro.contract_total ?? null,
+        installment_value: registro.installment_value ?? null,
+        contract_delivery_method: registro.contract_delivery_method || null,
+        billing_delivery_method: registro.billing_delivery_method || null,
+        project_id: Number(registro.project_id)
+      } : null;
+
+      const normalizarAcompanhamento = (registro) => registro ? {
+        project_files_request: registro.project_files_request || null,
+        deliveries_approvals: registro.deliveries_approvals || null,
+        project_id: Number(registro.project_id)
+      } : null;
+
+      let contratoSalvo = contratoExistente;
+      let acompanhamentoSalvo = acompanhamentoExistente;
+      let falhouContrato = false;
+      let falhouAcompanhamento = false;
+
+      if (possuiDadosContrato || contratoExistente) {
+        try {
+          contratoSalvo = await db.saveContractByProject(projectIdSalvo, contractPayload);
+          console.log('[Projeto] Contrato salvo', contratoSalvo);
+        } catch (error) {
+          falhouContrato = true;
+          console.error('[Projeto] Falha ao atualizar contrato', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+        }
+      }
+
+      if (possuiDadosAcompanhamento || acompanhamentoExistente) {
+        try {
+          acompanhamentoSalvo = await db.saveProjectFollowupByProject(projectIdSalvo, followupPayload);
+          console.log('[Projeto] Acompanhamento salvo', acompanhamentoSalvo);
+        } catch (error) {
+          falhouAcompanhamento = true;
+          console.error('[Projeto] Falha ao atualizar acompanhamento', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+        }
+      }
+
+      const [contratoConfirmado, acompanhamentoConfirmado] = await Promise.all([
+        db.fetchContractByProject(projectIdSalvo),
+        db.fetchProjectFollowupByProject(projectIdSalvo)
+      ]);
+
+      console.log('[Projeto] Dados confirmados', {
+        contratoConfirmado,
+        acompanhamentoConfirmado
+      });
+
+      const contratoEsperado = (possuiDadosContrato || contratoExistente)
+        ? {
+            ...contractPayload,
+            project_id: projectIdSalvo
+          }
+        : null;
+
+      const acompanhamentoEsperado = (possuiDadosAcompanhamento || acompanhamentoExistente)
+        ? {
+            ...followupPayload,
+            project_id: projectIdSalvo
+          }
+        : null;
+
+      const contratoConfirmadoNormalizado = normalizarContrato(contratoConfirmado);
+      const acompanhamentoConfirmadoNormalizado = normalizarAcompanhamento(acompanhamentoConfirmado);
+
+      const contratoEsperadoNormalizado = normalizarContrato(contratoEsperado);
+      const acompanhamentoEsperadoNormalizado = normalizarAcompanhamento(acompanhamentoEsperado);
+
+      const contratoCorreto = JSON.stringify(contratoEsperadoNormalizado) === JSON.stringify(contratoConfirmadoNormalizado);
+      const acompanhamentoCorreto = JSON.stringify(acompanhamentoEsperadoNormalizado) === JSON.stringify(acompanhamentoConfirmadoNormalizado);
+
+      if (falhouContrato || falhouAcompanhamento) {
+        showToast('Os dados principais foram salvos, mas não foi possível atualizar o financeiro do projeto.', 'error');
+        return;
+      }
+
+      if (!contratoCorreto || !acompanhamentoCorreto) {
+        console.error('[Projeto] Divergência entre formulário e dados confirmados', {
+          contratoEsperado: contratoEsperadoNormalizado,
+          contratoConfirmado: contratoConfirmadoNormalizado,
+          acompanhamentoEsperado: acompanhamentoEsperadoNormalizado,
+          acompanhamentoConfirmado: acompanhamentoConfirmadoNormalizado
+        });
+        showToast('Os dados foram salvos, mas a confirmação do financeiro do projeto não bateu com o formulário.', 'error');
+        return;
+      }
+
+      showToast(projectId ? 'Projeto atualizado com sucesso.' : 'Projeto cadastrado com sucesso.', 'success');
+      window.location.href = `./visualizar.html?type=project&id=${projectIdSalvo}`;
+    } catch (error) {
+      console.error('[Projeto] Falha ao salvar projeto', {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint
+      });
+      showToast('Nao foi possivel salvar o projeto.', 'error');
+    }
+  };
+
+  (async () => {
+    const clientCombobox = await inicializarClientCombobox();
+    await carregarProjetoParaEdicao(clientCombobox);
+  })();
+  </script>
+</body>
+</html>
