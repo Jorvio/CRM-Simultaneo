@@ -424,12 +424,17 @@ window.db = {
           cliente:clients!proposals_client_id_fkey (
             id,
             name,
-            legal_name
+            legal_name,
+            client_type,
+            cpf,
+            cnpj
           ),
           projeto:projects!proposals_project_id_fkey (
             id,
             name,
-            client_id
+            client_id,
+            services,
+            status
           )
         `)
         .order('created_at', { ascending: false }),
@@ -557,12 +562,17 @@ window.db = {
           cliente:clients!proposals_client_id_fkey (
             id,
             name,
-            legal_name
+            legal_name,
+            client_type,
+            cpf,
+            cnpj
           ),
           projeto:projects!proposals_project_id_fkey (
             id,
             name,
-            client_id
+            client_id,
+            services,
+            status
           )
         `)
         .eq('project_id', projectId)
@@ -604,12 +614,17 @@ window.db = {
           cliente:clients!proposals_client_id_fkey (
             id,
             name,
-            legal_name
+            legal_name,
+            client_type,
+            cpf,
+            cnpj
           ),
           projeto:projects!proposals_project_id_fkey (
             id,
             name,
-            client_id
+            client_id,
+            services,
+            status
           )
         `)
         .eq('id', id)
