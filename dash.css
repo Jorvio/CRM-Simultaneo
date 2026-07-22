@@ -1,5 +1,5 @@
-.dashboard-shell{min-height:100vh; background:var(--bg);}
-.dashboard-main{margin-left:70px; min-height:100vh; background:var(--bg); padding:24px;}
+.dashboard-shell{display:flex; min-height:100vh; background:var(--bg);}
+.dashboard-main{margin-left:70px; width:100%; flex:1; min-height:100vh; background:var(--bg); padding:24px;}
 #dash-root{background:var(--bg); color:var(--text); font-family:Inter, sans-serif; padding:20px 0 32px;}
 .num{font-family:JetBrains Mono, monospace; letter-spacing:-0.02em;}
 .disp{font-family:Space Grotesk, sans-serif;}

@@ -53,8 +53,8 @@ function renderSidebarBrand() {
 
   brand.innerHTML = `
     <a href="./dashboard.html" class="sidebar-brand-link" aria-label="Ir para o Dashboard">
-      <img src="./assets/astra-logo.png?v=20260722-1" alt="Astra CRM" class="sidebar-logo-full">
-      <img src="./assets/astra-icon.png?v=20260722-1" alt="" aria-hidden="true" class="sidebar-logo-compact">
+      <img src="./astra-logo.png?v=20260722-1" alt="Astra CRM" class="sidebar-logo-full">
+      <img src="./astra-icon.png?v=20260722-1" alt="" aria-hidden="true" class="sidebar-logo-compact">
     </a>
   `;
 }
