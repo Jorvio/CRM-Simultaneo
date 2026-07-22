@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Novo Projeto</title>
-<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="shared.css?v=20260722-6">
 <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
@@ -86,10 +86,10 @@
     </main>
   </div>
   <script type="module">
-  import './js/auth-guard.js?v=20260722-1';
-  import './js/user-menu.js?v=20260722-1';
-  import './js/ui.js?v=20260722-1';
-  import { db, loadCurrentUserPermissions } from './js/supabase.js?v=20260722-1';
+  import './js/auth-guard.js?v=20260722-6';
+  import './js/user-menu.js?v=20260722-6';
+  import './js/ui.js?v=20260722-6';
+  import { db, loadCurrentUserPermissions } from './js/supabase.js?v=20260722-6';
 
   await window.crmAuthReady;
   const params = new URLSearchParams(window.location.search);

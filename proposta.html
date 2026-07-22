@@ -1,14 +1,101 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Proposta</title>
-  <meta http-equiv="refresh" content="0; url=./crm/proposta.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposta</title>
+<link rel="stylesheet" href="shared.css?v=20260722-6">
+<link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
-  <script>
-    window.location.replace('./crm/proposta.html' + window.location.search + window.location.hash);
-  </script>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-icon">CRM</div><div class="brand-text"><span>CRM</span><small>Simultâneo</small></div></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span><span class="nav-label">Dashboard</span></a>
+        <a class="nav-item active" href="funil.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l3-4 3 2 4-6"></path></svg></span><span class="nav-label">Funil</span></a>
+        <a class="nav-item" href="clientes.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg></span><span class="nav-label">Clientes</span></a>
+        <a class="nav-item" href="projetos.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"></path><path d="M5 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7"></path><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span><span class="nav-label">Projetos</span></a>
+      </nav>
+      <div class="sidebar-footer"><div class="profile-avatar">J</div><div class="profile-info"><span class="profile-name">João</span><span class="profile-role">Gestor</span></div></div>
+    </aside>
+    <main class="page-content">
+      <div class="app">
+        <div class="page-card">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title" id="proposalPageTitle">Nova Proposta</h1>
+              <div class="page-subtext" id="proposalPageSubtext">Cadastre os dados comerciais e financeiros da proposta</div>
+            </div>
+            <div>
+              <button class="btn-secondary" id="btnCancelProposal" type="button">Cancelar</button>
+            </div>
+          </div>
+          <div class="page-body">
+            <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
+              <div class="page-card" style="padding:20px;">
+                <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                  <h2 class="page-title" style="font-size:18px; margin:0;">Dados Principais</h2>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                  <div class="field"><label for="fldProposalNumber">Número da proposta *</label><input id="fldProposalNumber" type="text" placeholder="Ex: PRP-1001" required></div>
+                  <div class="field search-field">
+                    <label for="fldProposalClientSearch">Cliente *</label>
+                    <input id="fldProposalClientSearch" type="text" autocomplete="off" placeholder="Busque pelo nome do cliente" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="fldProposalClientResults" aria-activedescendant="">
+                    <input id="fldProposalClientId" type="hidden">
+                    <div id="fldProposalClientResults" class="search-results" role="listbox" hidden></div>
+                  </div>
+                  <div class="field search-field">
+                    <label for="fldProposalProjectSearch">Projeto *</label>
+                    <input id="fldProposalProjectSearch" type="text" autocomplete="off" placeholder="Selecione um cliente primeiro" disabled role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="fldProposalProjectResults" aria-activedescendant="">
+                    <input id="fldProposalProjectId" type="hidden">
+                    <div id="fldProposalProjectResults" class="search-results" role="listbox" hidden></div>
+                  </div>
+                  <div class="field"><label for="fldProposalContact">Contato *</label><input id="fldProposalContact" type="text" placeholder="Nome do contato"></div>
+                  <div class="field"><label for="fldProposalPointOfContact">Ponto de contato *</label><input id="fldProposalPointOfContact" type="text" placeholder="Canal ou responsável"></div>
+                  <div class="field"><label for="fldProposalBudgetDate">Data do orçamento *</label><input id="fldProposalBudgetDate" type="date"></div>
+                  <div class="field"><label for="fldProposalClosingDate">Data de fechamento</label><input id="fldProposalClosingDate" type="date"></div>
+                  <div class="field"><label for="fldProposalClosingMonth">Mês de fechamento</label><input id="fldProposalClosingMonth" type="text" placeholder="Ex: Jul/26" readonly></div>
+                  <div class="field"><label for="fldProposalStatus">Status da proposta *</label><select id="fldProposalStatus"></select></div>
+                  <div class="field"><label for="fldProposalProjectStatus">Status do projeto *</label><select id="fldProposalProjectStatus"></select></div>
+                  <div class="field"><label for="fldProposalNotes">Observações</label><textarea id="fldProposalNotes" placeholder="Observações comerciais"></textarea></div>
+                </div>
+              </div>
+              <div style="display:grid; gap:20px;">
+                <div class="page-card" style="padding:20px;">
+                  <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                    <h2 class="page-title" style="font-size:18px; margin:0;">Valores</h2>
+                  </div>
+                  <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                    <div class="field"><label for="fldProposalValueBRL">Valor em reais</label><input id="fldProposalValueBRL" type="number" step="0.01" placeholder="0,00"></div>
+                    <div class="field"><label for="fldProposalValueUSD">Valor em dólar</label><input id="fldProposalValueUSD" type="number" step="0.01" placeholder="0,00"></div>
+                  </div>
+                </div>
+                <div class="page-card" style="padding:20px;">
+                  <div class="page-header" style="padding:0 0 20px 0; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                    <h2 class="page-title" style="font-size:18px; margin:0;">Financeiro da Proposta</h2>
+                  </div>
+                  <div class="form-grid" style="grid-template-columns:1fr; gap:16px;">
+                    <div class="field"><label for="fldProposalPaymentMethod">Forma de pagamento</label><input id="fldProposalPaymentMethod" type="text" placeholder="Ex: Boleto, Pix, Cartão"></div>
+                    <div class="field"><label for="fldProposalInstallmentTerms">Forma de parcelamento</label><input id="fldProposalInstallmentTerms" type="text" placeholder="Ex: 3x, 6x, 12x"></div>
+                    <div class="field"><label for="fldProposalPaymentDueDate">Data do vencimento</label><input id="fldProposalPaymentDueDate" type="date"></div>
+                    <div class="field"><label for="fldProposalInstallmentDueDay">Dia padrão do vencimento</label><input id="fldProposalInstallmentDueDay" type="number" min="1" max="31" inputmode="numeric"></div>
+                    <div class="field"><label for="fldProposalInstallmentValue">Valor das parcelas</label><input id="fldProposalInstallmentValue" type="text" inputmode="decimal" placeholder="R$ 0,00"></div>
+                    <div class="field"><label for="fldProposalContractDeliveryMethod">Envio do contrato</label><input id="fldProposalContractDeliveryMethod" type="text" placeholder="Ex: Por e-mail, assinatura digital"></div>
+                    <div class="field"><label for="fldProposalBillingDeliveryMethod">Envio das cobranças</label><input id="fldProposalBillingDeliveryMethod" type="text" placeholder="Ex: Mensal, quinzenal"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn-primary" id="btnSaveProposal" type="button">Salvar Proposta</button>
+              <button class="btn-secondary" id="btnBackProposal" type="button">Voltar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="./js/proposta.js?v=20260722-6"></script>
 </body>
 </html>

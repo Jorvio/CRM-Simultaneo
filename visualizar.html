@@ -1,14 +1,47 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visualizar</title>
-  <meta http-equiv="refresh" content="0; url=./crm/visualizar.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visualizar — CRM</title>
+<link rel="stylesheet" href="shared.css?v=20260722-6">
+<link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
-  <script>
-    window.location.replace('./crm/visualizar.html' + window.location.search + window.location.hash);
-  </script>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-icon">CRM</div><div class="brand-text"><span>CRM</span><small>Simultâneo</small></div></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span><span class="nav-label">Dashboard</span></a>
+        <a class="nav-item" href="funil.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l3-4 3 2 4-6"></path></svg></span><span class="nav-label">Funil</span></a>
+        <a class="nav-item" href="clientes.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg></span><span class="nav-label">Clientes</span></a>
+        <a class="nav-item" href="projetos.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"></path><path d="M5 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7"></path><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span><span class="nav-label">Projetos</span></a>
+      </nav>
+    </aside>
+
+    <main class="page-content">
+      <div class="app">
+        <div class="page-card">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Visualizar Registro</h1>
+              <div class="page-subtext">Todos os dados cadastrados</div>
+            </div>
+            <div>
+              <button class="btn-secondary" id="btnVoltar" type="button">Voltar</button>
+              <a class="btn" id="editClientLink" href="cliente-novo.html">Editar</a>
+            </div>
+          </div>
+          <div class="page-body">
+            <div id="recordContent">
+              <p style="color:var(--ink-soft); padding:20px;">Carregando registro...</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="./js/visualizar.js?v=20260722-6"></script>
 </body>
 </html>

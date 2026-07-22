@@ -1,14 +1,169 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clientes</title>
-  <meta http-equiv="refresh" content="0; url=./crm/clientes.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clientes</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
-  <script>
-    window.location.replace('./crm/clientes.html' + window.location.search + window.location.hash);
-  </script>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">CRM</div>
+        <div class="brand-text"><span>CRM</span><small>Simultâneo</small></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a class="nav-item" href="dashboard.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span><span class="nav-label">Dashboard</span></a>
+        <a class="nav-item" href="funil.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l3-4 3 2 4-6"></path></svg></span><span class="nav-label">Funil</span></a>
+        <a class="nav-item active" href="clientes.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg></span><span class="nav-label">Clientes</span></a>
+        <a class="nav-item" href="projetos.html"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"></path><path d="M5 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7"></path><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span><span class="nav-label">Projetos</span></a>
+        <a class="nav-item" href="#"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c0 .7.4 1.3 1 1.5V11a2 2 0 0 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"></path></svg></span><span class="nav-label">Configurações</span></a>
+      </nav>
+      <div class="sidebar-footer"><div class="profile-avatar">J</div><div class="profile-info"><span class="profile-name">João</span><span class="profile-role">Gestor</span></div></div>
+    </aside>
+    <main class="page-content">
+      <div class="app">
+        <div class="page-card">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Clientes</h1>
+              <div class="page-subtext">Gestão de clientes e relacionamento comercial</div>
+            </div>
+            <button class="btn-primary" id="btnNovoCliente" type="button">+ Novo Cliente</button>
+          </div>
+          <div class="page-body">
+            <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Razão Social</th>
+                      <th>Tipo</th>
+                      <th>CPF</th>
+                      <th>CNPJ</th>
+                      <th>Endereço CNPJ</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="clientTableBody"></tbody>
+                </table>
+              </div>
+          </div>
+          <script type="module">
+          import './js/auth-guard.js';
+          import './js/user-menu.js';
+          import './js/ui.js';
+          import { db, dbMessage, loadCurrentUserPermissions } from './js/supabase.js';
+
+          await window.crmAuthReady;
+
+          const access = await loadCurrentUserPermissions().catch(() => null);
+          if (!access) {
+            window.location.href = './login.html';
+            throw new Error('Usuário não autenticado');
+          }
+
+          const permissions = access.permissions;
+          const btnNovoCliente = document.getElementById('btnNovoCliente');
+          btnNovoCliente?.addEventListener('click', () => {
+            window.location.href = './cliente-novo.html';
+          });
+
+          const escapeHtml = window.escapeHtml || ((v) => String(v ?? ''));
+
+          function obterUrlAtualRelativa() {
+            const arquivo = window.location.pathname.split('/').pop() || 'clientes.html';
+            return arquivo + window.location.search + window.location.hash;
+          }
+
+          function criarUrlVisualizacao(type, id) {
+            const returnTo = encodeURIComponent(obterUrlAtualRelativa());
+            return `./visualizar.html?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}&returnTo=${returnTo}`;
+          }
+          if (btnNovoCliente && !permissions.podeAdicionar) {
+            btnNovoCliente.style.display = 'none';
+          }
+
+          async function renderClients() {
+            try {
+              const clients = await db.fetchClients();
+              const tbody = document.getElementById('clientTableBody');
+              tbody.innerHTML = '';
+              if (!clients || clients.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Nenhum cliente cadastrado.</div></td></tr>';
+                return;
+              }
+              clients.forEach(client => {
+                const tipoCliente = client.client_type === 'PF' ? 'Pessoa Física' : client.client_type === 'PJ' ? 'Pessoa Jurídica' : '';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td>${escapeHtml(client.name || '')}</td>
+                  <td>${escapeHtml(client.legal_name || '')}</td>
+                  <td>${escapeHtml(tipoCliente)}</td>
+                  <td>${escapeHtml(formatarCPF(client.cpf || ''))}</td>
+                  <td>${escapeHtml(formatarCNPJ(client.cnpj || ''))}</td>
+                  <td>${escapeHtml(client.address || '')}</td>
+                  <td>
+                    <div style="display:flex;gap:8px;">
+                      <a class="btn-secondary" href="${criarUrlVisualizacao('client', client.id)}">Visualizar</a>
+                      ${permissions.podeEditar ? `<a class="btn" href="cliente-novo.html?id=${client.id}">Editar</a>` : ''}
+                      ${permissions.podeExcluir ? `<button class="btn-secondary" type="button" data-id="${client.id}">Excluir</button>` : ''}
+                    </div>
+                  </td>
+                `;
+                const deleteButton = tr.querySelector('button[data-id]');
+                if (deleteButton) {
+                  deleteButton.onclick = async () => {
+                  if (!permissions.podeExcluir) {
+                    showToast('Seu usuario nao possui permissao para excluir clientes.', 'error');
+                    return;
+                  }
+                  if (!confirm('Excluir cliente?')) return;
+                  try {
+                    await db.deleteClient(client.id);
+                    renderClients();
+                    showToast('Cliente excluido com sucesso.', 'success');
+                  } catch (error) {
+                    console.error('[deleteClient] Erro:', error);
+                    showToast('Nao foi possivel excluir o cliente.', 'error');
+                  }
+                  };
+                }
+                tbody.appendChild(tr);
+              });
+            } catch (error) {
+              dbMessage('Erro ao carregar clientes', 'error');
+            }
+          }
+
+          function somenteNumeros(valor) {
+            return String(valor || '').replace(/\D/g, '');
+          }
+
+          function formatarCPF(valor) {
+            const numeros = somenteNumeros(valor).slice(0, 11);
+            return numeros
+              .replace(/(\d{3})(\d)/, '$1.$2')
+              .replace(/(\d{3})(\d)/, '$1.$2')
+              .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+          }
+
+          function formatarCNPJ(valor) {
+            const numeros = somenteNumeros(valor).slice(0, 14);
+            return numeros
+              .replace(/^(\d{2})(\d)/, '$1.$2')
+              .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+              .replace(/\.(\d{3})(\d)/, '.$1/$2')
+              .replace(/(\d{4})(\d)/, '$1-$2');
+          }
+
+          renderClients();
+          </script>
+        </div>
+      </div>
+    </main>
+  </div>
 </body>
 </html>

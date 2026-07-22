@@ -27,7 +27,7 @@
     const repoBase = segments.length > 1 ? `/${segments[0]}/` : '/';
     const target = routeMap[file] || 'login.html';
 
-    window.location.replace(`${repoBase}crm/${target}${window.location.search}${window.location.hash}`);
+    window.location.replace(`${repoBase}${target}${window.location.search}${window.location.hash}`);
   })();
 </script>
 </head>

@@ -7,16 +7,16 @@
 </head>
 <body>
   <script type="module">
-    import { supabase } from './crm/js/supabase.js';
+    import { supabase } from './js/supabase.js';
 
     const {
       data: { session }
     } = await supabase.auth.getSession();
 
     if (session?.user) {
-      window.location.replace('./crm/dashboard.html');
+      window.location.replace('./dashboard.html');
     } else {
-      window.location.replace('./crm/login.html');
+      window.location.replace('./login.html');
     }
   </script>
   <p>Redirecionando para o CRM...</p>
