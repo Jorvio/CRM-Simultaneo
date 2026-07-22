@@ -56,7 +56,10 @@
   <script type="module">
   import './js/auth-guard.js';
   import './js/user-menu.js';
+  import './js/ui.js';
   import { db, loadCurrentUserPermissions } from './js/supabase.js';
+
+  await window.crmAuthReady;
 
   const params = new URLSearchParams(window.location.search);
   const clientId = params.get('id');
@@ -66,6 +69,7 @@
   const fieldLegalName = document.getElementById('fieldLegalName');
   const fieldCpf = document.getElementById('fieldCpf');
   const fieldCnpj = document.getElementById('fieldCnpj');
+  const fldCliRazao = document.getElementById('fldCliRazao');
   const fldCliCPF = document.getElementById('fldCliCPF');
   const fldCliCNPJ = document.getElementById('fldCliCNPJ');
 
@@ -132,7 +136,7 @@
       btnSaveClient.textContent = 'Salvar Alterações';
     } catch (error) {
       console.error('[cliente-novo] Erro ao carregar cliente para edição:', error);
-      alert(`Erro ao carregar cliente para edição:\n${error.message || JSON.stringify(error)}`);
+      showToast('Nao foi possivel carregar o cliente para edicao.', 'error');
     }
   }
 
@@ -147,32 +151,32 @@
     const endereco = document.getElementById('fldCliEndereco').value.trim();
 
     if (!tipoCliente) {
-      alert('Selecione se o cliente é Pessoa Física ou Pessoa Jurídica.');
+        showToast('Selecione se o cliente e Pessoa Fisica ou Pessoa Juridica.', 'error');
       return;
     }
 
     if (tipoCliente === 'PF') {
       if (cpfNumeros.length !== 11) {
-        alert('Digite o CPF completo com 11 números.');
+          showToast('Digite o CPF completo com 11 numeros.', 'error');
         return;
       }
       if (!nomeCliente) {
-        alert('Digite o nome completo.');
+          showToast('Digite o nome completo.', 'error');
         return;
       }
     }
 
     if (tipoCliente === 'PJ') {
       if (!razaoSocial) {
-        alert('Razão Social é obrigatória para Pessoa Jurídica.');
+          showToast('Razao Social e obrigatoria para Pessoa Juridica.', 'error');
         return;
       }
       if (cnpjNumeros.length !== 14) {
-        alert('Digite o CNPJ completo com 14 números.');
+          showToast('Digite o CNPJ completo com 14 numeros.', 'error');
         return;
       }
       if (!nomeCliente) {
-        alert('Digite o Cliente ou Nome Fantasia.');
+          showToast('Digite o cliente ou nome fantasia.', 'error');
         return;
       }
     }
@@ -202,12 +206,12 @@
         roleName === 'master';
 
       if (!clientId && !podeAdicionar) {
-        alert('Seu usuário não possui permissão para salvar clientes.');
+          showToast('Seu usuario nao possui permissao para salvar clientes.', 'error');
         return;
       }
 
       if (clientId && !podeEditar) {
-        alert('Seu usuário não possui permissão para editar clientes.');
+          showToast('Seu usuario nao possui permissao para editar clientes.', 'error');
         return;
       }
 
@@ -216,8 +220,8 @@
         : await db.insertClient(clientData);
 
       console.log('Cliente cadastrado:', data);
-      alert(clientId ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
-      history.back();
+      showToast(clientId ? 'Cliente atualizado com sucesso.' : 'Cliente cadastrado com sucesso.', 'success');
+      window.location.href = './clientes.html';
     } catch (error) {
       console.error('[btnSaveClient] Erro ao salvar cliente:', error);
       const mensagemErro = [
@@ -234,7 +238,7 @@
           mensagemErro.includes('clients_cnpj_unique_idx') ||
           mensagemErro.includes('cnpj')
         ) {
-          alert('CNPJ já cadastrado.');
+            showToast('CNPJ ja cadastrado.', 'error');
           return;
         }
 
@@ -242,25 +246,25 @@
           mensagemErro.includes('clients_cpf_unique_idx') ||
           mensagemErro.includes('cpf')
         ) {
-          alert('CPF já cadastrado.');
+            showToast('CPF ja cadastrado.', 'error');
           return;
         }
 
-        alert('Este cliente já está cadastrado.');
+          showToast('Este cliente ja esta cadastrado.', 'error');
         return;
       }
 
       if (error?.code === 'PERMISSION_DENIED' || error?.code === '42501') {
-        alert('Seu usuário não possui permissão para salvar clientes.');
+          showToast('Seu usuario nao possui permissao para salvar clientes.', 'error');
         return;
       }
 
       if (error?.code === 'AUTH_REQUIRED' || error?.code === 'PROFILE_NOT_FOUND') {
-        window.location.href = 'login.html';
+          window.location.href = './login.html';
         return;
       }
 
-      alert(`Não foi possível salvar o cliente.\n${error.message || 'Tente novamente.'}`);
+        showToast('Nao foi possivel salvar o cliente.', 'error');
     }
   };
 

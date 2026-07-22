@@ -7,39 +7,52 @@ if (!window.supabase?.createClient) {
   window.supabase = { ...(window.supabase || {}), createClient };
 }
 
-(function inicializarSupabase() {
-  if (window.__crmSupabaseInitialized) {
-    console.warn('[Supabase] Tentativa de inicializacao duplicada bloqueada.');
-    return;
-  }
-
+(function initializeSupabaseClient() {
+  if (window.__crmSupabaseInitialized) return;
   window.__crmSupabaseInitialized = true;
 
-  if (window.supabaseClient) {
-    console.log('[Supabase] Cliente existente reutilizado.');
-    return;
-  }
+  if (window.supabaseClient) return;
 
   if (!window.supabase?.createClient) {
-    throw new Error('A biblioteca oficial do Supabase nao foi carregada.');
+    throw new Error('Biblioteca do Supabase nao carregada.');
   }
 
-  window.supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY,
-    {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-      }
+  window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
     }
-  );
-
-  console.log('[Supabase] Cliente unico inicializado.');
+  });
 })();
 
 const supabase = window.supabaseClient;
+
+const PUBLIC_ROUTES = new Set([
+  'index.html',
+  'login.html',
+  'esqueci-senha.html',
+  'redefinir-senha.html',
+  'auth-callback.html'
+]);
+
+function getCurrentPageName() {
+  return window.location.pathname.split('/').pop() || 'index.html';
+}
+
+function isPublicRoute() {
+  return PUBLIC_ROUTES.has(getCurrentPageName());
+}
+
+function logSupabaseError(scope, error, extra = {}) {
+  console.error(`[${scope}]`, {
+    code: error?.code,
+    message: error?.message,
+    details: error?.details,
+    hint: error?.hint,
+    ...extra
+  });
+}
 
 function isUnauthorizedError(error) {
   return (
@@ -54,13 +67,17 @@ async function handleUnauthorized(error) {
     return false;
   }
 
-  console.error('A sessao nao foi enviada ou o token e invalido.', error);
+  logSupabaseError('Supabase unauthorized', error);
   await supabase.auth.signOut();
-  window.location.replace('./login.html');
+
+  if (!isPublicRoute()) {
+    window.location.replace('./login.html?msg=not-authenticated');
+  }
+
   return true;
 }
 
-export async function obterSessaoObrigatoria() {
+export async function obterSessaoObrigatoria({ redirectToLogin = true } = {}) {
   const client = window.supabaseClient;
 
   if (!client) {
@@ -73,20 +90,16 @@ export async function obterSessaoObrigatoria() {
   } = await client.auth.getSession();
 
   if (error) {
-    console.error('[Auth] Erro ao recuperar sessao:', error);
+    logSupabaseError('Auth getSession', error);
     throw error;
   }
 
   if (!session?.user || !session?.access_token) {
-    console.error('[Auth] Consulta tentada sem sessao.');
-    window.location.replace('./login.html');
+    if (redirectToLogin && !isPublicRoute()) {
+      window.location.replace('./login.html?msg=not-authenticated');
+    }
     return null;
   }
-
-  console.log('[Auth] Sessao valida:', {
-    userId: session.user.id,
-    email: session.user.email
-  });
 
   return session;
 }
@@ -99,17 +112,11 @@ function buildPermissions(perfil) {
   const role = normalizeRoleName(perfil?.role_name);
   const perfilAtivo = perfil?.account_status === 'active';
 
-  const podeAdicionar =
-    perfilAtivo &&
-    ['master', 'editor'].includes(role);
-
-  const podeEditar =
-    perfilAtivo &&
-    role === 'master';
-
-  const podeExcluir =
-    perfilAtivo &&
-    role === 'master';
+  const podeAdicionar = perfilAtivo && ['master', 'editor'].includes(role);
+  const podeEditar = perfilAtivo && role === 'master';
+  const podeExcluir = perfilAtivo && role === 'master';
+  const podeGerenciarUsuarios =
+    perfilAtivo && (role === 'master' || Boolean(perfil?.can_manage_users));
 
   return {
     perfilAtivo,
@@ -117,7 +124,8 @@ function buildPermissions(perfil) {
     podeVisualizar: podeAdicionar,
     podeAdicionar,
     podeEditar,
-    podeExcluir
+    podeExcluir,
+    podeGerenciarUsuarios
   };
 }
 
@@ -148,7 +156,10 @@ async function loadCurrentProfile(session) {
     .single();
 
   if (perfilError || !perfil) {
-    console.error('[Supabase] Erro ao carregar perfil:', perfilError);
+    logSupabaseError('Profiles select', perfilError, {
+      tabela: 'profiles',
+      operacao: 'select'
+    });
     const error = new Error('Perfil de acesso nao encontrado.');
     error.code = 'PROFILE_NOT_FOUND';
     throw error;
@@ -192,7 +203,7 @@ async function assertPermission(action) {
   };
 
   if (!map[action]) {
-    const error = new Error('Seu usuário não possui permissão para esta operação.');
+    const error = new Error('Seu usuario nao possui permissao para esta operacao.');
     error.code = 'PERMISSION_DENIED';
     error.details = {
       action,
@@ -203,24 +214,22 @@ async function assertPermission(action) {
   }
 }
 
-async function exec(promise) {
+async function exec(promise, meta = {}) {
   const { data, error } = await promise;
   if (error) {
-    console.error('[Supabase] Erro na operação:', {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint
+    logSupabaseError('Supabase operation', error, {
+      tabela: meta.table || 'desconhecida',
+      operacao: meta.operation || 'desconhecida'
     });
 
     const redirected = await handleUnauthorized(error);
     if (redirected) {
-      const authError = new Error('Sessão expirada. Faça login novamente.');
+      const authError = new Error('Sessao expirada. Faca login novamente.');
       authError.code = 'AUTH_REQUIRED';
       throw authError;
     }
 
-    throw error;  // lança o objeto completo, não só a mensagem
+    throw error;
   }
   return data;
 }
@@ -231,35 +240,17 @@ function sanitizeResponsavelPayload(payload = {}) {
 }
 
 async function testarConexao() {
-  const {
-    data: { session },
-    error: sessionError
-  } = await supabase.auth.getSession();
+  const session = await obterSessaoObrigatoria({ redirectToLogin: false });
+  if (!session) return false;
 
-  if (sessionError) {
-    console.error('[Supabase] Erro ao verificar sessão:', sessionError);
-
-    return false;
-  }
-
-  if (!session) {
-    console.warn('[Supabase] Teste não executado porque não existe sessão.');
-
-    return false;
-  }
-
-  const { data, error } = await supabase
-    .from('clients')
-    .select('id')
-    .limit(1);
-
+  const { error } = await supabase.from('clients').select('id').limit(1);
   if (error) {
-    console.error('[Supabase] Falha no teste manual:', error);
-
+    logSupabaseError('Supabase test', error, {
+      tabela: 'clients',
+      operacao: 'select'
+    });
     return false;
   }
-
-  console.log('[Supabase] Teste manual concluído:', data);
 
   return true;
 }
@@ -270,9 +261,6 @@ window.db = {
   client: supabase,
 
   async fetchClients() {
-    console.log('[db] fetchClients');
-    const session = await obterSessaoObrigatoria();
-    if (!session) return [];
     await assertPermission('select');
 
     return exec(
@@ -289,51 +277,82 @@ window.db = {
           created_at,
           updated_at
         `)
-        .order('name', { ascending: true })
+        .order('name', { ascending: true }),
+      { table: 'clients', operation: 'select' }
     );
   },
+
   async fetchProjects() {
-    console.log('[db] fetchProjects');
-    const session = await obterSessaoObrigatoria();
-    if (!session) return [];
     await assertPermission('select');
 
     return exec(
       supabase
         .from('projects')
         .select(`
-          *,
-          client:clients (
+          id,
+          client_id,
+          responsible_id,
+          name,
+          services,
+          status,
+          created_at,
+          updated_at,
+          cliente:clients!projects_client_id_fkey (
             id,
             name,
             legal_name,
+            cpf,
+            cnpj,
+            address,
             client_type
           ),
-          responsavel:responsible_id (
+          responsavel:responsaveis!projects_responsible_id_fkey (
             id,
             nome_completo,
             cpf,
+            rg_orgao_emissor,
+            profissao,
+            estado_civil,
+            endereco_responsavel,
             email,
-            telefone
+            telefone,
+            email_copia,
+            created_at,
+            updated_at
+          ),
+          propostas:proposals!proposals_project_id_fkey (
+            id,
+            project_id,
+            client_id,
+            proposal_number,
+            proposal_status,
+            project_status,
+            created_at,
+            updated_at
           )
         `)
-        .order('id', { ascending: true })
+        .order('id', { ascending: true }),
+      { table: 'projects', operation: 'select' }
     );
   },
+
   async fetchResponsaveis() {
     await assertPermission('select');
-    console.log('[db] fetchResponsaveis');
-    return exec(supabase.from('responsaveis').select('*').order('id', { ascending: true }));
+    return exec(
+      supabase.from('responsaveis').select('*').order('id', { ascending: true }),
+      { table: 'responsaveis', operation: 'select' }
+    );
   },
+
   async fetchContracts() {
     await assertPermission('select');
-    console.log('[db] fetchContracts');
-    return exec(supabase.from('contracts').select('*').order('id', { ascending: true }));
+    return exec(
+      supabase.from('contracts').select('*').order('id', { ascending: true }),
+      { table: 'contracts', operation: 'select' }
+    );
   },
+
   async fetchProposals() {
-    console.log('[db] fetchProposals');
-    const session = await obterSessaoObrigatoria();
-    if (!session) return [];
     await assertPermission('select');
 
     return exec(
@@ -357,186 +376,313 @@ window.db = {
           notes,
           created_at,
           updated_at,
-
           cliente:clients!proposals_client_id_fkey (
             id,
             name,
             legal_name
           ),
-
           projeto:projects!proposals_project_id_fkey (
             id,
             name,
             client_id
           )
         `)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }),
+      { table: 'proposals', operation: 'select' }
     );
   },
+
   async fetchClientById(id) {
     await assertPermission('select');
-    console.log('[db] fetchClientById', id);
-    return exec(supabase.from('clients').select('*').eq('id', id).single());
+    return exec(
+      supabase.from('clients').select('*').eq('id', id).single(),
+      { table: 'clients', operation: 'select.single' }
+    );
   },
+
   async fetchProjectById(id) {
     await assertPermission('select');
-    console.log('[db] fetchProjectById', id);
+
     return exec(
       supabase
         .from('projects')
         .select(`
-          *,
-          client:clients (
+          id,
+          client_id,
+          responsible_id,
+          name,
+          services,
+          status,
+          created_at,
+          updated_at,
+          cliente:clients!projects_client_id_fkey (
             id,
             name,
             legal_name,
-            client_type
+            cpf,
+            cnpj,
+            address,
+            client_type,
+            created_at,
+            updated_at
           ),
-          responsavel:responsible_id (
+          responsavel:responsaveis!projects_responsible_id_fkey (
             id,
             nome_completo,
             cpf,
+            rg_orgao_emissor,
+            profissao,
+            estado_civil,
+            endereco_responsavel,
             email,
-            telefone
+            telefone,
+            email_copia,
+            created_at,
+            updated_at
+          ),
+          propostas:proposals!proposals_project_id_fkey (
+            id,
+            project_id,
+            client_id,
+            proposal_number,
+            contact_id,
+            contact_name,
+            point_of_contact,
+            budget_date,
+            closing_date,
+            closing_month,
+            value_usd,
+            value_brl,
+            proposal_status,
+            project_status,
+            notes,
+            created_at,
+            updated_at
           )
         `)
         .eq('id', id)
-        .single()
+        .single(),
+      { table: 'projects', operation: 'select.single' }
     );
   },
+
   async fetchProjectsByClient(clientId) {
     await assertPermission('select');
-    console.log('[db] fetchProjectsByClient', clientId);
     return exec(
       supabase
         .from('projects')
-        .select('id, name, client_id')
+        .select('id, client_id, responsible_id, name, services, status, created_at, updated_at')
         .eq('client_id', clientId)
-        .order('name', { ascending: true })
+        .order('name', { ascending: true }),
+      { table: 'projects', operation: 'select.byClient' }
     );
   },
+
   async fetchProposalsByProject(projectId) {
     await assertPermission('select');
-    console.log('[db] fetchProposalsByProject', projectId);
+
     return exec(
       supabase
         .from('proposals')
         .select(`
           id,
+          project_id,
+          client_id,
           proposal_number,
+          contact_id,
+          contact_name,
+          point_of_contact,
           budget_date,
           closing_date,
+          closing_month,
           value_usd,
           value_brl,
           proposal_status,
           project_status,
-          contact_name,
           notes,
-          created_at
+          created_at,
+          updated_at,
+          cliente:clients!proposals_client_id_fkey (
+            id,
+            name,
+            legal_name
+          ),
+          projeto:projects!proposals_project_id_fkey (
+            id,
+            name,
+            client_id
+          )
         `)
         .eq('project_id', projectId)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }),
+      { table: 'proposals', operation: 'select.byProject' }
     );
   },
+
   async fetchProposalById(id) {
     await assertPermission('select');
-    console.log('[db] fetchProposalById', id);
-    return exec(supabase.from('proposals').select('*').eq('id', id).single());
+    return exec(
+      supabase
+        .from('proposals')
+        .select(`
+          id,
+          project_id,
+          client_id,
+          proposal_number,
+          contact_id,
+          contact_name,
+          point_of_contact,
+          budget_date,
+          closing_date,
+          closing_month,
+          value_usd,
+          value_brl,
+          proposal_status,
+          project_status,
+          notes,
+          created_at,
+          updated_at,
+          cliente:clients!proposals_client_id_fkey (
+            id,
+            name,
+            legal_name
+          ),
+          projeto:projects!proposals_project_id_fkey (
+            id,
+            name,
+            client_id
+          )
+        `)
+        .eq('id', id)
+        .single(),
+      { table: 'proposals', operation: 'select.single' }
+    );
   },
+
   async insertClient(payload) {
     await assertPermission('insert');
-    console.log('[db] insertClient — payload enviado:', JSON.stringify(payload));
-    const result = await exec(supabase.from('clients').insert([payload]).select().single());
-    console.log('[db] insertClient — resultado:', result);
-    return result;
+    return exec(
+      supabase.from('clients').insert([payload]).select().single(),
+      { table: 'clients', operation: 'insert' }
+    );
   },
+
   async updateClient(id, payload) {
     await assertPermission('update');
-    console.log('[db] updateClient id:', id, 'payload:', payload);
-    return exec(supabase.from('clients').update(payload).eq('id', id).select().single());
+    return exec(
+      supabase.from('clients').update(payload).eq('id', id).select().single(),
+      { table: 'clients', operation: 'update' }
+    );
   },
+
   async deleteClient(id) {
     await assertPermission('delete');
-    console.log('[db] deleteClient id:', id);
-    return exec(supabase.from('clients').delete().eq('id', id));
+    return exec(
+      supabase.from('clients').delete().eq('id', id),
+      { table: 'clients', operation: 'delete' }
+    );
   },
+
   async insertProject(payload) {
     await assertPermission('insert');
-    console.log('[db] insertProject — payload enviado:', JSON.stringify(payload));
-    const result = await exec(supabase.from('projects').insert([payload]).select().single());
-    console.log('[db] insertProject — resultado:', result);
-    return result;
+    return exec(
+      supabase.from('projects').insert([payload]).select().single(),
+      { table: 'projects', operation: 'insert' }
+    );
   },
+
   async updateProject(id, payload) {
     await assertPermission('update');
-    console.log('[db] updateProject id:', id, 'payload:', payload);
-    return exec(supabase.from('projects').update(payload).eq('id', id).select().single());
+    return exec(
+      supabase.from('projects').update(payload).eq('id', id).select().single(),
+      { table: 'projects', operation: 'update' }
+    );
   },
+
   async deleteProject(id) {
     await assertPermission('delete');
-    console.log('[db] deleteProject id:', id);
-    return exec(supabase.from('projects').delete().eq('id', id));
+    return exec(
+      supabase.from('projects').delete().eq('id', id),
+      { table: 'projects', operation: 'delete' }
+    );
   },
+
   async insertResponsavel(payload) {
     await assertPermission('insert');
     const safePayload = sanitizeResponsavelPayload(payload);
-    console.log('[db] insertResponsavel payload:', JSON.stringify(safePayload));
-    return exec(supabase.from('responsaveis').insert([safePayload]).select().single());
+    return exec(
+      supabase.from('responsaveis').insert([safePayload]).select().single(),
+      { table: 'responsaveis', operation: 'insert' }
+    );
   },
+
   async updateResponsavel(id, payload) {
     await assertPermission('update');
     const safePayload = sanitizeResponsavelPayload(payload);
-    console.log('[db] updateResponsavel id:', id);
-    return exec(supabase.from('responsaveis').update(safePayload).eq('id', id).select().single());
+    return exec(
+      supabase.from('responsaveis').update(safePayload).eq('id', id).select().single(),
+      { table: 'responsaveis', operation: 'update' }
+    );
   },
+
   async insertContract(payload) {
     await assertPermission('insert');
-    console.log('[db] insertContract payload:', JSON.stringify(payload));
-    return exec(supabase.from('contracts').insert([payload]).select().single());
+    return exec(
+      supabase.from('contracts').insert([payload]).select().single(),
+      { table: 'contracts', operation: 'insert' }
+    );
   },
+
   async updateContract(id, payload) {
     await assertPermission('update');
-    console.log('[db] updateContract id:', id);
-    return exec(supabase.from('contracts').update(payload).eq('id', id).select().single());
+    return exec(
+      supabase.from('contracts').update(payload).eq('id', id).select().single(),
+      { table: 'contracts', operation: 'update' }
+    );
   },
+
   async insertProposal(payload) {
     await assertPermission('insert');
-    console.log('[db] insertProposal — payload enviado:', JSON.stringify(payload));
-    const result = await exec(supabase.from('proposals').insert([payload]).select().single());
-    console.log('[db] insertProposal — resultado:', result);
-    return result;
+    return exec(
+      supabase.from('proposals').insert([payload]).select().single(),
+      { table: 'proposals', operation: 'insert' }
+    );
   },
+
   async updateProposal(id, payload) {
     await assertPermission('update');
-    console.log('[db] updateProposal id:', id, 'payload:', payload);
-    return exec(supabase.from('proposals').update(payload).eq('id', id).select().single());
+    return exec(
+      supabase.from('proposals').update(payload).eq('id', id).select().single(),
+      { table: 'proposals', operation: 'update' }
+    );
   },
+
   async deleteProposal(id) {
     await assertPermission('delete');
-    console.log('[db] deleteProposal id:', id);
-    return exec(supabase.from('proposals').delete().eq('id', id));
+    return exec(
+      supabase.from('proposals').delete().eq('id', id),
+      { table: 'proposals', operation: 'delete' }
+    );
   },
+
   async checkRls() {
     await assertPermission('select');
     const results = {};
     for (const table of ['clients', 'projects', 'responsaveis', 'contracts', 'proposals']) {
-      const { data, error } = await supabase.from(table).select('id').limit(1);
+      const { error } = await supabase.from(table).select('id').limit(1);
       results[table] = error ? `ERRO: ${error.message}` : 'ok';
-      console.log(`[RLS] ${table}:`, results[table]);
     }
     return results;
   }
 };
 
-window.dbMessage = function(message, type = 'info') {
+window.dbMessage = function dbMessage(message, type = 'info') {
   if (type === 'error') {
-    console.error('[dbMessage erro]', message);
-    alert(`Erro: ${message}`);
-  } else if (type === 'success') {
-    console.log('[dbMessage sucesso]', message);
-    if (window.showToast) { showToast(message); } else { alert(message); }
-  } else {
-    console.log('[dbMessage]', message);
+    console.error('[dbMessage]', message);
+  }
+
+  if (typeof window.showToast === 'function') {
+    window.showToast(message, type);
   }
 };
 

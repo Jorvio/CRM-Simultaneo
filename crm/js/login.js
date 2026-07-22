@@ -1,4 +1,7 @@
 import { supabase } from './supabase.js';
+import { requireAuth } from './auth-guard.js';
+import { validatePasswordFields } from './password-utils.js';
+import './ui.js';
 
 function byId(id) {
   return document.getElementById(id);
@@ -156,25 +159,14 @@ function initForgotPage() {
   });
 }
 
-function validatePasswordFields(pass, confirmPass, messageId) {
-  if (!pass) {
-    showMessage(messageId, 'Informe a nova senha.');
-    return false;
-  }
-  if (pass.length < 8) {
-    showMessage(messageId, 'A senha deve ter no mínimo 8 caracteres.');
-    return false;
-  }
-  if (pass !== confirmPass) {
-    showMessage(messageId, 'As senhas não conferem.');
-    return false;
-  }
-  return true;
-}
-
 function initResetPage() {
   const form = byId('resetForm');
   if (!form) return;
+
+  const mode = new URLSearchParams(window.location.search).get('mode');
+  if (mode === 'change') {
+    requireAuth().catch(() => null);
+  }
 
   togglePassword('toggleResetPassword', 'resetPassword');
   togglePassword('toggleResetPasswordConfirm', 'resetPasswordConfirm');
@@ -187,7 +179,11 @@ function initResetPage() {
     const confirmPassword = String(byId('resetPasswordConfirm')?.value || '');
     const submitBtn = byId('btnResetPassword');
 
-    if (!validatePasswordFields(password, confirmPassword, 'resetMessage')) return;
+    const validation = validatePasswordFields(password, confirmPassword);
+    if (!validation.ok) {
+      showMessage('resetMessage', validation.message);
+      return;
+    }
 
     setLoading(submitBtn, true, 'Redefinindo...');
 
@@ -200,7 +196,9 @@ function initResetPage() {
       }
 
       showMessage('resetMessage', 'Senha alterada com sucesso.', 'success');
-      setTimeout(() => { window.location.href = 'login.html'; }, 900);
+      setTimeout(() => {
+        window.location.href = mode === 'change' ? 'dashboard.html' : 'login.html';
+      }, 900);
     } catch (error) {
       console.error(error);
       showMessage('resetMessage', 'Não foi possível redefinir a senha. Tente novamente.');
@@ -228,7 +226,11 @@ async function initPrimeiroAcessoPage() {
     const confirmPassword = String(byId('firstPasswordConfirm')?.value || '');
     const submitBtn = byId('btnFirstAccess');
 
-    if (!validatePasswordFields(password, confirmPassword, 'firstAccessMessage')) return;
+    const validation = validatePasswordFields(password, confirmPassword);
+    if (!validation.ok) {
+      showMessage('firstAccessMessage', validation.message);
+      return;
+    }
 
     setLoading(submitBtn, true, 'Salvando...');
 
@@ -340,25 +342,16 @@ async function initMinhaContaPage() {
   if (providerInput) providerInput.value = session.user?.app_metadata?.provider || 'email';
   if (avatar) avatar.textContent = (profile.full_name || profile.email || 'U').slice(0, 2).toUpperCase();
 
-  togglePassword('toggleAccountPassword', 'accountPassword');
-  togglePassword('toggleAccountPasswordConfirm', 'accountPasswordConfirm');
-
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     clearMessage('accountMessage');
 
     const submitBtn = byId('btnSaveAccount');
     const fullName = String(nameInput?.value || '').trim();
-    const password = String(byId('accountPassword')?.value || '');
-    const confirmPassword = String(byId('accountPasswordConfirm')?.value || '');
 
     if (!fullName) {
       showMessage('accountMessage', 'Informe o nome completo.');
       return;
-    }
-
-    if (password || confirmPassword) {
-      if (!validatePasswordFields(password, confirmPassword, 'accountMessage')) return;
     }
 
     setLoading(submitBtn, true, 'Salvando...');
@@ -373,15 +366,6 @@ async function initMinhaContaPage() {
         console.error(profileError);
         showMessage('accountMessage', 'Não foi possível atualizar seus dados.');
         return;
-      }
-
-      if (password) {
-        const { error: passwordError } = await supabase.auth.updateUser({ password });
-        if (passwordError) {
-          console.error(passwordError);
-          showMessage('accountMessage', 'Nome atualizado, mas não foi possível alterar a senha.', 'info');
-          return;
-        }
       }
 
       showMessage('accountMessage', 'Dados atualizados com sucesso.', 'success');

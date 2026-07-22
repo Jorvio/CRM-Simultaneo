@@ -88,26 +88,29 @@
   <script type="module">
   import './js/auth-guard.js';
   import './js/user-menu.js';
+  import './js/ui.js';
   import { db, dbMessage, loadCurrentUserPermissions } from './js/supabase.js';
+
+  await window.crmAuthReady;
   const params = new URLSearchParams(window.location.search);
   const projectId = params.get('id');
 
   const access = await loadCurrentUserPermissions().catch(() => null);
   if (!access) {
-    window.location.href = 'login.html';
+    window.location.href = './login.html';
     throw new Error('Usuário não autenticado');
   }
   const permissions = access.permissions;
 
   if (projectId && !permissions.podeEditar) {
-    alert('Seu usuário não possui permissão para editar projetos.');
-    window.location.href = 'projetos.html';
+    showToast('Seu usuario nao possui permissao para editar projetos.', 'error');
+    window.location.href = './projetos.html';
     throw new Error('Sem permissão de edição');
   }
 
   if (!projectId && !permissions.podeAdicionar) {
-    alert('Seu usuário não possui permissão para cadastrar projetos.');
-    window.location.href = 'projetos.html';
+    showToast('Seu usuario nao possui permissao para cadastrar projetos.', 'error');
+    window.location.href = './projetos.html';
     throw new Error('Sem permissão de cadastro');
   }
 
@@ -125,7 +128,7 @@
       });
     } catch (error) {
       console.error('[projeto-novo] Erro ao carregar clientes:', error);
-      alert('Não foi possível carregar os clientes. Tente novamente.');
+      showToast('Nao foi possivel carregar os clientes.', 'error');
     }
   }
 
@@ -202,15 +205,20 @@
       if (project.responsavel) {
         document.getElementById('fldRespNome').value = project.responsavel.nome_completo || '';
         document.getElementById('fldRespCpf').value = project.responsavel.cpf || '';
+        document.getElementById('fldRespRg').value = project.responsavel.rg_orgao_emissor || '';
+        document.getElementById('fldRespProfissao').value = project.responsavel.profissao || '';
+        document.getElementById('fldRespEstadoCivil').value = project.responsavel.estado_civil || '';
+        document.getElementById('fldRespEndereco').value = project.responsavel.endereco_responsavel || '';
         document.getElementById('fldRespEmail').value = project.responsavel.email || '';
         document.getElementById('fldRespTelefone').value = project.responsavel.telefone || '';
+        document.getElementById('fldRespEmailCopia').value = project.responsavel.email_copia || '';
       }
 
       document.querySelector('.page-title').textContent = 'Editar Projeto';
       document.getElementById('btnSaveProj').textContent = 'Salvar Alterações';
     } catch (error) {
       console.error('[projeto-novo] Erro ao carregar projeto para edição:', error);
-      alert('Não foi possível carregar o projeto para edição.');
+      showToast('Nao foi possivel carregar o projeto para edicao.', 'error');
     }
   }
 
@@ -219,16 +227,16 @@
     const name = document.getElementById('fldProjName').value.trim();
     const serv = document.getElementById('fldProjServ').value.trim();
     const statusProjeto = document.getElementById('fldProjStatus').value.trim();
-    if(!clientId){ alert('Selecione um cliente para o projeto.'); return; }
-    if(!name){ alert('Nome do projeto é obrigatório'); return; }
+    if(!clientId){ showToast('Selecione um cliente para o projeto.', 'error'); return; }
+    if(!name){ showToast('Nome do projeto e obrigatorio.', 'error'); return; }
 
     if (projectId && !permissions.podeEditar) {
-      alert('Seu usuário não possui permissão para editar projetos.');
+      showToast('Seu usuario nao possui permissao para editar projetos.', 'error');
       return;
     }
 
     if (!projectId && !permissions.podeAdicionar) {
-      alert('Seu usuário não possui permissão para cadastrar projetos.');
+      showToast('Seu usuario nao possui permissao para cadastrar projetos.', 'error');
       return;
     }
 
@@ -247,11 +255,16 @@
         ? await db.updateProject(Number(projectId), payload)
         : await db.insertProject(payload);
       console.log('[btnSaveProj] Projeto salvo com sucesso:', result);
-      alert(projectId ? 'Projeto atualizado com sucesso!' : 'Projeto cadastrado com sucesso!');
-      history.back();
+      showToast(projectId ? 'Projeto atualizado com sucesso.' : 'Projeto cadastrado com sucesso.', 'success');
+      const targetId = result?.id || projectId;
+      if (targetId) {
+        window.location.href = `./visualizar.html?type=project&id=${targetId}`;
+      } else {
+        window.location.href = './projetos.html';
+      }
     } catch (error) {
       console.error('[btnSaveProj] Erro ao salvar projeto:', error);
-      alert(`Erro ao salvar projeto:\n${error.message || JSON.stringify(error)}`);
+      showToast('Nao foi possivel salvar o projeto.', 'error');
     }
   };
 

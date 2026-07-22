@@ -1,3 +1,6 @@
+import './sidebar.js';
+import './ui.js';
+
 import { supabase } from './supabase.js';
 import { getCachedProfile, requireAuth, signOutAndGoLogin } from './auth-guard.js';
 
@@ -60,7 +63,7 @@ function openMenu(trigger, profile) {
       return;
     }
     if (action === 'password') {
-      window.location.href = 'primeiro-acesso.html?mode=change';
+      window.location.href = './redefinir-senha.html?mode=change';
       return;
     }
     if (action === 'users') {
@@ -93,7 +96,7 @@ async function initUserMenu() {
   if (profileRole) profileRole.textContent = String(profile.role_name || 'editor').toUpperCase();
   if (profileAvatar) profileAvatar.textContent = initials(profile.full_name, profile.email);
 
-  const settingsLink = document.querySelector('.sidebar-nav .nav-item[href="#"]');
+  const settingsLink = document.querySelector('.sidebar-nav .nav-item[data-nav-key="configuracoes"]');
   if (!settingsLink) return;
 
   settingsLink.addEventListener('click', async (event) => {
@@ -114,5 +117,5 @@ await initUserMenu();
 
 export async function logout() {
   await supabase.auth.signOut();
-  window.location.href = 'login.html';
+  window.location.href = './login.html';
 }

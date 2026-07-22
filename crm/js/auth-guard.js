@@ -1,11 +1,13 @@
 import { supabase, loadCurrentUserPermissions } from './supabase.js';
 
 const PUBLIC_PAGES = new Set([
+  'index.html',
   'login.html',
   'esqueci-senha.html',
   'redefinir-senha.html',
   'auth-callback.html'
 ]);
+
 const PROFILE_CACHE_KEY = 'crm_profile';
 
 function pageName() {
@@ -13,18 +15,22 @@ function pageName() {
   return path.split('/').pop() || 'index.html';
 }
 
+function isPublicPage(name = pageName()) {
+  return PUBLIC_PAGES.has(name);
+}
+
 function toLogin(message) {
-  const url = new URL('login.html', window.location.href);
+  const url = new URL('./login.html', window.location.href);
   if (message) url.searchParams.set('msg', message);
   window.location.replace(url.toString());
 }
 
 function toDashboard() {
-  window.location.replace('dashboard.html');
+  window.location.replace('./dashboard.html');
 }
 
 function toPrimeiroAcesso() {
-  window.location.replace('primeiro-acesso.html');
+  window.location.replace('./primeiro-acesso.html');
 }
 
 function cacheProfile(profile) {
@@ -51,6 +57,15 @@ export async function loadSessionProfile() {
     error
   } = await supabase.auth.getSession();
 
+  if (error) {
+    console.error('[auth-guard getSession]', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    });
+  }
+
   if (error || !session) {
     return { session: null, profile: null };
   }
@@ -58,7 +73,13 @@ export async function loadSessionProfile() {
   try {
     const { perfil } = await loadCurrentUserPermissions();
     return { session, profile: perfil };
-  } catch {
+  } catch (profileError) {
+    console.error('[auth-guard loadCurrentUserPermissions]', {
+      code: profileError?.code,
+      message: profileError?.message,
+      details: profileError?.details,
+      hint: profileError?.hint
+    });
     return { session, profile: null };
   }
 }
@@ -71,18 +92,18 @@ async function invalidateWithMessage(message) {
 
 export async function requireAuth() {
   const currentPage = pageName();
-  const isPublic = PUBLIC_PAGES.has(currentPage);
+  const publicPage = isPublicPage(currentPage);
 
   const { session, profile } = await loadSessionProfile();
 
   if (!session) {
     clearProfileCache();
-    if (!isPublic) toLogin('not-authenticated');
+    if (!publicPage) toLogin('not-authenticated');
     return { session: null, profile: null };
   }
 
   if (!profile) {
-    if (isPublic) return { session, profile: null };
+    if (publicPage) return { session, profile: null };
     await invalidateWithMessage('no-profile');
     return { session: null, profile: null };
   }
@@ -104,7 +125,7 @@ export async function requireAuth() {
     return { session: null, profile: null };
   }
 
-  if (!isPublic && profile.must_change_password && currentPage !== 'primeiro-acesso.html') {
+  if (!publicPage && profile.must_change_password && currentPage !== 'primeiro-acesso.html') {
     toPrimeiroAcesso();
     return { session, profile };
   }
@@ -114,7 +135,12 @@ export async function requireAuth() {
     return { session, profile };
   }
 
-  if (isPublic && !profile.must_change_password && currentPage !== 'auth-callback.html') {
+  if (
+    publicPage &&
+    !profile.must_change_password &&
+    currentPage !== 'auth-callback.html' &&
+    currentPage !== 'redefinir-senha.html'
+  ) {
     toDashboard();
     return { session, profile };
   }
@@ -128,13 +154,21 @@ export async function signOutAndGoLogin() {
   toLogin('signed-out');
 }
 
-if (!PUBLIC_PAGES.has(pageName())) {
-  await requireAuth();
+if (!window.crmAuthReady) {
+  window.crmAuthReady = requireAuth();
 }
 
-supabase.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_OUT' && !PUBLIC_PAGES.has(pageName())) {
-    clearProfileCache();
-    toLogin('signed-out');
+if (!window.__crmAuthGuardInitialized) {
+  window.__crmAuthGuardInitialized = true;
+
+  if (!isPublicPage()) {
+    await window.crmAuthReady;
   }
-});
+
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT' && !isPublicPage()) {
+      clearProfileCache();
+      toLogin('signed-out');
+    }
+  });
+}

@@ -127,7 +127,7 @@
               <h1 class="page-title">Projetos</h1>
               <div class="page-subtext">Visão consolidada dos projetos e entregas</div>
             </div>
-            <button class="btn-primary" onclick="location.href='projeto-novo.html'">+ Novo Projeto</button>
+            <button class="btn-primary" id="btnNovoProjeto" type="button">+ Novo Projeto</button>
           </div>
           <div class="page-body">
             <div class="table-wrap">
@@ -167,15 +167,21 @@
   <script type="module">
   import './js/auth-guard.js';
   import './js/user-menu.js';
+  import './js/ui.js';
   import { db, loadCurrentUserPermissions } from './js/supabase.js';
+
+  await window.crmAuthReady;
 
   const access = await loadCurrentUserPermissions().catch(() => null);
   if (!access) {
-    window.location.href = 'login.html';
+    window.location.href = './login.html';
     throw new Error('Usuário não autenticado');
   }
   const permissions = access.permissions;
-  const btnNovoProjeto = document.querySelector('.btn-primary');
+  const btnNovoProjeto = document.getElementById('btnNovoProjeto');
+  btnNovoProjeto?.addEventListener('click', () => {
+    window.location.href = './projeto-novo.html';
+  });
   if (btnNovoProjeto && !permissions.podeAdicionar) {
     btnNovoProjeto.style.display = 'none';
   }
@@ -210,9 +216,9 @@
 
     return `
       <div class="proposal-links">
-        ${propostas.map((p) => {
+        ${propostas.map((p, index) => {
           const numero = escaparHtml(p.proposal_number || 'sem número');
-          return `<a class="proposal-link" href="visualizar.html?type=proposal&id=${p.id}">[${numero}]</a>`;
+          return `<a class="proposal-link" href="./visualizar.html?type=proposal&id=${p.id}">Proposta ${index + 1}: ${numero}</a>`;
         }).join('')}
       </div>
     `;
@@ -242,7 +248,7 @@
       item.innerHTML = `
         <span>Proposta ${escaparHtml(numeroProposta)}</span>
         <div class="proposal-management-actions">
-          <a class="btn-secondary" href="visualizar.html?type=proposal&id=${proposta.id}">Visualizar</a>
+          <a class="btn-secondary" href="./visualizar.html?type=proposal&id=${proposta.id}">Visualizar</a>
           <button type="button" class="btn-delete-proposal">Excluir</button>
         </div>
       `;
@@ -269,7 +275,7 @@
 
   async function excluirProposta(proposta) {
     if (!permissions.podeExcluir) {
-      alert('Seu usuário não possui permissão para excluir propostas.');
+      showToast('Seu usuario nao possui permissao para excluir propostas.', 'error');
       return;
     }
 
@@ -287,11 +293,11 @@
       await db.deleteProposal(proposta.id);
     } catch (error) {
       console.error('Erro completo ao excluir proposta:', error);
-      alert('Não foi possível excluir a proposta. Verifique se ela possui registros vinculados.');
+      showToast('Nao foi possivel excluir a proposta.', 'error');
       return;
     }
 
-    alert('Proposta excluída com sucesso.');
+    showToast('Proposta excluida com sucesso.', 'success');
     await carregarProjetos();
 
     if (projetoGerenciadoId != null) {
@@ -318,48 +324,42 @@
       }
 
       for (const projeto of projetos) {
-        const nomeCliente = projeto.cliente?.name || 'Não informado';
+        const nomeCliente = projeto.cliente?.legal_name || projeto.cliente?.name || 'Não informado';
         const nomeResponsavel = projeto.responsavel?.nome_completo || 'Não informado';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${projeto.name || ''}</td>
-          <td>${nomeCliente}</td>
-          <td>${nomeResponsavel}</td>
-          <td>${projeto.services || ''}</td>
+          <td>${escaparHtml(projeto.name || '')}</td>
+          <td>${escaparHtml(nomeCliente)}</td>
+          <td>${escaparHtml(nomeResponsavel)}</td>
+          <td>${escaparHtml(projeto.services || '')}</td>
           <td>${renderPropostasDoProjeto(projeto.propostas)}</td>
-          <td>${projeto.status || ''}</td>
+          <td>${escaparHtml(projeto.status || '')}</td>
           <td>
             <div class="project-actions">
-              <a class="btn-secondary" href="visualizar.html?type=project&id=${projeto.id}">Visualizar</a>
-              ${permissions.podeEditar ? `<a class="btn" href="projeto-novo.html?id=${projeto.id}">Editar</a>` : ''}
+              <a class="btn-secondary" href="./visualizar.html?type=project&id=${projeto.id}">Visualizar</a>
+              ${permissions.podeEditar ? `<a class="btn" href="./projeto-novo.html?id=${projeto.id}">Editar</a>` : ''}
               ${permissions.podeExcluir ? `<button class="btn-secondary" type="button" data-id="${projeto.id}">Excluir</button>` : ''}
-              ${(permissions.podeEditar || permissions.podeExcluir) ? `<button class="btn-secondary" type="button" data-manage-id="${projeto.id}">Gerenciar propostas</button>` : ''}
+              ${(permissions.podeEditar || permissions.podeExcluir) ? `<a class="btn-secondary" href="./visualizar.html?type=project&id=${projeto.id}&focus=propostas">Gerenciar propostas</a>` : ''}
             </div>
           </td>
         `;
         const deleteButton = tr.querySelector('button[data-id]');
-        const manageButton = tr.querySelector('button[data-manage-id]');
 
         if (deleteButton) {
           deleteButton.onclick = async () => {
             if (!permissions.podeExcluir) {
-              alert('Seu usuário não possui permissão para excluir projetos.');
+              showToast('Seu usuario nao possui permissao para excluir projetos.', 'error');
               return;
             }
             if (!confirm('Excluir projeto?')) return;
             try {
               await db.deleteProject(projeto.id);
               await carregarProjetos();
+              showToast('Projeto excluido com sucesso.', 'success');
             } catch (error) {
               console.error('[deleteProject] Erro:', error);
-              alert(`Erro ao excluir projeto:\n${error.message || JSON.stringify(error)}`);
+              showToast('Nao foi possivel excluir o projeto.', 'error');
             }
-          };
-        }
-
-        if (manageButton) {
-          manageButton.onclick = () => {
-            abrirGerenciarPropostas(projeto.id);
           };
         }
 
@@ -372,7 +372,7 @@
       }
     } catch (error) {
       console.error('Erro completo ao carregar projetos:', error);
-      alert('Não foi possível carregar os projetos.');
+      showToast('Nao foi possivel carregar os projetos.', 'error');
     }
   }
 
