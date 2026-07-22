@@ -4,11 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CRM Simultaneo</title>
-  <meta http-equiv="refresh" content="0; url=./crm/index.html">
 </head>
 <body>
-  <script>
-    window.location.replace('./crm/index.html');
+  <script type="module">
+    import { supabase } from './crm/js/supabase.js';
+
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+
+    if (session?.user) {
+      window.location.replace('./crm/dashboard.html');
+    } else {
+      window.location.replace('./crm/login.html');
+    }
   </script>
   <p>Redirecionando para o CRM...</p>
 </body>
