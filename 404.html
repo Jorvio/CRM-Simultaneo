@@ -6,30 +6,11 @@
 <title>Página não encontrada</title>
 <script>
   (function () {
-    const appPages = {
-      'dashboard.html': 'crm/dashboard.html',
-      'funil.html': 'crm/funil.html',
-      'clientes.html': 'crm/clientes.html',
-      'cliente-novo.html': 'crm/cliente-novo.html',
-      'projetos.html': 'crm/projetos.html',
-      'projeto-novo.html': 'crm/projeto-novo.html',
-      'visualizar.html': 'crm/visualizar.html',
-      'proposta.html': 'crm/proposta.html',
-      'usuarios.html': 'crm/usuarios.html'
-    };
-
     const path = window.location.pathname;
     const segments = path.split('/').filter(Boolean);
-    const file = segments.length ? segments[segments.length - 1] : '';
     const repoBase = segments.length > 1 ? `/${segments[0]}/` : '/';
     
-    // Se for uma app page removida da raiz, redireciona para crm/
-    if (appPages[file]) {
-      window.location.replace(`${repoBase}${appPages[file]}${window.location.search}${window.location.hash}`);
-      return;
-    }
-    
-    // Caso contrário, redireciona para login
+    // Redireciona para login (página de entrada)
     window.location.replace(`${repoBase}login.html${window.location.search}${window.location.hash}`);
   })();
 </script>

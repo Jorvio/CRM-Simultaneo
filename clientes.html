@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="./assets/favicon.png?v=20260722-1">
 <meta name="theme-color" content="#ffb800">
 <link rel="stylesheet" href="shared.css">
-<link rel="stylesheet" href="css/auth.css">
+<link rel="stylesheet" href="auth.css">
 </head>
 <body>
   <div class="page-shell">
@@ -55,10 +55,10 @@
               </div>
           </div>
           <script type="module">
-          import './js/auth-guard.js';
-          import './js/user-menu.js';
-          import './js/ui.js';
-          import { db, dbMessage, loadCurrentUserPermissions } from './js/supabase.js';
+          import './auth-guard.js';
+          import './user-menu.js';
+          import './ui.js';
+          import { db, dbMessage, loadCurrentUserPermissions } from './supabase.js';
 
           await window.crmAuthReady;
 

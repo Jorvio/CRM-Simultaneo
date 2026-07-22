@@ -6,7 +6,7 @@
 <title>Novo Projeto</title><link rel="icon" type="image/png" href="./assets/favicon.png?v=20260722-1">
 <link rel="apple-touch-icon" href="./assets/favicon.png?v=20260722-1">
 <meta name="theme-color" content="#ffb800"><link rel="stylesheet" href="shared.css?v=20260722-9">
-<link rel="stylesheet" href="css/auth.css">
+<link rel="stylesheet" href="auth.css">
 </head>
 <body>
   <div class="page-shell">
@@ -87,10 +87,10 @@
     </main>
   </div>
   <script type="module">
-  import './js/auth-guard.js?v=20260722-9';
-  import './js/user-menu.js?v=20260722-9';
-  import './js/ui.js?v=20260722-9';
-  import { db, loadCurrentUserPermissions } from './js/supabase.js?v=20260722-9';
+  import './auth-guard.js?v=20260722-9';
+  import './user-menu.js?v=20260722-9';
+  import './ui.js?v=20260722-9';
+  import { db, loadCurrentUserPermissions } from './supabase.js?v=20260722-9';
 
   await window.crmAuthReady;
   const params = new URLSearchParams(window.location.search);

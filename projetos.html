@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#ffb800">
 
 <link rel="stylesheet" href="shared.css">
-<link rel="stylesheet" href="css/auth.css">
+<link rel="stylesheet" href="auth.css">
 <style>
 .project-actions {
   display: flex;
@@ -168,10 +168,10 @@
     </div>
   </div>
   <script type="module">
-  import './js/auth-guard.js';
-  import './js/user-menu.js';
-  import './js/ui.js';
-  import { db, loadCurrentUserPermissions } from './js/supabase.js';
+  import './auth-guard.js';
+  import './user-menu.js';
+  import './ui.js';
+  import { db, loadCurrentUserPermissions } from './supabase.js';
 
   await window.crmAuthReady;
 
