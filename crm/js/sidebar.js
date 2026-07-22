@@ -47,6 +47,18 @@ function mapCurrentNav(path) {
   return path.replace('.html', '');
 }
 
+function renderSidebarBrand() {
+  const brand = document.querySelector('.sidebar-brand');
+  if (!brand) return;
+
+  brand.innerHTML = `
+    <a href="./dashboard.html" class="sidebar-brand-link" aria-label="Ir para o Dashboard">
+      <img src="./assets/astra-logo.png?v=20260722-1" alt="Astra CRM" class="sidebar-logo-full">
+      <img src="./assets/astra-icon.png?v=20260722-1" alt="" aria-hidden="true" class="sidebar-logo-compact">
+    </a>
+  `;
+}
+
 export function renderSharedSidebar() {
   const sidebar = document.querySelector('.sidebar');
   if (!sidebar) return;
@@ -62,4 +74,5 @@ export function renderSharedSidebar() {
   }).join('');
 }
 
+renderSidebarBrand();
 renderSharedSidebar();
