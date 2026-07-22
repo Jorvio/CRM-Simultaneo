@@ -47,6 +47,31 @@ function mapCurrentNav(path) {
   return path.replace('.html', '');
 }
 
+function renderSidebarBrand() {
+  const brand = document.querySelector('.sidebar-brand');
+  if (!brand) return;
+
+  brand.innerHTML = `
+    <a href="./dashboard.html" class="sidebar-brand-link" aria-label="Ir para o Dashboard">
+      <img src="./assets/astra-logo.png?v=20260722-1" alt="Astra CRM" class="sidebar-logo-full">
+      <img src="./assets/astra-icon.png?v=20260722-1" alt="" aria-hidden="true" class="sidebar-logo-compact">
+    </a>
+  `;
+}
+
+function addSidebarCredit() {
+  const footer = document.querySelector('.sidebar-footer');
+  if (!footer) return;
+
+  let credit = footer.querySelector('.sidebar-credit');
+  if (!credit) {
+    credit = document.createElement('div');
+    credit.className = 'sidebar-credit';
+    credit.textContent = 'produced by Juana Wurges';
+    footer.appendChild(credit);
+  }
+}
+
 export function renderSharedSidebar() {
   const sidebar = document.querySelector('.sidebar');
   if (!sidebar) return;
@@ -62,4 +87,6 @@ export function renderSharedSidebar() {
   }).join('');
 }
 
+renderSidebarBrand();
 renderSharedSidebar();
+addSidebarCredit();

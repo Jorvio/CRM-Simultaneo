@@ -59,6 +59,19 @@ function renderSidebarBrand() {
   `;
 }
 
+function addSidebarCredit() {
+  const footer = document.querySelector('.sidebar-footer');
+  if (!footer) return;
+
+  let credit = footer.querySelector('.sidebar-credit');
+  if (!credit) {
+    credit = document.createElement('div');
+    credit.className = 'sidebar-credit';
+    credit.textContent = 'produced by Juana Wurges';
+    footer.appendChild(credit);
+  }
+}
+
 export function renderSharedSidebar() {
   const sidebar = document.querySelector('.sidebar');
   if (!sidebar) return;
@@ -76,3 +89,4 @@ export function renderSharedSidebar() {
 
 renderSidebarBrand();
 renderSharedSidebar();
+addSidebarCredit();

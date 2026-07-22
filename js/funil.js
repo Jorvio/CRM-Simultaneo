@@ -1,481 +1,286 @@
-import './auth-guard.js?v=20260722-6';
-import './user-menu.js?v=20260722-6';
-import { db, loadCurrentUserPermissions } from './supabase.js?v=20260722-6';
+import { supabase } from './supabase.js';
+import { showToast } from './ui.js';
 
-await window.crmAuthReady;
-const access = await loadCurrentUserPermissions().catch(() => null);
-if (!access) {
-  window.location.href = './login.html';
-  throw new Error('Usuário não autenticado');
+let allProposals = [];
+let filteredProposals = [];
+let activeFilters = {};
+
+const TABLE_BODY = document.getElementById('proposalTableBody');
+const SEARCH_INPUT = document.getElementById('searchInput');
+const BTN_FILTERS = document.getElementById('btnFilters');
+const FILTER_PANEL = document.getElementById('filterPanel');
+const BTN_FILTER_APPLY = document.getElementById('btnFilterApply');
+const BTN_FILTER_CLEAR = document.getElementById('btnFilterClear');
+const FOOTER_INFO = document.getElementById('footerInfo');
+const FILTER_COUNT = document.getElementById('filterCount');
+
+async function loadProposals() {
+  try {
+    TABLE_BODY.innerHTML = '<tr><td colspan="12" class="state-message"><div class="title">Carregando propostas...</div></td></tr>';
+
+    const { data, error } = await supabase
+      .from('proposals')
+      .select(`
+        id,
+        proposal_number,
+        contact_name,
+        point_of_contact,
+        budget_date,
+        closing_date,
+        closing_month,
+        value_usd,
+        value_brl,
+        proposal_status,
+        project_status,
+        client:clients!proposals_client_id_fkey(id, name, legal_name),
+        project:projects!proposals_project_id_fkey(id, name, client_id)
+      `)
+      .order('proposal_number', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao carregar propostas:', error);
+      renderError();
+      return;
+    }
+
+    allProposals = data || [];
+    filteredProposals = [...allProposals];
+    renderTable();
+  } catch (err) {
+    console.error('Erro:', err);
+    renderError();
+  }
 }
 
-const permissions = access.permissions;
-const btnNovaProposta = document.getElementById('btnNovaProposta');
-if (btnNovaProposta && !permissions.podeAdicionar) {
-  btnNovaProposta.style.display = 'none';
+function renderTable() {
+  if (filteredProposals.length === 0) {
+    TABLE_BODY.innerHTML = '<tr><td colspan="12" class="state-message"><div class="title">Nenhuma proposta corresponde aos critérios.</div></td></tr>';
+    FOOTER_INFO.textContent = '0 propostas';
+    return;
+  }
+
+  TABLE_BODY.innerHTML = filteredProposals.map(proposal => `
+    <tr>
+      <td>
+        <button class="action-button" onclick="window.location.href='./visualizar.html?type=proposal&id=${proposal.id}&returnTo=funil.html'" title="Visualizar proposta">
+          <svg viewBox="0 0 24 24">
+            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+      </td>
+      <td>${formatProposalNumber(proposal.proposal_number)}</td>
+      <td>
+        <div class="client-project">
+          <strong>${formatClientName(proposal.client)}</strong>
+          <small>${formatProjectName(proposal.project)}</small>
+        </div>
+      </td>
+      <td>${proposal.contact_name || '—'}</td>
+      <td>${proposal.point_of_contact || '—'}</td>
+      <td>${formatDate(proposal.budget_date)}</td>
+      <td>${formatDate(proposal.closing_date)}</td>
+      <td>${formatMonth(proposal.closing_month)}</td>
+      <td>${formatCurrency(proposal.value_usd, 'USD')}</td>
+      <td>${formatCurrency(proposal.value_brl, 'BRL')}</td>
+      <td><span class="badge ${formatBadgeClass(proposal.proposal_status)}">${proposal.proposal_status || '—'}</span></td>
+      <td>${proposal.project_status || '—'}</td>
+    </tr>
+  `).join('');
+
+  FOOTER_INFO.textContent = `${filteredProposals.length} ${filteredProposals.length === 1 ? 'proposta' : 'propostas'}`;
 }
 
-const columns = [
-  { key: 'numero', label: 'Nº Proposta', type: 'text', width: 110 },
-  { key: 'cliente', label: 'Cliente', type: 'link-client', width: 150 },
-  { key: 'projeto', label: 'Projeto', type: 'link-project', width: 150 },
-  { key: 'contato', label: 'Contato', type: 'text', width: 130 },
-  { key: 'pontoContato', label: 'Ponto de Contato', type: 'text', width: 130 },
-  { key: 'dataOrcamento', label: 'Data Orçamento', type: 'date', width: 120 },
-  { key: 'dataFechamento', label: 'Data Fechamento', type: 'date', width: 120 },
-  { key: 'mesFechamento', label: 'Mês Fecham.', type: 'computed', width: 100 },
-  { key: 'valorExterior', label: 'Valor Exterior', type: 'money-usd', width: 110 },
-  { key: 'valorReais', label: 'Valor R$', type: 'money-brl', width: 110 },
-  { key: 'statusProposta', label: 'Status Proposta', type: 'status-proposta', width: 130 },
-  { key: 'statusProjeto', label: 'Status Projeto', type: 'status-projeto', width: 150 },
-  { key: 'obs', label: 'Observações', type: 'text-long', width: 180 }
-];
+function applyFilters() {
+  const filters = {
+    number: document.getElementById('filterNumber').value.toLowerCase(),
+    client: document.getElementById('filterClient').value.toLowerCase(),
+    project: document.getElementById('filterProject').value.toLowerCase(),
+    contact: document.getElementById('filterContact').value.toLowerCase(),
+    poc: document.getElementById('filterPOC').value.toLowerCase(),
+    proposalStatus: Array.from(document.getElementById('filterProposalStatus').selectedOptions).map(o => o.value).filter(v => v),
+    projectStatus: document.getElementById('filterProjectStatus').value.toLowerCase(),
+    budgetDateFrom: document.getElementById('filterBudgetDateFrom').value,
+    budgetDateTo: document.getElementById('filterBudgetDateTo').value,
+    closingDateFrom: document.getElementById('filterClosingDateFrom').value,
+    closingDateTo: document.getElementById('filterClosingDateTo').value,
+    month: document.getElementById('filterMonth').value,
+    valueUSDMin: parseFloat(document.getElementById('filterValueUSDMin').value) || 0,
+    valueUSDMax: parseFloat(document.getElementById('filterValueUSDMax').value) || Infinity,
+    valueBRLMin: parseFloat(document.getElementById('filterValueBRLMin').value) || 0,
+    valueBRLMax: parseFloat(document.getElementById('filterValueBRLMax').value) || Infinity,
+  };
 
-const statusPropostaOptions = ['Aberta', 'Negociando', 'Fechada', 'Perdida', 'Pausada'];
+  activeFilters = Object.keys(filters).reduce((acc, key) => {
+    if (filters[key] && filters[key] !== '' && (!Array.isArray(filters[key]) || filters[key].length > 0)) {
+      acc[key] = filters[key];
+    }
+    return acc;
+  }, {});
 
-let data = [];
-let filterText = '';
-let activeStatuses = new Set();
-let sortKey = null;
-let sortDir = 1;
-let proposalsLoadError = false;
+  filteredProposals = allProposals.filter(proposal => {
+    if (filters.number && !proposal.proposal_number.toLowerCase().includes(filters.number)) return false;
+    if (filters.client && !(proposal.client?.name + proposal.client?.legal_name).toLowerCase().includes(filters.client)) return false;
+    if (filters.project && !proposal.project?.name?.toLowerCase().includes(filters.project)) return false;
+    if (filters.contact && !proposal.contact_name?.toLowerCase().includes(filters.contact)) return false;
+    if (filters.poc && !proposal.point_of_contact?.toLowerCase().includes(filters.poc)) return false;
+    if (filters.proposalStatus.length && !filters.proposalStatus.includes(proposal.proposal_status)) return false;
+    if (filters.projectStatus && !proposal.project_status?.toLowerCase().includes(filters.projectStatus)) return false;
+    if (filters.budgetDateFrom && proposal.budget_date < filters.budgetDateFrom) return false;
+    if (filters.budgetDateTo && proposal.budget_date > filters.budgetDateTo) return false;
+    if (filters.closingDateFrom && proposal.closing_date < filters.closingDateFrom) return false;
+    if (filters.closingDateTo && proposal.closing_date > filters.closingDateTo) return false;
+    if (filters.month && proposal.closing_month !== filters.month) return false;
+    if (proposal.value_usd && (proposal.value_usd < filters.valueUSDMin || proposal.value_usd > filters.valueUSDMax)) return false;
+    if (proposal.value_brl && (proposal.value_brl < filters.valueBRLMin || proposal.value_brl > filters.valueBRLMax)) return false;
+    return true;
+  });
 
-function obterUrlAtualRelativa() {
-  const arquivo = window.location.pathname.split('/').pop() || 'funil.html';
-  return arquivo + window.location.search + window.location.hash;
+  const filterCount = Object.keys(activeFilters).length;
+  if (filterCount > 0) {
+    FILTER_COUNT.textContent = ` (${filterCount})`;
+    FILTER_COUNT.style.display = 'inline';
+  } else {
+    FILTER_COUNT.style.display = 'none';
+  }
+
+  FILTER_PANEL.classList.remove('show');
+  renderTable();
+  applySearch();
 }
 
-function criarUrlVisualizacao(type, id) {
-  const returnTo = encodeURIComponent(obterUrlAtualRelativa());
-  return `./visualizar.html?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}&returnTo=${returnTo}`;
+function clearFilters() {
+  document.getElementById('filterNumber').value = '';
+  document.getElementById('filterClient').value = '';
+  document.getElementById('filterProject').value = '';
+  document.getElementById('filterContact').value = '';
+  document.getElementById('filterPOC').value = '';
+  document.getElementById('filterProposalStatus').value = '';
+  document.getElementById('filterProjectStatus').value = '';
+  document.getElementById('filterBudgetDateFrom').value = '';
+  document.getElementById('filterBudgetDateTo').value = '';
+  document.getElementById('filterClosingDateFrom').value = '';
+  document.getElementById('filterClosingDateTo').value = '';
+  document.getElementById('filterMonth').value = '';
+  document.getElementById('filterValueUSDMin').value = '';
+  document.getElementById('filterValueUSDMax').value = '';
+  document.getElementById('filterValueBRLMin').value = '';
+  document.getElementById('filterValueBRLMax').value = '';
+
+  activeFilters = {};
+  FILTER_COUNT.style.display = 'none';
+  filteredProposals = [...allProposals];
+  renderTable();
+  applySearch();
 }
 
-function monthLabel(dateStr) {
-  if (!dateStr) return '—';
-  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  const date = new Date(`${dateStr}T00:00:00`);
-  return `${months[date.getMonth()]}/${String(date.getFullYear()).slice(2)}`;
-}
+function applySearch() {
+  const searchTerm = SEARCH_INPUT.value.toLowerCase().trim();
+  if (!searchTerm) {
+    renderTable();
+    return;
+  }
 
-function formatMoney(value, currency) {
-  if (value === '' || value === null || value === undefined) return '—';
-  const number = Number(value);
-  return `${currency === 'USD' ? 'US$ ' : 'R$ '}${number.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const searched = filteredProposals.filter(proposal => {
+    const searchableText = [
+      proposal.proposal_number,
+      proposal.client?.name,
+      proposal.client?.legal_name,
+      proposal.project?.name,
+      proposal.contact_name,
+      proposal.point_of_contact,
+      proposal.proposal_status,
+      proposal.project_status
+    ].join(' ').toLowerCase();
+
+    return searchableText.includes(searchTerm);
+  });
+
+  TABLE_BODY.innerHTML = searched.length === 0
+    ? '<tr><td colspan="12" class="state-message"><div class="title">Nenhuma proposta encontrada.</div></td></tr>'
+    : searched.map(proposal => `
+      <tr>
+        <td>
+          <button class="action-button" onclick="window.location.href='./visualizar.html?type=proposal&id=${proposal.id}&returnTo=funil.html'" title="Visualizar proposta">
+            <svg viewBox="0 0 24 24">
+              <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            </svg>
+          </button>
+        </td>
+        <td>${formatProposalNumber(proposal.proposal_number)}</td>
+        <td>
+          <div class="client-project">
+            <strong>${formatClientName(proposal.client)}</strong>
+            <small>${formatProjectName(proposal.project)}</small>
+          </div>
+        </td>
+        <td>${proposal.contact_name || '—'}</td>
+        <td>${proposal.point_of_contact || '—'}</td>
+        <td>${formatDate(proposal.budget_date)}</td>
+        <td>${formatDate(proposal.closing_date)}</td>
+        <td>${formatMonth(proposal.closing_month)}</td>
+        <td>${formatCurrency(proposal.value_usd, 'USD')}</td>
+        <td>${formatCurrency(proposal.value_brl, 'BRL')}</td>
+        <td><span class="badge ${formatBadgeClass(proposal.proposal_status)}">${proposal.proposal_status || '—'}</span></td>
+        <td>${proposal.project_status || '—'}</td>
+      </tr>
+    `).join('');
+
+  FOOTER_INFO.textContent = `${searched.length} ${searched.length === 1 ? 'proposta' : 'propostas'}`;
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return '—';
-  const [year, month, day] = dateStr.split('-');
-  return `${day}/${month}/${year}`;
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('pt-BR');
 }
 
-function statusClass(status, kind) {
-  if (kind === 'proposta') {
-    const map = { Aberta: 'aberta', Negociando: 'negociando', Fechada: 'fechada', Perdida: 'perdida', Pausada: 'pausada' };
-    return map[status] || 'pausada';
-  }
-  return 'aberta';
+function formatMonth(monthStr) {
+  if (!monthStr) return '—';
+  const [year, month] = monthStr.split('-');
+  return `${month}/${year}`;
 }
 
-function showToast(message) {
-  const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 1800);
+function formatCurrency(value, type) {
+  if (!value && value !== 0) return 'Não informado';
+  const formatted = Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return type === 'USD' ? `US$ ${formatted}` : `R$ ${formatted}`;
 }
 
-function montarPayloadProposta(row, changedKey) {
-  const proposalFieldMap = {
-    numero: 'proposal_number',
-    contato: 'contact_name',
-    pontoContato: 'point_of_contact',
-    dataOrcamento: 'budget_date',
-    dataFechamento: 'closing_date',
-    valorExterior: 'value_usd',
-    valorReais: 'value_brl',
-    statusProposta: 'proposal_status',
-    statusProjeto: 'project_status',
-    obs: 'notes'
-  };
-
-  const payload = {};
-  if (changedKey) {
-    const dbField = proposalFieldMap[changedKey];
-    if (!dbField) return payload;
-    payload[dbField] = changedKey === 'valorExterior' || changedKey === 'valorReais'
-      ? (row[changedKey] === '' || row[changedKey] == null ? null : Number(row[changedKey]))
-      : (row[changedKey] || null);
-    if (changedKey === 'dataFechamento') {
-      payload.closing_month = row.dataFechamento ? monthLabel(row.dataFechamento) : null;
-    }
-    return payload;
-  }
-
-  payload.proposal_number = row.numero;
-  payload.client_id = row.client_id || null;
-  payload.project_id = row.project_id || null;
-  payload.contact_id = row.contact_id || null;
-  payload.contact_name = row.contato || null;
-  payload.point_of_contact = row.pontoContato || null;
-  payload.budget_date = row.dataOrcamento || null;
-  payload.closing_date = row.dataFechamento || null;
-  payload.closing_month = row.dataFechamento ? monthLabel(row.dataFechamento) : null;
-  payload.value_usd = row.valorExterior === '' || row.valorExterior == null ? null : Number(row.valorExterior);
-  payload.value_brl = row.valorReais === '' || row.valorReais == null ? null : Number(row.valorReais);
-  payload.payment_method = row.proposalPaymentMethod || null;
-  payload.installment_terms = row.proposalInstallmentTerms || null;
-  payload.payment_due_date = row.proposalPaymentDueDate || null;
-  payload.installment_due_day = row.proposalInstallmentDueDay === '' || row.proposalInstallmentDueDay == null ? null : Number(row.proposalInstallmentDueDay);
-  payload.installment_value = row.proposalInstallmentValue === '' || row.proposalInstallmentValue == null ? null : Number(row.proposalInstallmentValue);
-  payload.contract_delivery_method = row.proposalContractDeliveryMethod || null;
-  payload.billing_delivery_method = row.proposalBillingDeliveryMethod || null;
-  payload.proposal_status = row.statusProposta || null;
-  payload.project_status = row.statusProjeto || null;
-  payload.notes = row.obs || null;
-  return payload;
+function formatClientName(client) {
+  if (!client) return 'Cliente não informado';
+  return client.legal_name || client.name || 'Cliente não informado';
 }
 
-function renderHeader() {
-  const row = document.getElementById('headerRow');
-  row.innerHTML = '';
-  columns.forEach((col) => {
-    const th = document.createElement('th');
-    th.style.width = `${col.width}px`;
-    let arrow = '';
-    if (sortKey === col.key) arrow = `<span class="sort-arrow">${sortDir === 1 ? '▲' : '▼'}</span>`;
-    th.innerHTML = col.label + arrow;
-    th.onclick = () => {
-      if (sortKey === col.key) {
-        sortDir *= -1;
-      } else {
-        sortKey = col.key;
-        sortDir = 1;
-      }
-      render();
-    };
-    row.appendChild(th);
-  });
-  const thActions = document.createElement('th');
-  thActions.style.width = '220px';
-  thActions.textContent = 'Ações';
-  thActions.style.cursor = 'default';
-  row.appendChild(thActions);
+function formatProjectName(project) {
+  if (!project) return 'Projeto não informado';
+  return project.name || 'Projeto não informado';
 }
 
-function renderStatusFilters() {
-  const wrap = document.getElementById('statusFilters');
-  wrap.innerHTML = '';
-  statusPropostaOptions.forEach((status) => {
-    const chip = document.createElement('div');
-    chip.className = `chip${activeStatuses.has(status) ? ' active' : ''}`;
-    chip.textContent = status;
-    chip.onclick = () => {
-      if (activeStatuses.has(status)) activeStatuses.delete(status); else activeStatuses.add(status);
-      render();
-    };
-    wrap.appendChild(chip);
-  });
+function formatProposalNumber(num) {
+  return num || '—';
 }
 
-function renderSummary() {
-  const wrap = document.getElementById('summaryPills');
-  const total = data.length;
-  const abertas = data.filter((item) => String(item.statusProposta || '').toLowerCase() === 'aberta').length;
-  const fechadas = data.filter((item) => String(item.statusProposta || '').toLowerCase() === 'fechada').length;
-  const valorFechado = data
-    .filter((item) => String(item.statusProposta || '').toLowerCase() === 'fechada')
-    .reduce((acc, item) => acc + Number(item.valorReais || 0), 0);
-  const conv = total ? Math.round((fechadas / total) * 100) : 0;
-
-  const pills = [
-    { num: total, lbl: 'Propostas' },
-    { num: abertas, lbl: 'Abertas' },
-    { num: `${conv}%`, lbl: 'Conversão' },
-    { num: `R$ ${Math.round(valorFechado / 1000)}k`, lbl: 'Fechado' }
-  ];
-  wrap.innerHTML = pills.map((pill) => `<div class="pill-stat"><span class="num">${pill.num}</span><span class="lbl">${pill.lbl}</span></div>`).join('');
+function formatBadgeClass(status) {
+  if (!status) return '';
+  return status.toLowerCase().replace(/\s+/g, '');
 }
 
-function getFiltered() {
-  let rows = data.filter((row) => {
-    if (activeStatuses.size && !activeStatuses.has(row.statusProposta)) return false;
-    if (filterText) {
-      const haystack = `${row.numero} ${row.cliente} ${row.projeto} ${row.contato} ${row.pontoContato} ${row.obs}`.toLowerCase();
-      if (!haystack.includes(filterText.toLowerCase())) return false;
-    }
-    return true;
-  });
-
-  if (sortKey) {
-    rows = rows.slice().sort((a, b) => {
-      let av = a[sortKey];
-      let bv = b[sortKey];
-      if (sortKey === 'valorExterior' || sortKey === 'valorReais') {
-        av = Number(av || 0);
-        bv = Number(bv || 0);
-      }
-      if (av === undefined || av === '') av = '';
-      if (bv === undefined || bv === '') bv = '';
-      if (av < bv) return -1 * sortDir;
-      if (av > bv) return 1 * sortDir;
-      return 0;
-    });
-  }
-
-  return rows;
+function renderError() {
+  TABLE_BODY.innerHTML = '<tr><td colspan="12" class="state-message"><div class="title">Não foi possível carregar o Funil.</div><div class="description">Tente novamente recarregando a página.</div></td></tr>';
+  FOOTER_INFO.textContent = '0 propostas';
 }
 
-function attachEdit(td, row, col, inputType) {
-  if (!permissions.podeEditar) return;
-  td.onclick = () => {
-    if (td.querySelector('input')) return;
-    const current = row[col.key] || '';
-    td.innerHTML = `<input type="${inputType}" value="${current}">`;
-    const input = td.querySelector('input');
-    input.focus();
-    input.select();
-    const commit = async () => {
-      row[col.key] = input.value;
-      if (row.id) {
-        try {
-          const payload = montarPayloadProposta(row, col.key);
-          await db.updateProposal(row.id, payload);
-        } catch (error) {
-          console.error('[updateProposal] Erro:', error);
-          alert(`Erro ao atualizar proposta: ${error.message || JSON.stringify(error)}`);
-        }
-      }
-      render();
-    };
-    input.onblur = commit;
-    input.onkeydown = (event) => {
-      if (event.key === 'Enter') input.blur();
-      if (event.key === 'Escape') render();
-    };
-  };
-}
-
-function openSelectEdit(td, row, col, options) {
-  if (!permissions.podeEditar || td.querySelector('select')) return;
-  td.innerHTML = `<select>${options.map((option) => `<option value="${option}" ${option === row[col.key] ? 'selected' : ''}>${option}</option>`).join('')}</select>`;
-  const select = td.querySelector('select');
-  select.focus();
-  select.onchange = async () => {
-    row[col.key] = select.value;
-    if (row.id) {
-      try {
-        const payload = montarPayloadProposta(row, col.key);
-        await db.updateProposal(row.id, payload);
-      } catch (error) {
-        console.error('[updateProposal select] Erro:', error);
-        alert(`Erro ao atualizar: ${error.message || JSON.stringify(error)}`);
-      }
-    }
-    render();
-  };
-  select.onblur = () => render();
-}
-
-function makeCell(row, col) {
-  const td = document.createElement('td');
-  const value = row[col.key];
-
-  if (col.type === 'computed') {
-    td.innerHTML = `<span class="badge-mes">${monthLabel(row.dataFechamento)}</span>`;
-    return td;
-  }
-  if (col.type === 'link-client') {
-    td.innerHTML = `<span class="client-link">${value}</span>`;
-    td.querySelector('.client-link').onclick = () => {
-      if (row.client_id) {
-        window.location.href = criarUrlVisualizacao('client', row.client_id);
-        return;
-      }
-      showToast('Cliente não vinculado');
-    };
-    return td;
-  }
-  if (col.type === 'link-project') {
-    td.innerHTML = `<span class="project-link">${value}</span>`;
-    td.querySelector('.project-link').onclick = () => {
-      if (row.project_id) {
-        window.location.href = criarUrlVisualizacao('project', row.project_id);
-        return;
-      }
-      showToast('Projeto não vinculado');
-    };
-    return td;
-  }
-  if (col.type === 'money-usd' || col.type === 'money-brl') {
-    td.className = 'money-col editable';
-    td.textContent = formatMoney(value, col.type === 'money-usd' ? 'USD' : 'BRL');
-    attachEdit(td, row, col, 'number');
-    return td;
-  }
-  if (col.type === 'date') {
-    td.className = 'editable';
-    td.textContent = formatDate(value);
-    attachEdit(td, row, col, 'date');
-    return td;
-  }
-  if (col.type === 'status-proposta') {
-    const cls = statusClass(value, 'proposta');
-    td.innerHTML = `<span class="badge" style="color:var(--st-${cls});background:var(--st-${cls}-bg)">${value}</span>`;
-    td.className = 'editable';
-    td.onclick = () => openSelectEdit(td, row, col, statusPropostaOptions);
-    return td;
-  }
-  if (col.type === 'status-projeto') {
-    td.textContent = value || '—';
-    td.className = 'editable';
-    td.style.color = 'var(--ink-soft)';
-    td.style.fontSize = '12px';
-    td.onclick = () => openSelectEdit(td, row, col, ['—', 'Aguardando dados para contrato', 'Contrato em elaboração', 'Aguardando assinatura', 'Contrato assinado', 'Em produção', 'Projeto em andamento', 'Entrega parcial', 'Aprovação', 'Cobrança enviada', 'Projeto finalizado']);
-    return td;
-  }
-  if (col.type === 'text-long') {
-    td.className = 'obs-cell editable';
-    td.textContent = value || '';
-    td.title = value || '';
-    attachEdit(td, row, col, 'text');
-    return td;
-  }
-
-  td.className = 'num-col editable';
-  td.textContent = value || '';
-  attachEdit(td, row, col, 'text');
-  return td;
-}
-
-function renderTable() {
-  const body = document.getElementById('tableBody');
-  body.innerHTML = '';
-  const rows = getFiltered();
-
-  if (proposalsLoadError) {
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = columns.length + 1;
-    td.innerHTML = '<div class="empty-state">Não foi possível carregar as propostas.</div>';
-    tr.appendChild(td);
-    body.appendChild(tr);
-    return;
-  }
-
-  if (!rows.length) {
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = columns.length + 1;
-    td.innerHTML = `<div class="empty-state">${data.length === 0 ? 'Nenhuma proposta encontrada para esse filtro.' : 'Sem propostas para o filtro atual.'}</div>`;
-    tr.appendChild(td);
-    body.appendChild(tr);
-  } else {
-    rows.forEach((row) => {
-      const tr = document.createElement('tr');
-      columns.forEach((col) => tr.appendChild(makeCell(row, col)));
-      const tdActions = document.createElement('td');
-      tdActions.innerHTML = `
-        <div class="row-actions">
-          <button title="Visualizar proposta">Visualizar proposta</button>
-          ${permissions.podeEditar ? '<button title="Editar proposta">Editar</button>' : ''}
-          ${permissions.podeExcluir ? '<button title="Excluir proposta">Excluir</button>' : ''}
-        </div>`;
-
-      tdActions.querySelectorAll('button').forEach((btn, i) => {
-        if (i === 0) {
-          btn.onclick = () => {
-            if (!row.id) return;
-            window.location.href = criarUrlVisualizacao('proposal', row.id);
-          };
-          return;
-        }
-        if (permissions.podeEditar && i === 1) {
-          btn.onclick = () => {
-            window.location.href = `./proposta.html?id=${encodeURIComponent(row.id)}&returnTo=${encodeURIComponent(obterUrlAtualRelativa())}`;
-          };
-          return;
-        }
-        btn.onclick = async () => {
-          if (!permissions.podeExcluir) {
-            alert('Seu usuário não possui permissão para excluir propostas.');
-            return;
-          }
-          if (!row.id || !confirm('Excluir proposta?')) return;
-          try {
-            await db.deleteProposal(row.id);
-            data = data.filter((item) => item.id !== row.id);
-            render();
-            showToast('Proposta excluída com sucesso');
-          } catch (error) {
-            console.error('[deleteProposal] Erro ao excluir proposta:', error);
-            alert('Não foi possível excluir a proposta.');
-          }
-        };
-      });
-      tr.appendChild(tdActions);
-      body.appendChild(tr);
-    });
-  }
-
-  const total = rows.reduce((acc, row) => acc + Number(row.valorReais || 0), 0);
-  document.getElementById('footerCount').textContent = `${rows.length} proposta${rows.length !== 1 ? 's' : ''} exibida${rows.length !== 1 ? 's' : ''} de ${data.length}`;
-  document.getElementById('footerTotal').textContent = `Total (filtro): ${formatMoney(total, 'BRL')}`;
-}
-
-function render() {
-  renderHeader();
-  renderStatusFilters();
-  renderSummary();
-  renderTable();
-}
-
-document.getElementById('searchInput').addEventListener('input', (event) => {
-  filterText = event.target.value;
-  renderTable();
+// Event Listeners
+BTN_FILTERS.addEventListener('click', () => {
+  FILTER_PANEL.classList.toggle('show');
 });
 
-function normalizeProposalRow(row) {
-  return {
-    id: row.id,
-    numero: row.proposal_number || '',
-    cliente: row.cliente?.legal_name || row.cliente?.name || 'Não informado',
-    projeto: row.projeto?.name || 'Não informado',
-    contact_id: row.contact_id || null,
-    contato: row.contact_name || 'Não informado',
-    pontoContato: row.point_of_contact || 'Não informado',
-    dataOrcamento: row.budget_date || '',
-    dataFechamento: row.closing_date || '',
-    mesFechamento: row.closing_month || 'Não informado',
-    valorExterior: row.value_usd != null ? Number(row.value_usd) : null,
-    valorReais: row.value_brl != null ? Number(row.value_brl) : null,
-    proposalPaymentMethod: row.payment_method || '',
-    proposalInstallmentTerms: row.installment_terms || '',
-    proposalPaymentDueDate: row.payment_due_date || '',
-    proposalInstallmentDueDay: row.installment_due_day ?? '',
-    proposalInstallmentValue: row.installment_value ?? '',
-    proposalContractDeliveryMethod: row.contract_delivery_method || '',
-    proposalBillingDeliveryMethod: row.billing_delivery_method || '',
-    statusProposta: row.proposal_status || 'Não informado',
-    statusProjeto: row.project_status || 'Não informado',
-    obs: row.notes || 'Não informado',
-    client_id: row.client_id || null,
-    project_id: row.project_id || null
-  };
-}
+BTN_FILTER_APPLY.addEventListener('click', applyFilters);
+BTN_FILTER_CLEAR.addEventListener('click', clearFilters);
 
-async function loadData() {
-  try {
-    const proposals = await db.fetchProposals();
-    proposalsLoadError = false;
-    data = Array.isArray(proposals) ? proposals.map(normalizeProposalRow) : [];
-  } catch (error) {
-    console.error('Erro completo ao carregar propostas:', error);
-    proposalsLoadError = true;
-    data = [];
-    alert('Não foi possível carregar as propostas.');
-  }
-  render();
-}
+SEARCH_INPUT.addEventListener('input', applySearch);
 
-render();
-await loadData();
+// Initialize
+loadProposals();
