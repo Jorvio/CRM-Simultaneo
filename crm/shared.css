@@ -24,7 +24,7 @@
 body{margin:0; font-family:Inter, sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden;}
 a{color:inherit; text-decoration:none;}
 
-.page-shell, .dashboard-shell{min-height:100vh; background:var(--bg);}
+.page-shell, .dashboard-shell{display:flex; min-height:100vh; background:var(--bg);}
 .sidebar{
   position:fixed; left:0; top:0; bottom:0; width:70px; background:var(--sidebar-bg);
   border-right:1px solid var(--sidebar-border); padding:20px 14px; transition:width 300ms ease; overflow:hidden; z-index:20;
