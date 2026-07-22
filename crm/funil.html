@@ -100,9 +100,9 @@
   <div class="toast" id="toast"></div>
 
   <script type="module">
-  import './js/auth-guard.js';
-  import './js/user-menu.js';
-  import { db, dbMessage, loadCurrentUserPermissions } from './js/supabase.js';
+  import './js/auth-guard.js?v=20260722-1';
+  import './js/user-menu.js?v=20260722-1';
+  import { db, dbMessage, loadCurrentUserPermissions } from './js/supabase.js?v=20260722-1';
   await window.crmAuthReady;
   const access = await loadCurrentUserPermissions().catch(() => null);
   if (!access) {
@@ -181,6 +181,29 @@
     return (currency==='USD' ? 'US$ ' : 'R$ ') + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   }
 
+  function obterTexto(id) {
+    const element = document.getElementById(id);
+    return element ? element.value.trim() : '';
+  }
+
+  function obterNumeroInteiro(id) {
+    const texto = obterTexto(id);
+    if (!texto) return null;
+    const numero = Number.parseInt(texto, 10);
+    return Number.isFinite(numero) ? numero : null;
+  }
+
+  function converterValor(valor) {
+    const texto = String(valor ?? '').trim();
+    if (!texto) return null;
+    const normalizado = texto
+      .replace(/\./g, '')
+      .replace(',', '.')
+      .replace(/[^\d.-]/g, '');
+    const numero = Number(normalizado);
+    return Number.isFinite(numero) ? numero : null;
+  }
+
   function formatDate(dateStr){
     if(!dateStr) return '—';
     const [y,m,d] = dateStr.split('-');
@@ -229,6 +252,13 @@
     payload.closing_month = row.dataFechamento ? monthLabel(row.dataFechamento) : null;
     payload.value_usd = row.valorExterior === '' || row.valorExterior == null ? null : Number(row.valorExterior);
     payload.value_brl = row.valorReais === '' || row.valorReais == null ? null : Number(row.valorReais);
+    payload.payment_method = row.proposalPaymentMethod || null;
+    payload.installment_terms = row.proposalInstallmentTerms || null;
+    payload.payment_due_date = row.proposalPaymentDueDate || null;
+    payload.installment_due_day = row.proposalInstallmentDueDay === '' || row.proposalInstallmentDueDay == null ? null : Number(row.proposalInstallmentDueDay);
+    payload.installment_value = row.proposalInstallmentValue === '' || row.proposalInstallmentValue == null ? null : Number(row.proposalInstallmentValue);
+    payload.contract_delivery_method = row.proposalContractDeliveryMethod || null;
+    payload.billing_delivery_method = row.proposalBillingDeliveryMethod || null;
     payload.proposal_status = row.statusProposta || null;
     payload.project_status = row.statusProjeto || null;
     payload.notes = row.obs || null;
@@ -562,6 +592,20 @@
             <div class="field"><label for="fldStatusProjeto">Status Projeto *</label><select id="fldStatusProjeto">${statusProjetoOptions.map(s=>`<option>${s}</option>`).join('')}</select></div>
           </div>
         </div>
+        <div class="page-card" style="padding:20px; margin-top:18px; border:1px solid var(--border);">
+          <div class="page-header" style="padding:0 0 16px 0; border-bottom:1px solid var(--border); margin-bottom:16px;">
+            <h3 class="page-title" style="font-size:18px; margin:0;">Financeiro da proposta</h3>
+          </div>
+          <div class="form-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px;">
+            <div class="field"><label for="fldProposalPaymentMethod">Forma de pagamento</label><input id="fldProposalPaymentMethod" type="text" placeholder="Ex: Boleto, Pix, Cartão"></div>
+            <div class="field"><label for="fldProposalInstallmentTerms">Forma de parcelamento</label><input id="fldProposalInstallmentTerms" type="text" placeholder="Ex: 3x, 6x, 12x"></div>
+            <div class="field"><label for="fldProposalPaymentDueDate">Data do vencimento</label><input id="fldProposalPaymentDueDate" type="date"></div>
+            <div class="field"><label for="fldProposalInstallmentDueDay">Dia padrão do vencimento das parcelas</label><input id="fldProposalInstallmentDueDay" type="number" min="1" max="31" inputmode="numeric"></div>
+            <div class="field"><label for="fldProposalInstallmentValue">Valor das parcelas</label><input id="fldProposalInstallmentValue" type="text" inputmode="decimal" placeholder="R$ 0,00"></div>
+            <div class="field"><label for="fldProposalContractDeliveryMethod">Envio do contrato</label><input id="fldProposalContractDeliveryMethod" type="text" placeholder="Ex: Por e-mail, assinatura digital"></div>
+            <div class="field" style="grid-column:1 / -1;"><label for="fldProposalBillingDeliveryMethod">Envio das cobranças</label><input id="fldProposalBillingDeliveryMethod" type="text" placeholder="Ex: Mensal, quinzenal"></div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer"><button class="btn-secondary" id="btnCancelModal">Cancelar</button><button class="btn-primary" id="btnSaveModal">Salvar Proposta</button></div>
     </div>
@@ -597,6 +641,13 @@
       document.getElementById('fldValorExt').value = existingRow.valorExterior ?? '';
       document.getElementById('fldValorBr').value = existingRow.valorReais ?? '';
       document.getElementById('fldObs').value = existingRow.obs || '';
+      document.getElementById('fldProposalPaymentMethod').value = existingRow.proposalPaymentMethod || '';
+      document.getElementById('fldProposalInstallmentTerms').value = existingRow.proposalInstallmentTerms || '';
+      document.getElementById('fldProposalPaymentDueDate').value = existingRow.proposalPaymentDueDate || '';
+      document.getElementById('fldProposalInstallmentDueDay').value = existingRow.proposalInstallmentDueDay ?? '';
+      document.getElementById('fldProposalInstallmentValue').value = existingRow.proposalInstallmentValue ?? '';
+      document.getElementById('fldProposalContractDeliveryMethod').value = existingRow.proposalContractDeliveryMethod || '';
+      document.getElementById('fldProposalBillingDeliveryMethod').value = existingRow.proposalBillingDeliveryMethod || '';
       document.getElementById('fldStatusProposta').value = existingRow.statusProposta || statusPropostaOptions[0];
       document.getElementById('fldStatusProjeto').value = existingRow.statusProjeto || statusProjetoOptions[0];
 
@@ -618,6 +669,13 @@
       document.getElementById('fldValorExt').value = '';
       document.getElementById('fldValorBr').value = '';
       document.getElementById('fldObs').value = '';
+      document.getElementById('fldProposalPaymentMethod').value = '';
+      document.getElementById('fldProposalInstallmentTerms').value = '';
+      document.getElementById('fldProposalPaymentDueDate').value = '';
+      document.getElementById('fldProposalInstallmentDueDay').value = '';
+      document.getElementById('fldProposalInstallmentValue').value = '';
+      document.getElementById('fldProposalContractDeliveryMethod').value = '';
+      document.getElementById('fldProposalBillingDeliveryMethod').value = '';
       selectedClientId = null;
       selectedProjectId = null;
 
@@ -790,6 +848,13 @@
       mesFechamento: row.closing_month || row.mesFechamento || 'Não informado',
       valorExterior: row.value_usd != null ? Number(row.value_usd) : (row.valorExterior != null ? Number(row.valorExterior) : null),
       valorReais: row.value_brl != null ? Number(row.value_brl) : (row.valorReais != null ? Number(row.valorReais) : null),
+      proposalPaymentMethod: row.payment_method || row.proposalPaymentMethod || '',
+      proposalInstallmentTerms: row.installment_terms || row.proposalInstallmentTerms || '',
+      proposalPaymentDueDate: row.payment_due_date || row.proposalPaymentDueDate || '',
+      proposalInstallmentDueDay: row.installment_due_day ?? row.proposalInstallmentDueDay ?? '',
+      proposalInstallmentValue: row.installment_value ?? row.proposalInstallmentValue ?? '',
+      proposalContractDeliveryMethod: row.contract_delivery_method || row.proposalContractDeliveryMethod || '',
+      proposalBillingDeliveryMethod: row.billing_delivery_method || row.proposalBillingDeliveryMethod || '',
       statusProposta: row.proposal_status || row.statusProposta || 'Não informado',
       statusProjeto: row.project_status || row.statusProjeto || 'Não informado',
       obs: row.notes || row.obs || 'Não informado',
@@ -857,6 +922,13 @@
       dataFechamento: fech,
       valorExterior: valorExt,
       valorReais: valorBr,
+      proposalPaymentMethod: obterTexto('fldProposalPaymentMethod'),
+      proposalInstallmentTerms: obterTexto('fldProposalInstallmentTerms'),
+      proposalPaymentDueDate: obterTexto('fldProposalPaymentDueDate'),
+      proposalInstallmentDueDay: obterNumeroInteiro('fldProposalInstallmentDueDay'),
+      proposalInstallmentValue: converterValor(document.getElementById('fldProposalInstallmentValue').value),
+      proposalContractDeliveryMethod: obterTexto('fldProposalContractDeliveryMethod'),
+      proposalBillingDeliveryMethod: obterTexto('fldProposalBillingDeliveryMethod'),
       statusProposta: statusP,
       statusProjeto: statusPrj,
       obs

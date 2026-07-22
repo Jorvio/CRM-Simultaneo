@@ -43,10 +43,10 @@
     </main>
   </div>
   <script type="module">
-  import './js/auth-guard.js';
-  import './js/user-menu.js';
-  import './js/ui.js';
-  import { db } from './js/supabase.js';
+  import './js/auth-guard.js?v=20260722-1';
+  import './js/user-menu.js?v=20260722-1';
+  import './js/ui.js?v=20260722-1';
+  import { db } from './js/supabase.js?v=20260722-1';
 
   await window.crmAuthReady;
 
@@ -101,6 +101,19 @@
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
+    }).format(numero);
+  }
+
+  function formatarMoedaUSD(valor) {
+    const numero = Number(valor);
+
+    if (!Number.isFinite(numero)) {
+      return 'Não informado';
+    }
+
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
     }).format(numero);
   }
 
@@ -218,35 +231,28 @@
       }
 
       if (params.type === 'project') {
-        const project = await db.fetchProjectById(Number(params.id));
-        const propostas = Array.isArray(project.propostas)
-          ? project.propostas
-          : await db.fetchProposalsByProject(Number(params.id));
-
-        let contract = null;
-        let followup = null;
-
-        try {
-          contract = await db.fetchContractByProject(Number(params.id));
-        } catch (error) {
-          console.error('[visualizar contract]', {
-            code: error?.code,
-            message: error?.message,
-            details: error?.details,
-            hint: error?.hint
-          });
-        }
-
-        try {
-          followup = await db.fetchProjectFollowupByProject(Number(params.id));
-        } catch (error) {
-          console.error('[visualizar followup]', {
-            code: error?.code,
-            message: error?.message,
-            details: error?.details,
-            hint: error?.hint
-          });
-        }
+        const [project, contract, followup, propostas] = await Promise.all([
+          db.fetchProjectById(Number(params.id)),
+          db.fetchContractByProject(Number(params.id)).catch((error) => {
+            console.error('[visualizar contract]', {
+              code: error?.code,
+              message: error?.message,
+              details: error?.details,
+              hint: error?.hint
+            });
+            return null;
+          }),
+          db.fetchProjectFollowupByProject(Number(params.id)).catch((error) => {
+            console.error('[visualizar followup]', {
+              code: error?.code,
+              message: error?.message,
+              details: error?.details,
+              hint: error?.hint
+            });
+            return null;
+          }),
+          db.fetchProposalsByProject(Number(params.id))
+        ]);
 
         const cliente = project.cliente || null;
         const responsavel = project.responsavel || null;
@@ -373,6 +379,19 @@
               ${renderCampo('Contato', proposal.contact_name)}
               ${renderCampo('Ponto de contato', proposal.point_of_contact)}
               ${renderCampo('Observacoes', proposal.notes)}
+            </div>
+            <div class="page-card" style="padding:18px;">
+              <h3 style="margin-top:0;">Financeiro</h3>
+              ${renderSecaoVaziaAviso([proposal.value_brl, proposal.value_usd, proposal.payment_method, proposal.installment_terms, proposal.payment_due_date, proposal.installment_due_day, proposal.installment_value, proposal.contract_delivery_method, proposal.billing_delivery_method])}
+              ${renderCampo('Valor total em reais', formatarMoeda(proposal.value_brl))}
+              ${renderCampo('Valor total em dólar', formatarMoedaUSD(proposal.value_usd))}
+              ${renderCampo('Forma de pagamento', proposal.payment_method)}
+              ${renderCampo('Forma de parcelamento', proposal.installment_terms)}
+              ${renderCampo('Data do vencimento', formatarData(proposal.payment_due_date))}
+              ${renderCampo('Dia padrão das parcelas', proposal.installment_due_day)}
+              ${renderCampo('Valor das parcelas', formatarMoeda(proposal.installment_value))}
+              ${renderCampo('Envio do contrato', proposal.contract_delivery_method)}
+              ${renderCampo('Envio das cobranças', proposal.billing_delivery_method)}
             </div>
           </div>`;
         return;

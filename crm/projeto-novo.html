@@ -86,10 +86,10 @@
     </main>
   </div>
   <script type="module">
-  import './js/auth-guard.js';
-  import './js/user-menu.js';
-  import './js/ui.js';
-  import { db, loadCurrentUserPermissions } from './js/supabase.js';
+  import './js/auth-guard.js?v=20260722-1';
+  import './js/user-menu.js?v=20260722-1';
+  import './js/ui.js?v=20260722-1';
+  import { db, loadCurrentUserPermissions } from './js/supabase.js?v=20260722-1';
 
   await window.crmAuthReady;
   const params = new URLSearchParams(window.location.search);
@@ -145,6 +145,22 @@
       .replace(/[^\d.-]/g, '');
     const numero = Number(normalizado);
     return Number.isFinite(numero) ? numero : null;
+  }
+
+  function obterTexto(id) {
+    const element = document.getElementById(id);
+    return element ? element.value.trim() : '';
+  }
+
+  function obterNumeroInteiro(id) {
+    const texto = obterTexto(id);
+    if (!texto) return null;
+    const numero = Number.parseInt(texto, 10);
+    return Number.isFinite(numero) ? numero : null;
+  }
+
+  function converterValor(valor) {
+    return limparMoeda(valor);
   }
 
   function obterUrlAtualRelativa() {
@@ -217,7 +233,28 @@
     if (!projectId) return;
 
     try {
-      const project = await db.fetchProjectById(Number(projectId));
+      const [project, contract, acompanhamento] = await Promise.all([
+        db.fetchProjectById(Number(projectId)),
+        db.fetchContractByProject(Number(projectId)).catch((error) => {
+          console.error('[projeto-novo contract]', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+          return null;
+        }),
+        db.fetchProjectFollowupByProject(Number(projectId)).catch((error) => {
+          console.error('[projeto-novo followup]', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+          return null;
+        })
+      ]);
+
       document.getElementById('fldProjClient').value = project.client_id ? String(project.client_id) : '';
       document.getElementById('fldProjName').value = project.name || '';
       document.getElementById('fldProjServ').value = project.services || '';
@@ -235,39 +272,19 @@
         document.getElementById('fldRespEmailCopia').value = project.responsavel.email_copia || '';
       }
 
-      try {
-        const contract = await db.fetchContractByProject(Number(projectId));
-        if (contract) {
-          document.getElementById('fldPaymentMethod').value = contract.payment_method || '';
-          document.getElementById('fldInstallmentTerms').value = contract.installment_terms || '';
-          document.getElementById('fldInstallmentDueDay').value = contract.installment_due_day || '';
-          document.getElementById('fldContractTotal').value = contract.contract_total ?? '';
-          document.getElementById('fldInstallmentValue').value = contract.installment_value ?? '';
-          document.getElementById('fldContractDeliveryMethod').value = contract.contract_delivery_method || '';
-          document.getElementById('fldBillingDeliveryMethod').value = contract.billing_delivery_method || '';
-        }
-      } catch (error) {
-        console.error('[projeto-novo contract]', {
-          code: error?.code,
-          message: error?.message,
-          details: error?.details,
-          hint: error?.hint
-        });
+      if (contract) {
+        document.getElementById('fldPaymentMethod').value = contract.payment_method || '';
+        document.getElementById('fldInstallmentTerms').value = contract.installment_terms || '';
+        document.getElementById('fldInstallmentDueDay').value = contract.installment_due_day ?? '';
+        document.getElementById('fldContractTotal').value = contract.contract_total ?? '';
+        document.getElementById('fldInstallmentValue').value = contract.installment_value ?? '';
+        document.getElementById('fldContractDeliveryMethod').value = contract.contract_delivery_method || '';
+        document.getElementById('fldBillingDeliveryMethod').value = contract.billing_delivery_method || '';
       }
 
-      try {
-        const followup = await db.fetchProjectFollowupByProject(Number(projectId));
-        if (followup) {
-          document.getElementById('fldProjectFilesRequest').value = followup.project_files_request || '';
-          document.getElementById('fldDeliveriesApprovals').value = followup.deliveries_approvals || '';
-        }
-      } catch (error) {
-        console.error('[projeto-novo followup]', {
-          code: error?.code,
-          message: error?.message,
-          details: error?.details,
-          hint: error?.hint
-        });
+      if (acompanhamento) {
+        document.getElementById('fldProjectFilesRequest').value = acompanhamento.project_files_request || '';
+        document.getElementById('fldDeliveriesApprovals').value = acompanhamento.deliveries_approvals || '';
       }
 
       document.querySelector('.page-title').textContent = 'Editar Projeto';
@@ -284,7 +301,8 @@
     const name = document.getElementById('fldProjName').value.trim();
     const services = document.getElementById('fldProjServ').value.trim();
     const statusProjeto = document.getElementById('fldProjStatus').value.trim();
-    if(!name){
+
+    if (!name) {
       showToast('Informe o nome do projeto.', 'error');
       document.getElementById('fldProjName').focus();
       return;
@@ -310,100 +328,96 @@
         responsible_id: responsibleId || null
       };
 
-      console.log('[btnSaveProj] Salvando projeto no Supabase:', payloadProject);
-      const result = projectId
+      console.log('[Projeto] Salvando projeto', payloadProject);
+      const projectSaved = projectId
         ? await db.updateProject(Number(projectId), payloadProject)
         : await db.insertProject(payloadProject);
 
-      const projectIdToUse = Number(result?.id || projectId);
-
-      const paymentMethod = document.getElementById('fldPaymentMethod').value.trim();
-      const installmentTerms = document.getElementById('fldInstallmentTerms').value.trim();
-      const installmentDueDay = document.getElementById('fldInstallmentDueDay').value.trim();
-      const contractTotal = limparMoeda(document.getElementById('fldContractTotal').value);
-      const installmentValue = limparMoeda(document.getElementById('fldInstallmentValue').value);
-      const contractDeliveryMethod = document.getElementById('fldContractDeliveryMethod').value.trim();
-      const billingDeliveryMethod = document.getElementById('fldBillingDeliveryMethod').value.trim();
+      const projectIdSalvo = Number(projectSaved?.id || projectId);
+      if (!Number.isFinite(projectIdSalvo)) {
+        throw new Error('Nao foi possivel determinar o ID do projeto salvo.');
+      }
 
       const contractPayload = {
-        payment_method: paymentMethod || null,
-        installment_terms: installmentTerms || null,
-        installment_due_day: installmentDueDay || null,
-        contract_total: contractTotal,
-        installment_value: installmentValue,
-        contract_delivery_method: contractDeliveryMethod || null,
-        billing_delivery_method: billingDeliveryMethod || null
+        payment_method: obterTexto('fldPaymentMethod'),
+        installment_terms: obterTexto('fldInstallmentTerms'),
+        installment_due_day: obterNumeroInteiro('fldInstallmentDueDay'),
+        contract_total: converterValor(document.getElementById('fldContractTotal').value),
+        installment_value: converterValor(document.getElementById('fldInstallmentValue').value),
+        contract_delivery_method: obterTexto('fldContractDeliveryMethod'),
+        billing_delivery_method: obterTexto('fldBillingDeliveryMethod')
       };
-
-      const possuiDadosContrato = [
-        paymentMethod,
-        installmentTerms,
-        installmentDueDay,
-        contractTotal,
-        installmentValue,
-        contractDeliveryMethod,
-        billingDeliveryMethod
-      ].some(
-        (value) => value !== null && value !== undefined && value !== ''
-      );
-
-      let contratoExistente = null;
-      try {
-        contratoExistente = await db.fetchContractByProject(projectIdToUse);
-      } catch (error) {
-        console.error('[projeto-novo contract-check]', {
-          code: error?.code,
-          message: error?.message,
-          details: error?.details,
-          hint: error?.hint
-        });
-      }
-
-      if (possuiDadosContrato || (projectId && contratoExistente)) {
-        try {
-          await db.upsertContractByProject(projectIdToUse, contractPayload);
-        } catch (error) {
-          console.error('[projeto-novo upsertContractByProject]', {
-            code: error?.code,
-            message: error?.message,
-            details: error?.details,
-            hint: error?.hint
-          });
-        }
-      }
-
-      const projectFilesRequest = document.getElementById('fldProjectFilesRequest').value.trim();
-      const deliveriesApprovals = document.getElementById('fldDeliveriesApprovals').value.trim();
 
       const followupPayload = {
-        project_files_request: projectFilesRequest || null,
-        deliveries_approvals: deliveriesApprovals || null
+        project_files_request: obterTexto('fldProjectFilesRequest'),
+        deliveries_approvals: obterTexto('fldDeliveriesApprovals')
       };
 
+      const [contratoExistente, acompanhamentoExistente] = await Promise.all([
+        db.fetchContractByProject(projectIdSalvo).catch((error) => {
+          console.error('[Projeto] Falha ao buscar contrato do projeto', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+          return null;
+        }),
+        db.fetchProjectFollowupByProject(projectIdSalvo).catch((error) => {
+          console.error('[Projeto] Falha ao buscar acompanhamento do projeto', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+          return null;
+        })
+      ]);
+
+      const possuiDadosContrato = [
+        contractPayload.payment_method,
+        contractPayload.installment_terms,
+        contractPayload.installment_due_day,
+        contractPayload.contract_total,
+        contractPayload.installment_value,
+        contractPayload.contract_delivery_method,
+        contractPayload.billing_delivery_method
+      ].some((value) => value !== null && value !== undefined && String(value).trim() !== '');
+
       const possuiDadosAcompanhamento = [
-        projectFilesRequest,
-        deliveriesApprovals
-      ].some(
-        (value) => value !== null && value !== undefined && value !== ''
-      );
+        followupPayload.project_files_request,
+        followupPayload.deliveries_approvals
+      ].some((value) => value !== null && value !== undefined && String(value).trim() !== '');
 
-      let acompanhamentoExistente = null;
-      try {
-        acompanhamentoExistente = await db.fetchProjectFollowupByProject(projectIdToUse);
-      } catch (error) {
-        console.error('[projeto-novo followup-check]', {
-          code: error?.code,
-          message: error?.message,
-          details: error?.details,
-          hint: error?.hint
-        });
-      }
+      const normalizarContrato = (registro) => registro ? {
+        payment_method: registro.payment_method || null,
+        installment_terms: registro.installment_terms || null,
+        installment_due_day: registro.installment_due_day ?? null,
+        contract_total: registro.contract_total ?? null,
+        installment_value: registro.installment_value ?? null,
+        contract_delivery_method: registro.contract_delivery_method || null,
+        billing_delivery_method: registro.billing_delivery_method || null,
+        project_id: Number(registro.project_id)
+      } : null;
 
-      if (possuiDadosAcompanhamento || (projectId && acompanhamentoExistente)) {
+      const normalizarAcompanhamento = (registro) => registro ? {
+        project_files_request: registro.project_files_request || null,
+        deliveries_approvals: registro.deliveries_approvals || null,
+        project_id: Number(registro.project_id)
+      } : null;
+
+      let contratoSalvo = contratoExistente;
+      let acompanhamentoSalvo = acompanhamentoExistente;
+      let falhouContrato = false;
+      let falhouAcompanhamento = false;
+
+      if (possuiDadosContrato || contratoExistente) {
         try {
-          await db.upsertProjectFollowupByProject(projectIdToUse, followupPayload);
+          contratoSalvo = await db.saveContractByProject(projectIdSalvo, contractPayload);
+          console.log('[Projeto] Contrato salvo', contratoSalvo);
         } catch (error) {
-          console.error('[projeto-novo upsertProjectFollowupByProject]', {
+          falhouContrato = true;
+          console.error('[Projeto] Falha ao atualizar contrato', {
             code: error?.code,
             message: error?.message,
             details: error?.details,
@@ -412,16 +426,79 @@
         }
       }
 
-      console.log('[btnSaveProj] Projeto salvo com sucesso:', result);
-      showToast(projectId ? 'Projeto atualizado com sucesso.' : 'Projeto cadastrado com sucesso.', 'success');
-      const targetId = result?.id || projectIdToUse;
-      if (targetId) {
-        window.location.href = criarUrlVisualizacao('project', targetId);
-      } else {
-        window.location.href = './projetos.html';
+      if (possuiDadosAcompanhamento || acompanhamentoExistente) {
+        try {
+          acompanhamentoSalvo = await db.saveProjectFollowupByProject(projectIdSalvo, followupPayload);
+          console.log('[Projeto] Acompanhamento salvo', acompanhamentoSalvo);
+        } catch (error) {
+          falhouAcompanhamento = true;
+          console.error('[Projeto] Falha ao atualizar acompanhamento', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+        }
       }
+
+      const [contratoConfirmado, acompanhamentoConfirmado] = await Promise.all([
+        db.fetchContractByProject(projectIdSalvo),
+        db.fetchProjectFollowupByProject(projectIdSalvo)
+      ]);
+
+      console.log('[Projeto] Dados confirmados', {
+        contratoConfirmado,
+        acompanhamentoConfirmado
+      });
+
+      const contratoEsperado = (possuiDadosContrato || contratoExistente)
+        ? {
+            ...contractPayload,
+            project_id: projectIdSalvo
+          }
+        : null;
+
+      const acompanhamentoEsperado = (possuiDadosAcompanhamento || acompanhamentoExistente)
+        ? {
+            ...followupPayload,
+            project_id: projectIdSalvo
+          }
+        : null;
+
+      const contratoConfirmadoNormalizado = normalizarContrato(contratoConfirmado);
+      const acompanhamentoConfirmadoNormalizado = normalizarAcompanhamento(acompanhamentoConfirmado);
+
+      const contratoEsperadoNormalizado = normalizarContrato(contratoEsperado);
+      const acompanhamentoEsperadoNormalizado = normalizarAcompanhamento(acompanhamentoEsperado);
+
+      const contratoCorreto = JSON.stringify(contratoEsperadoNormalizado) === JSON.stringify(contratoConfirmadoNormalizado);
+      const acompanhamentoCorreto = JSON.stringify(acompanhamentoEsperadoNormalizado) === JSON.stringify(acompanhamentoConfirmadoNormalizado);
+
+      if (falhouContrato || falhouAcompanhamento) {
+        showToast('Os dados principais foram salvos, mas não foi possível atualizar o financeiro do projeto.', 'error');
+        return;
+      }
+
+      if (!contratoCorreto || !acompanhamentoCorreto) {
+        console.error('[Projeto] Divergência entre formulário e dados confirmados', {
+          contratoEsperado: contratoEsperadoNormalizado,
+          contratoConfirmado: contratoConfirmadoNormalizado,
+          acompanhamentoEsperado: acompanhamentoEsperadoNormalizado,
+          acompanhamentoConfirmado: acompanhamentoConfirmadoNormalizado
+        });
+        showToast('Os dados foram salvos, mas a confirmação do financeiro do projeto não bateu com o formulário.', 'error');
+        return;
+      }
+
+      showToast(projectId ? 'Projeto atualizado com sucesso.' : 'Projeto cadastrado com sucesso.', 'success');
+      window.location.href = `./visualizar.html?type=project&id=${projectIdSalvo}`;
     } catch (error) {
-      console.error('[btnSaveProj] Erro ao salvar projeto:', error);
+      console.error('[Projeto] Falha ao salvar projeto', {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint
+      });
       showToast('Nao foi possivel salvar o projeto.', 'error');
     }
   };

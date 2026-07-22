@@ -357,7 +357,7 @@ window.db = {
     const { data, error } = await supabase
       .from('contracts')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id', Number(projectId))
       .maybeSingle();
 
     if (error) {
@@ -376,7 +376,7 @@ window.db = {
     const { data, error } = await supabase
       .from('project_followups')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id', Number(projectId))
       .maybeSingle();
 
     if (error) {
@@ -409,6 +409,13 @@ window.db = {
           closing_month,
           value_usd,
           value_brl,
+          payment_method,
+          installment_terms,
+          payment_due_date,
+          installment_due_day,
+          installment_value,
+          contract_delivery_method,
+          billing_delivery_method,
           proposal_status,
           project_status,
           notes,
@@ -535,6 +542,13 @@ window.db = {
           closing_month,
           value_usd,
           value_brl,
+          payment_method,
+          installment_terms,
+          payment_due_date,
+          installment_due_day,
+          installment_value,
+          contract_delivery_method,
+          billing_delivery_method,
           proposal_status,
           project_status,
           notes,
@@ -575,6 +589,13 @@ window.db = {
           closing_month,
           value_usd,
           value_brl,
+          payment_method,
+          installment_terms,
+          payment_due_date,
+          installment_due_day,
+          installment_value,
+          contract_delivery_method,
+          billing_delivery_method,
           proposal_status,
           project_status,
           notes,
@@ -679,6 +700,57 @@ window.db = {
     );
   },
 
+  async saveContractByProject(projectId, payload) {
+    await assertPermission(payload?.id ? 'update' : 'insert');
+
+    const existing = await this.fetchContractByProject(projectId);
+    const completePayload = {
+      project_id: Number(projectId),
+      payment_method: payload.payment_method || null,
+      installment_terms: payload.installment_terms || null,
+      installment_due_day: payload.installment_due_day ?? null,
+      contract_total: payload.contract_total ?? null,
+      installment_value: payload.installment_value ?? null,
+      contract_delivery_method: payload.contract_delivery_method || null,
+      billing_delivery_method: payload.billing_delivery_method || null
+    };
+
+    if (existing?.id) {
+      const { data, error } = await supabase
+        .from('contracts')
+        .update(completePayload)
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) {
+        logSupabaseError('Contracts by project', error, {
+          tabela: 'contracts',
+          operacao: 'update.byProject'
+        });
+        throw error;
+      }
+
+      return data;
+    }
+
+    const { data, error } = await supabase
+      .from('contracts')
+      .insert([completePayload])
+      .select()
+      .single();
+
+    if (error) {
+      logSupabaseError('Contracts by project', error, {
+        tabela: 'contracts',
+        operacao: 'insert.byProject'
+      });
+      throw error;
+    }
+
+    return data;
+  },
+
   async upsertContractByProject(projectId, payload) {
     await assertPermission('insert');
     const existing = await this.fetchContractByProject(projectId);
@@ -729,6 +801,54 @@ window.db = {
         .single(),
       { table: 'project_followups', operation: 'upsert.insertByProject' }
     );
+  },
+
+  async saveProjectFollowupByProject(projectId, payload) {
+    const existing = await this.fetchProjectFollowupByProject(projectId);
+    const completePayload = {
+      project_id: Number(projectId),
+      project_files_request: payload.project_files_request || null,
+      deliveries_approvals: payload.deliveries_approvals || null
+    };
+
+    if (existing?.id) {
+      await assertPermission('update');
+
+      const { data, error } = await supabase
+        .from('project_followups')
+        .update(completePayload)
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) {
+        logSupabaseError('Project followups by project', error, {
+          tabela: 'project_followups',
+          operacao: 'update.byProject'
+        });
+        throw error;
+      }
+
+      return data;
+    }
+
+    await assertPermission('insert');
+
+    const { data, error } = await supabase
+      .from('project_followups')
+      .insert([completePayload])
+      .select()
+      .single();
+
+    if (error) {
+      logSupabaseError('Project followups by project', error, {
+        tabela: 'project_followups',
+        operacao: 'insert.byProject'
+      });
+      throw error;
+    }
+
+    return data;
   },
 
   async insertProposal(payload) {
