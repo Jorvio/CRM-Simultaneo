@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Novo Projeto</title>
-<link rel="stylesheet" href="shared.css?v=20260722-6">
+<link rel="stylesheet" href="shared.css?v=20260722-9">
 <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
@@ -26,7 +26,7 @@
           <div class="page-header"><div><h1 class="page-title">Cadastrar Projeto</h1><div class="page-subtext">Vincule o projeto a um cliente e inclua os dados complementares</div></div></div>
           <div class="page-body">
             <div class="form-grid" style="grid-template-columns:1fr; gap:12px; margin-bottom:12px;">
-              <div class="field"><label for="fldProjClient">Cliente</label><select id="fldProjClient"><option value="">Selecione um cliente</option></select></div>
+              <div class="field search-field"><label for="fldProjClientSearch">Cliente</label><input id="fldProjClientSearch" type="text" autocomplete="off" placeholder="Busque pelo nome do cliente"><input id="fldProjClientId" type="hidden"><div id="fldProjClientResults" class="search-results" hidden></div></div>
               <div class="field"><label for="fldProjName">Nome do Projeto *</label><input id="fldProjName" type="text" placeholder="Nome do projeto" required></div>
               <div class="field"><label>Serviços</label><input id="fldProjServ" type="text" placeholder="Serviços incluídos"></div>
               <div class="field"><label>Status do Projeto</label><input id="fldProjStatus" type="text" placeholder="Ex: Em andamento"></div>
@@ -86,10 +86,10 @@
     </main>
   </div>
   <script type="module">
-  import './js/auth-guard.js?v=20260722-6';
-  import './js/user-menu.js?v=20260722-6';
-  import './js/ui.js?v=20260722-6';
-  import { db, loadCurrentUserPermissions } from './js/supabase.js?v=20260722-6';
+  import './js/auth-guard.js?v=20260722-9';
+  import './js/user-menu.js?v=20260722-9';
+  import './js/ui.js?v=20260722-9';
+  import { db, loadCurrentUserPermissions } from './js/supabase.js?v=20260722-9';
 
   await window.crmAuthReady;
   const params = new URLSearchParams(window.location.search);
@@ -114,22 +114,198 @@
     throw new Error('Sem permissão de cadastro');
   }
 
+  function normalizeSearchText(value) {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
   async function carregarClientes() {
-    const select = document.getElementById('fldProjClient');
-    try {
-      const clients = await db.fetchClients();
-      select.innerHTML = '<option value="">Selecione um cliente</option>';
-      (clients || []).forEach((client) => {
-        const option = document.createElement('option');
-        option.value = String(client.id);
-        const label = client.legal_name || client.name || `Cliente #${client.id}`;
-        option.textContent = label;
-        select.appendChild(option);
-      });
-    } catch (error) {
+    const clients = await db.fetchClients().catch((error) => {
       console.error('[projeto-novo] Erro ao carregar clientes:', error);
       showToast('Nao foi possivel carregar os clientes.', 'error');
+      return [];
+    });
+    return clients || [];
+  }
+
+  function criarCombobox({ input, hiddenInput, results, getItems, getItemLabel, getItemKeywords, onSelect, onManualChange, noResultsText }) {
+    const comboState = {
+      items: [],
+      visibleItems: [],
+      activeIndex: -1,
+      optionPrefix: `${input.id}-option`
+    };
+
+    function closeResults() {
+      comboState.visibleItems = [];
+      comboState.activeIndex = -1;
+      results.hidden = true;
+      results.replaceChildren();
+      input.setAttribute('aria-expanded', 'false');
+      input.setAttribute('aria-activedescendant', '');
     }
+
+    function setActiveIndex(index) {
+      comboState.activeIndex = index;
+      const optionId = index >= 0 ? `${comboState.optionPrefix}-${index}` : '';
+      input.setAttribute('aria-activedescendant', optionId);
+
+      Array.from(results.children).forEach((child, childIndex) => {
+        if (child.getAttribute('role') !== 'option') return;
+        child.classList.toggle('active', childIndex === index);
+        if (childIndex === index) {
+          child.scrollIntoView({ block: 'nearest' });
+        }
+      });
+    }
+
+    function selectItem(item) {
+      hiddenInput.value = String(item.id);
+      input.value = getItemLabel(item);
+      onSelect(item);
+      closeResults();
+    }
+
+    function renderResults(filteredItems) {
+      comboState.visibleItems = filteredItems;
+      comboState.activeIndex = -1;
+      results.replaceChildren();
+      input.setAttribute('aria-activedescendant', '');
+
+      if (!filteredItems.length) {
+        const empty = document.createElement('div');
+        empty.className = 'no-result';
+        empty.textContent = noResultsText;
+        results.appendChild(empty);
+        results.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+        return;
+      }
+
+      filteredItems.forEach((item, index) => {
+        const option = document.createElement('div');
+        option.id = `${comboState.optionPrefix}-${index}`;
+        option.className = 'result-item';
+        option.setAttribute('role', 'option');
+        option.setAttribute('aria-selected', 'false');
+        option.textContent = getItemLabel(item);
+        option.addEventListener('mousedown', (event) => {
+          event.preventDefault();
+          selectItem(item);
+        });
+        results.appendChild(option);
+      });
+
+      results.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    function filtrar(query) {
+      comboState.items = getItems();
+      const normalizedQuery = normalizeSearchText(query);
+      if (!comboState.items.length) {
+        closeResults();
+        return;
+      }
+
+      const filteredItems = comboState.items.filter((item) => {
+        const keywords = getItemKeywords(item);
+        return !normalizedQuery || keywords.some((keyword) => normalizeSearchText(keyword).includes(normalizedQuery));
+      });
+
+      renderResults(filteredItems);
+    }
+
+    input.addEventListener('focus', () => {
+      filtrar(input.value);
+    });
+
+    input.addEventListener('input', () => {
+      hiddenInput.value = '';
+      onManualChange();
+      filtrar(input.value);
+    });
+
+    input.addEventListener('keydown', (event) => {
+      if (results.hidden && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        filtrar(input.value);
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (!comboState.visibleItems.length) return;
+        const nextIndex = comboState.activeIndex + 1 >= comboState.visibleItems.length ? 0 : comboState.activeIndex + 1;
+        setActiveIndex(nextIndex);
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (!comboState.visibleItems.length) return;
+        const nextIndex = comboState.activeIndex <= 0 ? comboState.visibleItems.length - 1 : comboState.activeIndex - 1;
+        setActiveIndex(nextIndex);
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        if (comboState.activeIndex >= 0 && comboState.visibleItems[comboState.activeIndex]) {
+          event.preventDefault();
+          selectItem(comboState.visibleItems[comboState.activeIndex]);
+        }
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        closeResults();
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (event.target === input || results.contains(event.target)) {
+        return;
+      }
+      closeResults();
+    });
+
+    return {
+      open() {
+        filtrar(input.value);
+      },
+      close: closeResults,
+      setSelected(item) {
+        hiddenInput.value = item ? String(item.id) : '';
+        input.value = item ? getItemLabel(item) : '';
+        closeResults();
+      }
+    };
+  }
+
+  const clientState = { clients: [], selectedClient: null };
+
+  async function inicializarClientCombobox() {
+    clientState.clients = await carregarClientes();
+    
+    const clientCombobox = criarCombobox({
+      input: document.getElementById('fldProjClientSearch'),
+      hiddenInput: document.getElementById('fldProjClientId'),
+      results: document.getElementById('fldProjClientResults'),
+      getItems: () => clientState.clients,
+      getItemLabel: (client) => client.legal_name || client.name || `Cliente #${client.id}`,
+      getItemKeywords: (client) => [client.legal_name, client.name, client.cpf, client.cnpj, String(client.id)],
+      onSelect: (client) => {
+        clientState.selectedClient = client;
+      },
+      onManualChange: () => {
+        clientState.selectedClient = null;
+      },
+      noResultsText: 'Nenhum cliente encontrado.'
+    });
+
+    return clientCombobox;
   }
 
   function somenteNumeros(valor) {
@@ -229,7 +405,7 @@
     return novoResponsavel.id;
   }
 
-  async function carregarProjetoParaEdicao() {
+  async function carregarProjetoParaEdicao(clientCombobox) {
     if (!projectId) return;
 
     try {
@@ -255,7 +431,13 @@
         })
       ]);
 
-      document.getElementById('fldProjClient').value = project.client_id ? String(project.client_id) : '';
+      if (project.client_id && clientState.clients.length > 0) {
+        const client = clientState.clients.find((c) => Number(c.id) === Number(project.client_id));
+        if (client) {
+          clientCombobox.setSelected(client);
+          clientState.selectedClient = client;
+        }
+      }
       document.getElementById('fldProjName').value = project.name || '';
       document.getElementById('fldProjServ').value = project.services || '';
       document.getElementById('fldProjStatus').value = project.status || '';
@@ -296,8 +478,8 @@
   }
 
   document.getElementById('btnSaveProj').onclick = async function(){
-    const clientValue = document.getElementById('fldProjClient').value.trim();
-    const clientId = clientValue ? Number(clientValue) : null;
+    const clientIdValue = document.getElementById('fldProjClientId').value.trim();
+    const clientId = clientIdValue ? Number(clientIdValue) : null;
     const name = document.getElementById('fldProjName').value.trim();
     const services = document.getElementById('fldProjServ').value.trim();
     const statusProjeto = document.getElementById('fldProjStatus').value.trim();
@@ -503,8 +685,10 @@
     }
   };
 
-  await carregarClientes();
-  await carregarProjetoParaEdicao();
+  (async () => {
+    const clientCombobox = await inicializarClientCombobox();
+    await carregarProjetoParaEdicao(clientCombobox);
+  })();
   </script>
 </body>
 </html>

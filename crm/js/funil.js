@@ -1,6 +1,6 @@
-import './auth-guard.js?v=20260722-new';
-import './user-menu.js?v=20260722-new';
-import { db, loadCurrentUserPermissions } from './supabase.js?v=20260722-new';
+import './auth-guard.js?v=20260722-9';
+import './user-menu.js?v=20260722-9';
+import { db, loadCurrentUserPermissions } from './supabase.js?v=20260722-9';
 
 await window.crmAuthReady;
 const access = await loadCurrentUserPermissions().catch(() => null);
