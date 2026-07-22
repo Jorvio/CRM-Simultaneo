@@ -352,6 +352,44 @@ window.db = {
     );
   },
 
+  async fetchContractByProject(projectId) {
+    await assertPermission('select');
+    const { data, error } = await supabase
+      .from('contracts')
+      .select('*')
+      .eq('project_id', projectId)
+      .maybeSingle();
+
+    if (error) {
+      logSupabaseError('Contracts by project', error, {
+        tabela: 'contracts',
+        operacao: 'select.byProject'
+      });
+      throw error;
+    }
+
+    return data || null;
+  },
+
+  async fetchProjectFollowupByProject(projectId) {
+    await assertPermission('select');
+    const { data, error } = await supabase
+      .from('project_followups')
+      .select('*')
+      .eq('project_id', projectId)
+      .maybeSingle();
+
+    if (error) {
+      logSupabaseError('Project followups by project', error, {
+        tabela: 'project_followups',
+        operacao: 'select.byProject'
+      });
+      throw error;
+    }
+
+    return data || null;
+  },
+
   async fetchProposals() {
     await assertPermission('select');
 
@@ -641,6 +679,58 @@ window.db = {
     );
   },
 
+  async upsertContractByProject(projectId, payload) {
+    await assertPermission('insert');
+    const existing = await this.fetchContractByProject(projectId);
+
+    if (existing?.id) {
+      return exec(
+        supabase
+          .from('contracts')
+          .update(payload)
+          .eq('id', existing.id)
+          .select()
+          .single(),
+        { table: 'contracts', operation: 'upsert.updateByProject' }
+      );
+    }
+
+    return exec(
+      supabase
+        .from('contracts')
+        .insert([{ ...payload, project_id: projectId }])
+        .select()
+        .single(),
+      { table: 'contracts', operation: 'upsert.insertByProject' }
+    );
+  },
+
+  async upsertProjectFollowupByProject(projectId, payload) {
+    await assertPermission('insert');
+    const existing = await this.fetchProjectFollowupByProject(projectId);
+
+    if (existing?.id) {
+      return exec(
+        supabase
+          .from('project_followups')
+          .update(payload)
+          .eq('id', existing.id)
+          .select()
+          .single(),
+        { table: 'project_followups', operation: 'upsert.updateByProject' }
+      );
+    }
+
+    return exec(
+      supabase
+        .from('project_followups')
+        .insert([{ ...payload, project_id: projectId }])
+        .select()
+        .single(),
+      { table: 'project_followups', operation: 'upsert.insertByProject' }
+    );
+  },
+
   async insertProposal(payload) {
     await assertPermission('insert');
     return exec(
@@ -668,7 +758,7 @@ window.db = {
   async checkRls() {
     await assertPermission('select');
     const results = {};
-    for (const table of ['clients', 'projects', 'responsaveis', 'contracts', 'proposals']) {
+    for (const table of ['clients', 'projects', 'responsaveis', 'contracts', 'project_followups', 'proposals']) {
       const { error } = await supabase.from(table).select('id').limit(1);
       results[table] = error ? `ERRO: ${error.message}` : 'ok';
     }

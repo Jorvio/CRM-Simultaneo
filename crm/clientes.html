@@ -72,6 +72,16 @@
           });
 
           const escapeHtml = window.escapeHtml || ((v) => String(v ?? ''));
+
+          function obterUrlAtualRelativa() {
+            const arquivo = window.location.pathname.split('/').pop() || 'clientes.html';
+            return arquivo + window.location.search + window.location.hash;
+          }
+
+          function criarUrlVisualizacao(type, id) {
+            const returnTo = encodeURIComponent(obterUrlAtualRelativa());
+            return `./visualizar.html?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}&returnTo=${returnTo}`;
+          }
           if (btnNovoCliente && !permissions.podeAdicionar) {
             btnNovoCliente.style.display = 'none';
           }
@@ -97,7 +107,7 @@
                   <td>${escapeHtml(client.address || '')}</td>
                   <td>
                     <div style="display:flex;gap:8px;">
-                      <a class="btn-secondary" href="visualizar.html?type=client&id=${client.id}">Visualizar</a>
+                      <a class="btn-secondary" href="${criarUrlVisualizacao('client', client.id)}">Visualizar</a>
                       ${permissions.podeEditar ? `<a class="btn" href="cliente-novo.html?id=${client.id}">Editar</a>` : ''}
                       ${permissions.podeExcluir ? `<button class="btn-secondary" type="button" data-id="${client.id}">Excluir</button>` : ''}
                     </div>

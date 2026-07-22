@@ -28,7 +28,7 @@
               <div class="page-subtext">Todos os dados cadastrados</div>
             </div>
             <div>
-              <a class="btn-secondary" href="clientes.html">Voltar</a>
+              <button class="btn-secondary" id="btnVoltar" type="button">Voltar</button>
               <a class="btn" id="editClientLink" href="cliente-novo.html">Editar</a>
             </div>
           </div>
@@ -56,6 +56,13 @@
     return Object.fromEntries(new URLSearchParams(window.location.search));
   }
 
+  function exibirValor(valor) {
+    if (valor === null || valor === undefined || String(valor).trim() === '') {
+      return 'Não informado';
+    }
+    return String(valor);
+  }
+
   function somenteNumeros(valor) {
     return String(valor || '').replace(/\D/g, '');
   }
@@ -78,20 +85,100 @@
   }
 
   function formatarData(dataIso) {
-    if (!dataIso) return '—';
+    if (!dataIso) return 'Não informado';
     const [y, m, d] = String(dataIso).split('T')[0].split('-');
-    if (!y || !m || !d) return '—';
+    if (!y || !m || !d) return 'Não informado';
     return `${d}/${m}/${y}`;
   }
 
   function formatarMoeda(valor) {
-    if (valor == null || valor === '') return '—';
-    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const numero = Number(valor);
+
+    if (!Number.isFinite(numero)) {
+      return 'Não informado';
+    }
+
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(numero);
   }
 
   function renderCampo(label, value) {
-    const resolved = value == null || value === '' ? 'Não informado' : String(value);
-    return `<p><strong>${label}:</strong> ${escapeHtml(resolved)}</p>`;
+    return `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(exibirValor(value))}</p>`;
+  }
+
+  function renderSecaoVaziaAviso(campos) {
+    const possuiAlgumValor = campos.some((campo) => {
+      if (campo === null || campo === undefined) return false;
+      return String(campo).trim() !== '';
+    });
+
+    if (possuiAlgumValor) return '';
+    return '<p style="color:var(--text-soft); margin-top:0;"><em>Nenhuma informação foi preenchida nesta seção.</em></p>';
+  }
+
+  function obterDestinoRetorno() {
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get('returnTo');
+
+    if (!returnTo) {
+      return null;
+    }
+
+    const destino = decodeURIComponent(returnTo).trim();
+    const paginasPermitidas = [
+      'dashboard.html',
+      'funil.html',
+      'clientes.html',
+      'projetos.html',
+      'visualizar.html'
+    ];
+
+    const arquivo = destino.split('?')[0].split('#')[0];
+
+    const destinoInseguro =
+      destino.includes('..') ||
+      destino.startsWith('/') ||
+      destino.startsWith('//') ||
+      /^[a-z][a-z0-9+.-]*:/i.test(destino);
+
+    if (destinoInseguro || !paginasPermitidas.includes(arquivo)) {
+      return null;
+    }
+
+    return `./${destino}`;
+  }
+
+  function voltarParaOrigem() {
+    const destino = obterDestinoRetorno();
+
+    const veioDoMesmoSite = (() => {
+      try {
+        return document.referrer && new URL(document.referrer).origin === window.location.origin;
+      } catch {
+        return false;
+      }
+    })();
+
+    if (veioDoMesmoSite && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    if (destino) {
+      window.location.href = destino;
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get('type');
+
+    window.location.href = type === 'proposal' ? './funil.html' : './projetos.html';
+  }
+
+  function criarUrlVisualizacao(type, id, returnTo) {
+    return `./visualizar.html?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}&returnTo=${encodeURIComponent(returnTo)}`;
   }
 
   async function renderRecord() {
@@ -107,7 +194,7 @@
     try {
       if (params.type === 'client') {
         const client = await db.fetchClientById(Number(params.id));
-        const tipoCliente = client.client_type === 'PF' ? 'Pessoa Fisica' : client.client_type === 'PJ' ? 'Pessoa Juridica' : 'Nao informado';
+        const tipoCliente = client.client_type === 'PF' ? 'Pessoa Fisica' : client.client_type === 'PJ' ? 'Pessoa Juridica' : null;
         editClientLink.href = `./cliente-novo.html?id=${client.id}`;
         content.innerHTML = `
           <div class="card-grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px;">
@@ -136,13 +223,40 @@
           ? project.propostas
           : await db.fetchProposalsByProject(Number(params.id));
 
+        let contract = null;
+        let followup = null;
+
+        try {
+          contract = await db.fetchContractByProject(Number(params.id));
+        } catch (error) {
+          console.error('[visualizar contract]', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+        }
+
+        try {
+          followup = await db.fetchProjectFollowupByProject(Number(params.id));
+        } catch (error) {
+          console.error('[visualizar followup]', {
+            code: error?.code,
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint
+          });
+        }
+
         const cliente = project.cliente || null;
         const responsavel = project.responsavel || null;
+        const retornoProjeto = `visualizar.html?type=project&id=${project.id}`;
 
-        const blocoPropostas = !propostas || propostas.length === 0
-          ? '<div class="empty-state">Este projeto ainda nao possui propostas cadastradas.</div>'
-          : `
-            <div style="display:grid; gap:12px; margin-top:16px;">
+        const blocoPropostas = `
+          ${renderSecaoVaziaAviso((propostas || []).map((p) => p.proposal_number))}
+          ${!propostas || propostas.length === 0
+            ? '<div class="empty-state">Nenhuma proposta foi preenchida nesta seção.</div>'
+            : `<div style="display:grid; gap:12px; margin-top:16px;">
               ${propostas.map((p) => `
                 <div class="page-card" style="padding:14px; border:1px solid var(--border);">
                   ${renderCampo('Proposta', p.proposal_number)}
@@ -156,13 +270,13 @@
                   ${renderCampo('Ponto de contato', p.point_of_contact)}
                   ${renderCampo('Observacoes', p.notes)}
                   <div style="display:flex; gap:8px; margin-top:10px;">
-                    <a class="btn-secondary" href="./visualizar.html?type=proposal&id=${p.id}">Visualizar</a>
+                    <a class="btn-secondary" href="${criarUrlVisualizacao('proposal', p.id, retornoProjeto)}">Visualizar</a>
                     <a class="btn" href="./funil.html?proposalId=${p.id}">Editar</a>
                   </div>
                 </div>
               `).join('')}
-            </div>
-          `;
+            </div>`}
+        `;
 
         editClientLink.href = `./projeto-novo.html?id=${project.id}`;
         content.innerHTML = `
@@ -177,7 +291,8 @@
               ${renderCampo('Atualizado em', formatarData(project.updated_at))}
             </div>
             <div class="page-card" style="padding:18px;">
-              <h3 style="margin-top:0;">Cliente relacionado</h3>
+              <h3 style="margin-top:0;">Cliente</h3>
+              ${renderSecaoVaziaAviso([cliente?.name, cliente?.legal_name, cliente?.client_type, cliente?.cpf, cliente?.cnpj, cliente?.address])}
               ${renderCampo('Nome', cliente?.name)}
               ${renderCampo('Razao social', cliente?.legal_name)}
               ${renderCampo('Tipo', cliente?.client_type)}
@@ -187,7 +302,8 @@
             </div>
           </div>
           <div class="page-card" style="padding:18px; margin-top:20px;">
-            <h3 style="margin-top:0;">Responsavel relacionado</h3>
+            <h3 style="margin-top:0;">Responsável</h3>
+            ${renderSecaoVaziaAviso([responsavel?.nome_completo, responsavel?.cpf, responsavel?.rg_orgao_emissor, responsavel?.profissao, responsavel?.estado_civil, responsavel?.endereco_responsavel, responsavel?.email, responsavel?.telefone, responsavel?.email_copia])}
             ${renderCampo('Nome completo', responsavel?.nome_completo)}
             ${renderCampo('CPF', responsavel?.cpf)}
             ${renderCampo('RG orgao emissor', responsavel?.rg_orgao_emissor)}
@@ -197,6 +313,27 @@
             ${renderCampo('Email', responsavel?.email)}
             ${renderCampo('Telefone', responsavel?.telefone)}
             ${renderCampo('Email copia', responsavel?.email_copia)}
+          </div>
+          <div class="page-card" style="padding:18px; margin-top:20px;">
+            <h3 style="margin-top:0;">Financeiro</h3>
+            ${renderSecaoVaziaAviso([contract?.payment_method, contract?.installment_terms, contract?.installment_due_day, contract?.contract_total, contract?.installment_value])}
+            ${renderCampo('Forma de pagamento', contract?.payment_method)}
+            ${renderCampo('Forma de parcelamento', contract?.installment_terms)}
+            ${renderCampo('Dia do vencimento', contract?.installment_due_day)}
+            ${renderCampo('Valor total do contrato', formatarMoeda(contract?.contract_total))}
+            ${renderCampo('Valor das parcelas', formatarMoeda(contract?.installment_value))}
+          </div>
+          <div class="page-card" style="padding:18px; margin-top:20px;">
+            <h3 style="margin-top:0;">Contrato</h3>
+            ${renderSecaoVaziaAviso([contract?.contract_delivery_method, contract?.billing_delivery_method])}
+            ${renderCampo('Envio do contrato', contract?.contract_delivery_method)}
+            ${renderCampo('Envio de cobrancas', contract?.billing_delivery_method)}
+          </div>
+          <div class="page-card" style="padding:18px; margin-top:20px;">
+            <h3 style="margin-top:0;">Acompanhamento</h3>
+            ${renderSecaoVaziaAviso([followup?.project_files_request, followup?.deliveries_approvals])}
+            ${renderCampo('Solicitacao de arquivos', followup?.project_files_request)}
+            ${renderCampo('Entregas e aprovacoes', followup?.deliveries_approvals)}
           </div>
           <div id="propostas-area" class="page-card" style="padding:18px; margin-top:20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -254,6 +391,7 @@
     }
   }
 
+  document.getElementById('btnVoltar')?.addEventListener('click', voltarParaOrigem);
   renderRecord();
   </script>
 </body>

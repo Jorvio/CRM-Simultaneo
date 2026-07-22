@@ -195,6 +195,28 @@
   let projetosCache = [];
   let projetoGerenciadoId = null;
 
+  function obterUrlAtualRelativa() {
+    const arquivo = window.location.pathname.split('/').pop() || 'projetos.html';
+    return arquivo + window.location.search + window.location.hash;
+  }
+
+  function criarUrlVisualizacao(type, id, extraParams = {}) {
+    const returnTo = encodeURIComponent(obterUrlAtualRelativa());
+    const params = new URLSearchParams({
+      type: String(type),
+      id: String(id),
+      returnTo
+    });
+
+    Object.entries(extraParams).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && String(value) !== '') {
+        params.set(key, String(value));
+      }
+    });
+
+    return `./visualizar.html?${params.toString()}`;
+  }
+
   function formatarMoeda(valor) {
     if (valor == null || valor === '') return '—';
     return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -218,7 +240,7 @@
       <div class="proposal-links">
         ${propostas.map((p, index) => {
           const numero = escaparHtml(p.proposal_number || 'sem número');
-          return `<a class="proposal-link" href="./visualizar.html?type=proposal&id=${p.id}">Proposta ${index + 1}: ${numero}</a>`;
+          return `<a class="proposal-link" href="${criarUrlVisualizacao('proposal', p.id)}">Proposta ${index + 1}: ${numero}</a>`;
         }).join('')}
       </div>
     `;
@@ -248,7 +270,7 @@
       item.innerHTML = `
         <span>Proposta ${escaparHtml(numeroProposta)}</span>
         <div class="proposal-management-actions">
-          <a class="btn-secondary" href="./visualizar.html?type=proposal&id=${proposta.id}">Visualizar</a>
+          <a class="btn-secondary" href="${criarUrlVisualizacao('proposal', proposta.id)}">Visualizar</a>
           <button type="button" class="btn-delete-proposal">Excluir</button>
         </div>
       `;
@@ -336,10 +358,10 @@
           <td>${escaparHtml(projeto.status || '')}</td>
           <td>
             <div class="project-actions">
-              <a class="btn-secondary" href="./visualizar.html?type=project&id=${projeto.id}">Visualizar</a>
+              <a class="btn-secondary" href="${criarUrlVisualizacao('project', projeto.id)}">Visualizar</a>
               ${permissions.podeEditar ? `<a class="btn" href="./projeto-novo.html?id=${projeto.id}">Editar</a>` : ''}
               ${permissions.podeExcluir ? `<button class="btn-secondary" type="button" data-id="${projeto.id}">Excluir</button>` : ''}
-              ${(permissions.podeEditar || permissions.podeExcluir) ? `<a class="btn-secondary" href="./visualizar.html?type=project&id=${projeto.id}&focus=propostas">Gerenciar propostas</a>` : ''}
+              ${(permissions.podeEditar || permissions.podeExcluir) ? `<a class="btn-secondary" href="${criarUrlVisualizacao('project', projeto.id, { focus: 'propostas' })}">Gerenciar propostas</a>` : ''}
             </div>
           </td>
         `;

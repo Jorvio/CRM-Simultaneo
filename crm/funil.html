@@ -158,6 +158,16 @@
     obs: 'notes'
   };
 
+  function obterUrlAtualRelativa(){
+    const arquivo = window.location.pathname.split('/').pop() || 'funil.html';
+    return arquivo + window.location.search + window.location.hash;
+  }
+
+  function criarUrlVisualizacao(type, id){
+    const returnTo = encodeURIComponent(obterUrlAtualRelativa());
+    return `./visualizar.html?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}&returnTo=${returnTo}`;
+  }
+
   function monthLabel(dateStr){
     if(!dateStr) return '—';
     const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -317,7 +327,7 @@
       td.innerHTML = `<span class="client-link">${val}</span>`;
       td.querySelector('.client-link').onclick = ()=> {
         if (row.client_id) {
-          window.location.href = `visualizar.html?type=client&id=${row.client_id}`;
+          window.location.href = criarUrlVisualizacao('client', row.client_id);
           return;
         }
         showToast('Cliente não vinculado');
@@ -328,7 +338,7 @@
       td.innerHTML = `<span class="project-link">${val}</span>`;
       td.querySelector('.project-link').onclick = ()=> {
         if (row.project_id) {
-          window.location.href = `visualizar.html?type=project&id=${row.project_id}`;
+          window.location.href = criarUrlVisualizacao('project', row.project_id);
           return;
         }
         showToast('Projeto não vinculado');
@@ -472,7 +482,7 @@
           if (i === 0) {
             btn.onclick = () => {
               if (!row.id) return;
-              window.location.href = `visualizar.html?type=proposal&id=${row.id}`;
+              window.location.href = criarUrlVisualizacao('proposal', row.id);
             };
             return;
           }
