@@ -868,18 +868,53 @@ window.db = {
 
   async insertProposal(payload) {
     await assertPermission('insert');
-    return exec(
-      supabase.from('proposals').insert([payload]).select().single(),
-      { table: 'proposals', operation: 'insert' }
-    );
+    const { data, error } = await supabase
+      .from('proposals')
+      .insert([payload])
+      .select('*')
+      .single();
+    if (error) {
+      console.error('[db] insertProposal', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      const redirected = await handleUnauthorized(error);
+      if (redirected) {
+        const authError = new Error('Sessao expirada. Faca login novamente.');
+        authError.code = 'AUTH_REQUIRED';
+        throw authError;
+      }
+      throw error;
+    }
+    return data;
   },
 
   async updateProposal(id, payload) {
     await assertPermission('update');
-    return exec(
-      supabase.from('proposals').update(payload).eq('id', id).select().single(),
-      { table: 'proposals', operation: 'update' }
-    );
+    const { data, error } = await supabase
+      .from('proposals')
+      .update(payload)
+      .eq('id', Number(id))
+      .select('*')
+      .single();
+    if (error) {
+      console.error('[db] updateProposal', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      const redirected = await handleUnauthorized(error);
+      if (redirected) {
+        const authError = new Error('Sessao expirada. Faca login novamente.');
+        authError.code = 'AUTH_REQUIRED';
+        throw authError;
+      }
+      throw error;
+    }
+    return data;
   },
 
   async deleteProposal(id) {

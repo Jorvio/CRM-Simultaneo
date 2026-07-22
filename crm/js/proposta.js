@@ -1,7 +1,7 @@
-import './auth-guard.js?v=20260722-9';
-import './user-menu.js?v=20260722-9';
-import './ui.js?v=20260722-9';
-import { db, loadCurrentUserPermissions } from './supabase.js?v=20260722-9';
+import './auth-guard.js?v=20260722-10';
+import './user-menu.js?v=20260722-10';
+import './ui.js?v=20260722-10';
+import { db, loadCurrentUserPermissions } from './supabase.js?v=20260722-10';
 
 await window.crmAuthReady;
 
@@ -149,6 +149,46 @@ function converterValorMonetario(value) {
   const normalized = text.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
   const number = Number(normalized);
   return Number.isFinite(number) ? number : null;
+}
+
+function textoOuNull(valor) {
+  const texto = String(valor ?? '').trim();
+  return texto || null;
+}
+
+function inteiroOuNull(valor) {
+  if (valor === null || valor === undefined || String(valor).trim() === '') return null;
+  const numero = Number(String(valor).replace(/\D/g, ''));
+  return Number.isInteger(numero) && numero > 0 ? numero : null;
+}
+
+function dataOuNull(valor) {
+  const texto = String(valor ?? '').trim();
+  if (!texto) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
+  const correspondencia = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (correspondencia) {
+    const [, dia, mes, ano] = correspondencia;
+    return `${ano}-${mes}-${dia}`;
+  }
+  return null;
+}
+
+function moedaOuNull(valor) {
+  if (valor === null || valor === undefined || String(valor).trim() === '') return null;
+  let texto = String(valor).trim()
+    .replace(/R\$/gi, '')
+    .replace(/US\$/gi, '')
+    .replace(/\s/g, '')
+    .replace(/[^\d,.-]/g, '');
+  if (!texto) return null;
+  if (texto.includes('.') && texto.includes(',')) {
+    texto = texto.replace(/\./g, '').replace(',', '.');
+  } else if (texto.includes(',')) {
+    texto = texto.replace(',', '.');
+  }
+  const numero = Number(texto);
+  return Number.isFinite(numero) ? numero : null;
 }
 
 function obterTexto(input) {
@@ -493,31 +533,28 @@ async function carregarPropostaAPartirDoProjeto() {
 }
 
 function montarPayload() {
-  const clientId = Number(fldProposalClientId.value);
-  const projectId = Number(fldProposalProjectId.value);
-
   return {
-    proposal_number: obterTexto(fldProposalNumber),
-    client_id: Number.isFinite(clientId) ? clientId : null,
-    project_id: Number.isFinite(projectId) ? projectId : null,
+    proposal_number: textoOuNull(fldProposalNumber?.value),
+    client_id: inteiroOuNull(fldProposalClientId?.value),
+    project_id: inteiroOuNull(fldProposalProjectId?.value),
     contact_id: null,
-    contact_name: obterTexto(fldProposalContact) || null,
-    point_of_contact: obterTexto(fldProposalPointOfContact) || null,
-    budget_date: fldProposalBudgetDate.value || null,
-    closing_date: fldProposalClosingDate.value || null,
-    closing_month: fldProposalClosingMonth.value || null,
-    value_usd: fldProposalValueUSD.value === '' ? null : Number(fldProposalValueUSD.value),
-    value_brl: fldProposalValueBRL.value === '' ? null : Number(fldProposalValueBRL.value),
-    proposal_status: fldProposalStatus.value || null,
-    project_status: fldProposalProjectStatus.value || null,
-    notes: obterTexto(fldProposalNotes) || null,
-    payment_method: obterTexto(fldProposalPaymentMethod) || null,
-    installment_terms: obterTexto(fldProposalInstallmentTerms) || null,
-    payment_due_date: fldProposalPaymentDueDate.value || null,
-    installment_due_day: obterNumeroInteiro(fldProposalInstallmentDueDay.value),
-    installment_value: converterValorMonetario(fldProposalInstallmentValue.value),
-    contract_delivery_method: obterTexto(fldProposalContractDeliveryMethod) || null,
-    billing_delivery_method: obterTexto(fldProposalBillingDeliveryMethod) || null
+    contact_name: textoOuNull(fldProposalContact?.value),
+    point_of_contact: textoOuNull(fldProposalPointOfContact?.value),
+    budget_date: dataOuNull(fldProposalBudgetDate?.value),
+    closing_date: dataOuNull(fldProposalClosingDate?.value),
+    closing_month: textoOuNull(fldProposalClosingMonth?.value),
+    value_brl: moedaOuNull(fldProposalValueBRL?.value),
+    value_usd: moedaOuNull(fldProposalValueUSD?.value),
+    proposal_status: textoOuNull(fldProposalStatus?.value),
+    project_status: textoOuNull(fldProposalProjectStatus?.value),
+    notes: textoOuNull(fldProposalNotes?.value),
+    payment_method: textoOuNull(fldProposalPaymentMethod?.value),
+    installment_terms: textoOuNull(fldProposalInstallmentTerms?.value),
+    payment_due_date: dataOuNull(fldProposalPaymentDueDate?.value),
+    installment_due_day: inteiroOuNull(fldProposalInstallmentDueDay?.value),
+    installment_value: moedaOuNull(fldProposalInstallmentValue?.value),
+    contract_delivery_method: textoOuNull(fldProposalContractDeliveryMethod?.value),
+    billing_delivery_method: textoOuNull(fldProposalBillingDeliveryMethod?.value)
   };
 }
 
@@ -533,76 +570,131 @@ async function validarRelacaoProjetoCliente(clientId, projectId) {
   return selectedProject;
 }
 
+let salvamentoEmAndamento = false;
+
 async function salvarProposta() {
-  const clientId = Number(fldProposalClientId.value);
-  const projectId = Number(fldProposalProjectId.value);
-  const payload = montarPayload();
+  if (salvamentoEmAndamento) return;
 
-  const required = {
-    'Numero da proposta': payload.proposal_number,
-    'Cliente': Number.isFinite(clientId) ? clientId : null,
-    'Projeto': Number.isFinite(projectId) ? projectId : null,
-    'Contato': payload.contact_name,
-    'Ponto de contato': payload.point_of_contact,
-    'Data do orçamento': payload.budget_date
-  };
+  const botao = document.getElementById('btnSaveProposal');
+  salvamentoEmAndamento = true;
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
 
-  for (const [label, value] of Object.entries(required)) {
-    if (!value) {
-      showToast(`${label} é obrigatório.`, 'error');
+  try {
+    const payload = montarPayload();
+
+    Object.keys(payload).forEach(chave => {
+      if (payload[chave] === undefined) {
+        payload[chave] = null;
+      }
+    });
+
+    console.log('[Proposta] Payload normalizado', payload);
+
+    if (!payload.proposal_number) {
+      showToast('Informe o número da proposta.', 'error');
       return;
     }
-  }
 
-  if (!Number.isFinite(clientId) || !state.selectedClient || Number(state.selectedClient.id) !== clientId) {
-    showToast('Selecione um cliente válido da lista.', 'error');
-    return;
-  }
-
-  if (!Number.isFinite(projectId) || !state.selectedProject || Number(state.selectedProject.id) !== projectId) {
-    showToast('Selecione um projeto válido da lista.', 'error');
-    return;
-  }
-
-  const projetoConfirmado = await validarRelacaoProjetoCliente(clientId, projectId);
-  if (!projetoConfirmado) {
-    return;
-  }
-
-  let proposalSaved;
-  try {
-    if (proposalId) {
-      proposalSaved = await db.updateProposal(Number(proposalId), payload);
-    } else {
-      proposalSaved = await db.insertProposal(payload);
+    if (!payload.client_id) {
+      showToast('Selecione um cliente da lista.', 'error');
+      return;
     }
+
+    if (!payload.project_id) {
+      showToast('Selecione um projeto da lista.', 'error');
+      return;
+    }
+
+    if (!payload.budget_date) {
+      showToast('Informe a data do orçamento.', 'error');
+      return;
+    }
+
+    if (!payload.proposal_status) {
+      showToast('Informe o status da proposta.', 'error');
+      return;
+    }
+
+    if (!state.selectedClient || Number(state.selectedClient.id) !== payload.client_id) {
+      showToast('Selecione um cliente válido da lista.', 'error');
+      return;
+    }
+
+    if (!state.selectedProject || Number(state.selectedProject.id) !== payload.project_id) {
+      showToast('Selecione um projeto válido da lista.', 'error');
+      return;
+    }
+
+    if (payload.installment_due_day !== null && (payload.installment_due_day < 1 || payload.installment_due_day > 31)) {
+      showToast('O dia do vencimento deve estar entre 1 e 31.', 'error');
+      return;
+    }
+
+    const projetoConfirmado = await validarRelacaoProjetoCliente(payload.client_id, payload.project_id);
+    if (!projetoConfirmado) return;
+
+    let propostaSalva;
+    if (proposalId) {
+      propostaSalva = await db.updateProposal(Number(proposalId), payload);
+    } else {
+      propostaSalva = await db.insertProposal(payload);
+    }
+
+    const idSalvo = Number(propostaSalva?.id || proposalId);
+    if (!Number.isFinite(idSalvo) || idSalvo <= 0) {
+      showToast('Não foi possível determinar o ID da proposta salva.', 'error');
+      return;
+    }
+
+    const propostaConfirmada = await db.fetchProposalById(idSalvo).catch(err => {
+      console.error('[Proposta] Falha ao confirmar proposta', err);
+      return null;
+    });
+
+    console.log('[Proposta] Registro confirmado', propostaConfirmada);
+
+    if (!propostaConfirmada) {
+      showToast('A proposta foi salva, mas a confirmação dos dados falhou.', 'error');
+      return;
+    }
+
+    const returnTo = encodeURIComponent(obterRetornoOrigem());
+    showToast(proposalId ? 'Proposta atualizada com sucesso.' : 'Proposta cadastrada com sucesso.', 'success');
+    window.location.href = `./visualizar.html?type=proposal&id=${idSalvo}&returnTo=${returnTo}`;
+
   } catch (error) {
-    console.error('[Proposta] Falha ao salvar proposta', error);
-    showToast('Nao foi possivel salvar a proposta.', 'error');
-    return;
+    if (error?.code === 'AUTH_REQUIRED') return;
+
+    console.error('[Proposta] Falha ao salvar', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint
+    });
+
+    let mensagem = 'Não foi possível salvar a proposta.';
+
+    if (error?.code === '42501' || error?.code === 'PERMISSION_DENIED') {
+      mensagem = 'Sua conta não possui permissão para salvar propostas.';
+    } else if (error?.code === '23502') {
+      mensagem = 'Existe um campo obrigatório sem preenchimento.';
+    } else if (error?.code === '23503') {
+      mensagem = 'O cliente ou projeto selecionado não existe.';
+    } else if (error?.code === '23505') {
+      mensagem = 'Já existe uma proposta com essa identificação.';
+    } else if (error?.message?.includes('invalid input syntax')) {
+      mensagem = 'Existe uma data, número ou valor em formato inválido.';
+    } else if (error?.message) {
+      mensagem = `Não foi possível salvar: ${error.message}`;
+    }
+
+    showToast(mensagem, 'error');
+  } finally {
+    salvamentoEmAndamento = false;
+    botao.disabled = false;
+    botao.textContent = proposalId ? 'Salvar Alterações' : 'Salvar Proposta';
   }
-
-  const idSalvo = Number(proposalSaved?.id || proposalId);
-  if (!Number.isFinite(idSalvo)) {
-    showToast('Nao foi possivel determinar o ID da proposta salva.', 'error');
-    return;
-  }
-
-  const propostaConfirmada = await db.fetchProposalById(idSalvo).catch((error) => {
-    console.error('[Proposta] Falha ao confirmar proposta', error);
-    return null;
-  });
-
-  console.log('[Proposta] Dados confirmados', propostaConfirmada);
-
-  if (!propostaConfirmada) {
-    showToast('A proposta foi salva, mas a confirmação dos dados falhou.', 'error');
-    return;
-  }
-
-  const returnTo = encodeURIComponent(obterRetornoOrigem());
-  showToast(proposalId ? 'Proposta atualizada com sucesso.' : 'Proposta cadastrada com sucesso.', 'success');
-  window.location.href = `./visualizar.html?type=proposal&id=${idSalvo}&returnTo=${returnTo}`;
 }
 
 fldProposalClosingDate.addEventListener('change', () => {
