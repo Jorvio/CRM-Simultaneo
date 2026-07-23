@@ -1,5 +1,5 @@
 import { db, obterSessaoObrigatoria, loadCurrentUserPermissions } from './supabase.js';
-import { fetchCotacaoAtual, fetchHistoricoDolar } from './cotacao.js';
+import { fetchCotacaoAtual, fetchHistoricoDolar, fetchIntradayDolar } from './cotacao.js?v=20260723-22';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Constantes
@@ -27,8 +27,8 @@ const CORES = {
 const PALETA_ANOS = ['#F59E0B', '#10B981', '#7C3AED', '#EF4444', '#4a5162', '#0EA5E9', '#EC4899', '#84CC16'];
 
 const PERIODOS_DOLAR = [
-  { chave: '1D', label: '1 D', qtd: 2 },
-  { chave: '5D', label: '5 D', qtd: 5 },
+  { chave: '1D', label: '1 D', qtd: null, intraday: true, horas: 24 },
+  { chave: '5D', label: '5 D', qtd: null, intraday: true, horas: 24 * 5 },
   { chave: '1M', label: '1 M', qtd: 22 },
   { chave: '1A', label: '1 A', qtd: 252 },
   { chave: '5A', label: '5 A', qtd: null },
@@ -59,6 +59,7 @@ let graficoAnual = null;
 
 let cotacaoAtual = null;
 let historicoDolar = [];
+let intradayDolar = [];
 let periodoSelecionadoDolar = '1M';
 
 const elDashRoot = document.getElementById('dash-root');
@@ -678,9 +679,21 @@ function renderizarGraficos(agregadoAno, bucketAtual) {
 }
 
 function obterHistoricoParaPeriodo(periodo) {
-  if (!historicoDolar || historicoDolar.length === 0) return [];
   const config = PERIODOS_DOLAR.find((p) => p.chave === periodo);
-  if (!config || !config.qtd) return historicoDolar; // 5A / Máx -> usa tudo que a API entregou
+  if (!config) return historicoDolar || [];
+
+  // Períodos curtos (1D / 5D) usam os ticks intraday, senão teríamos
+  // apenas 1 ou 5 pontos e o gráfico não mostraria as oscilações.
+  if (config.intraday) {
+    if (!intradayDolar || intradayDolar.length === 0) return [];
+    const limite = Date.now() - (config.horas * 60 * 60 * 1000);
+    const recortado = intradayDolar.filter((ponto) => ponto.data.getTime() >= limite);
+    // Se o recorte ficar curto demais (ex: fim de semana sem pregão), mostra tudo que temos
+    return recortado.length >= 2 ? recortado : intradayDolar;
+  }
+
+  if (!historicoDolar || historicoDolar.length === 0) return [];
+  if (!config.qtd) return historicoDolar; // 5A / Máx -> usa tudo que a API entregou
   return historicoDolar.slice(-config.qtd);
 }
 
@@ -695,6 +708,7 @@ function renderizarGraficoDolar() {
   if (!canvasDolar) return;
 
   const pontos = obterHistoricoParaPeriodo(periodoSelecionadoDolar);
+  const usaIntraday = Boolean(PERIODOS_DOLAR.find((p) => p.chave === periodoSelecionadoDolar)?.intraday);
 
   if (pontos.length < 2) {
     const ctx = canvasDolar.getContext('2d');
@@ -711,7 +725,9 @@ function renderizarGraficoDolar() {
   graficoDolar = new window.Chart(canvasDolar, {
     type: 'line',
     data: {
-      labels: pontos.map((item) => `${item.data.getDate()} de ${MESES_ABREV_MIN[item.data.getMonth()]}.`),
+      labels: pontos.map((item) => usaIntraday
+        ? item.data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        : `${item.data.getDate()} de ${MESES_ABREV_MIN[item.data.getMonth()]}.`),
       datasets: [{
         label: 'USD/BRL',
         data: pontos.map((item) => item.bid),
@@ -931,7 +947,8 @@ async function carregarDadosDashboard() {
       db.fetchProposals(),
       db.fetchContracts(),
       fetchCotacaoAtual(),
-      fetchHistoricoDolar(360)
+      fetchHistoricoDolar(360),
+      fetchIntradayDolar(400)
     ]);
 
     const errosDeFonte = [];
@@ -942,12 +959,16 @@ async function carregarDadosDashboard() {
 
     cotacaoAtual = resultados[4].status === 'fulfilled' ? resultados[4].value : null;
     historicoDolar = resultados[5].status === 'fulfilled' ? resultados[5].value : [];
+    intradayDolar = resultados[6].status === 'fulfilled' ? resultados[6].value : [];
 
     if (resultados[4].status === 'rejected') {
       console.error('[Dashboard] Falha ao buscar cotação atual do dólar:', resultados[4].reason);
     }
     if (resultados[5].status === 'rejected') {
       console.error('[Dashboard] Falha ao buscar histórico do dólar:', resultados[5].reason);
+    }
+    if (resultados[6].status === 'rejected') {
+      console.error('[Dashboard] Falha ao buscar intraday do dólar:', resultados[6].reason);
     }
 
     console.log('[Dashboard] Dados recebidos', {

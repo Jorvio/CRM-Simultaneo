@@ -91,6 +91,37 @@ function converterDataDaAPI(item) {
 }
 
 /**
+ * Busca cotações intraday (ticks recentes, várias por dia).
+ * Usado para os períodos curtos (1D / 5D), onde o endpoint diário
+ * entregaria apenas 1 ponto por dia e o gráfico ficaria "quadrado".
+ * Retorna array ordenado (mais antigo -> mais recente) de { data, bid }
+ */
+export async function fetchIntradayDolar(quantidade = 100) {
+  const qtd = Math.min(Math.max(Number(quantidade) || 100, 2), 1500);
+
+  const resposta = await fetch(`${AWESOME_API_BASE}/json/USD-BRL/${qtd}`);
+  if (!resposta.ok) {
+    throw new Error(`Falha ao buscar cotações intraday (HTTP ${resposta.status})`);
+  }
+
+  const dados = await resposta.json();
+  if (!Array.isArray(dados)) {
+    throw new Error('Resposta intraday em formato inesperado');
+  }
+
+  const pontos = dados
+    .map((item) => ({
+      data: converterDataDaAPI(item),
+      bid: Number(item.bid)
+    }))
+    .filter((item) => item.data && Number.isFinite(item.bid))
+    .sort((a, b) => a.data - b.data);
+
+  console.log(`[cotacao] Intraday do dólar: ${dados.length} registros brutos -> ${pontos.length} pontos válidos`);
+  return pontos;
+}
+
+/**
  * Busca o histórico diário do dólar comercial nos últimos `dias`.
  * Retorna array ordenado (mais antigo -> mais recente) de { data, bid }
  */
