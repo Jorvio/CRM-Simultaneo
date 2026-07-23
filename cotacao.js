@@ -69,12 +69,34 @@ export async function fetchCotacaoAtual({ forcarAtualizacao = false } = {}) {
   return cotacao;
 }
 
+function formatarDataParaAPI(data) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, '0');
+  return `${ano}${mes}${dia}`;
+}
+
 /**
  * Busca o histórico diário do dólar comercial nos últimos `dias`.
  * Retorna array ordenado (mais antigo -> mais recente) de { data, bid }
  */
 export async function fetchHistoricoDolar(dias = 30) {
-  const resposta = await fetch(`${AWESOME_API_BASE}/json/daily/USD-BRL/${dias}`);
+  const hoje = new Date();
+  const inicio = new Date();
+  inicio.setDate(inicio.getDate() - dias);
+
+  // Forçamos start_date/end_date explícitos: sem isso, a API às vezes devolve
+  // várias cotações de um intervalo curto (ex: só do dia de hoje) em vez de
+  // uma cotação por dia espalhada ao longo do período pedido.
+  const params = new URLSearchParams({
+    start_date: formatarDataParaAPI(inicio),
+    end_date: formatarDataParaAPI(hoje)
+  });
+
+  // Limite máximo da API é 360; damos uma folga (fins de semana/feriados não têm cotação)
+  const quantidade = Math.min(Math.ceil(dias * 1.6) + 10, 360);
+
+  const resposta = await fetch(`${AWESOME_API_BASE}/json/daily/USD-BRL/${quantidade}?${params.toString()}`);
   if (!resposta.ok) {
     throw new Error(`Falha ao buscar histórico do dólar (HTTP ${resposta.status})`);
   }
@@ -103,5 +125,7 @@ export async function fetchHistoricoDolar(dias = 30) {
     }
   });
 
-  return Array.from(porDia.values()).sort((a, b) => a.data - b.data);
+  const resultado = Array.from(porDia.values()).sort((a, b) => a.data - b.data);
+  console.log(`[cotacao] Histórico do dólar: ${dados.length} registros brutos -> ${resultado.length} dias únicos`);
+  return resultado;
 }

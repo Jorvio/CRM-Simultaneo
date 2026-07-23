@@ -24,6 +24,8 @@ const CORES = {
   marca: '#ffb800'
 };
 
+const PALETA_ANOS = ['#F59E0B', '#10B981', '#7C3AED', '#EF4444', '#4a5162', '#0EA5E9', '#EC4899', '#84CC16'];
+
 const PERIODOS_DOLAR = [
   { chave: '1D', label: '1 D', qtd: 2 },
   { chave: '5D', label: '5 D', qtd: 5 },
@@ -337,37 +339,6 @@ function construirAgregadoDoAno(ano) {
   return buckets;
 }
 
-function construirAgregadoAnual() {
-  const porAno = new Map();
-
-  function obterBucket(ano) {
-    if (!porAno.has(ano)) {
-      porAno.set(ano, { ano, propostas: 0, valorPropostas: 0, aprovadas: 0, valorAprovado: 0 });
-    }
-    return porAno.get(ano);
-  }
-
-  propostasNormalizadas.forEach((p) => {
-    const dataRecebimento = extrairData(p.budgetDate) || extrairData(p.createdAt);
-    if (dataRecebimento) {
-      const bucket = obterBucket(dataRecebimento.ano);
-      bucket.propostas++;
-      bucket.valorPropostas += p.valorReais;
-    }
-
-    if (p.statusCategoria === 'aprovada') {
-      const dataAprovacao = extrairData(p.closingDate) || extrairData(p.budgetDate) || extrairData(p.createdAt);
-      if (dataAprovacao) {
-        const bucket = obterBucket(dataAprovacao.ano);
-        bucket.aprovadas++;
-        bucket.valorAprovado += p.valorReais;
-      }
-    }
-  });
-
-  return Array.from(porAno.values()).sort((a, b) => a.ano - b.ano);
-}
-
 function calcularDelta(atual, anterior, campo) {
   if (!anterior || !anterior[campo]) return null;
   return Math.round(((atual[campo] - anterior[campo]) / anterior[campo]) * 100);
@@ -403,6 +374,16 @@ function renderizarDashboard() {
   const ytdValor = agregadoAno.slice(0, mesSelecionado + 1).reduce((soma, b) => soma + b.valorAprovado, 0);
   const ytdPropostas = agregadoAno.slice(0, mesSelecionado + 1).reduce((soma, b) => soma + b.propostas, 0);
 
+  const totaisAnoStatus = agregadoAno.reduce((acc, b) => {
+    acc.abertas += b.abertas;
+    acc.negociando += b.negociando;
+    acc.aprovadas += b.aprovadas;
+    acc.perdidas += b.perdidas;
+    acc.pausadas += b.pausadas;
+    acc.propostas += b.propostas;
+    return acc;
+  }, { abertas: 0, negociando: 0, aprovadas: 0, perdidas: 0, pausadas: 0, propostas: 0 });
+
   const taxaConversao = bucketAtual.propostas > 0
     ? Math.round((bucketAtual.aprovadas / bucketAtual.propostas) * 100)
     : 0;
@@ -436,10 +417,18 @@ function renderizarDashboard() {
     <div class="section-label"><span>COTAÇÃO DO DÓLAR &amp; HISTÓRICO ANUAL</span><div class="section-rule"></div></div>
     <div class="charts-row" style="grid-template-columns:0.65fr 2fr; margin-bottom:24px; align-items:stretch;">
       <div id="fxCardDolar" style="height:100%;">${renderizarPainelDolar()}</div>
-      <div class="panel">
+      <div class="panel" style="display:flex;flex-direction:column;height:100%;box-sizing:border-box;">
         <div class="panel-title">Propostas por ano</div>
-        <div class="panel-sub">Valor aprovado (barras) e propostas recebidas (linha)</div>
-        <div class="chart-wrapper-tall"><canvas id="graficoPropostasAnual"></canvas></div>
+        <div class="panel-sub">Total e distribuição de status em ${anoSelecionado}</div>
+        <div style="display:flex;align-items:center;gap:24px;flex:1;min-height:0;margin-top:6px;">
+          <div style="flex-shrink:0;">
+            <div style="font-size:11px;color:var(--text-soft,#6B7280);margin-bottom:4px;">Total no ano</div>
+            <div class="num" style="font-size:40px;font-weight:700;color:${CORES.texto};line-height:1;">${totaisAnoStatus.propostas}</div>
+          </div>
+          <div style="flex:1;min-width:0;height:100%;position:relative;">
+            <canvas id="graficoStatusAnual"></canvas>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -495,14 +484,30 @@ function renderizarDashboard() {
     </div>
   `;
 
-  renderizarGraficos(agregadoAno, bucketAtual);
-  renderizarGraficoAnual(construirAgregadoAnual());
+  try {
+    renderizarGraficos(agregadoAno, bucketAtual);
+  } catch (error) {
+    console.error('[Dashboard] Falha ao renderizar gráficos mensais/status:', error);
+  }
+  try {
+    renderizarGraficoStatusAnual(totaisAnoStatus);
+  } catch (error) {
+    console.error('[Dashboard] Falha ao renderizar gráfico anual:', error);
+  }
   atualizarBotoesMes();
 }
 
 // ─────────────────────────────────────────────────────────────────────────
 // Painel de cotação do dólar (estilo ticker / análise técnica)
 // ─────────────────────────────────────────────────────────────────────────
+
+function calcularVariacaoPeriodo(pontos) {
+  if (!pontos || pontos.length < 2) return null;
+  const primeiro = pontos[0].bid;
+  const ultimo = pontos[pontos.length - 1].bid;
+  if (!primeiro) return null;
+  return ((ultimo - primeiro) / primeiro) * 100;
+}
 
 function renderizarPainelDolar() {
   if (!cotacaoAtual) {
@@ -513,7 +518,12 @@ function renderizarPainelDolar() {
       </div>`;
   }
 
-  const subiu = cotacaoAtual.pctChange >= 0;
+  const pontosPeriodo = obterHistoricoParaPeriodo(periodoSelecionadoDolar);
+  const variacaoPeriodo = calcularVariacaoPeriodo(pontosPeriodo);
+  // Se não houver pontos suficientes no período, cai no % do dia (o que a própria API já fornece)
+  const variacaoExibida = variacaoPeriodo ?? cotacaoAtual.pctChange;
+
+  const subiu = variacaoExibida >= 0;
   const corTendencia = subiu ? '#3ddc84' : '#ff5c5c';
   const seta = subiu ? '▲' : '▼';
 
@@ -535,7 +545,7 @@ function renderizarPainelDolar() {
           <div class="num" style="font-size:24px;font-weight:700;color:#f2f3f7;margin-top:2px;">${escapeHtml(formatarTaxaCambio(cotacaoAtual.bid))}</div>
         </div>
         <div class="num" style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:${corTendencia}22;color:${corTendencia};white-space:nowrap;margin-top:2px;">
-          ${seta} ${subiu ? '+' : ''}${cotacaoAtual.pctChange}%
+          ${seta} ${subiu ? '+' : ''}${variacaoExibida.toFixed(2)}%
         </div>
       </div>
 
@@ -765,62 +775,43 @@ function renderizarGraficoDolar() {
   });
 }
 
-function renderizarGraficoAnual(agregadoAnual) {
+function renderizarGraficoStatusAnual(totaisAnoStatus) {
   if (typeof window.Chart === 'undefined') return;
 
-  const canvasAnual = document.getElementById('graficoPropostasAnual');
+  const canvasAnual = document.getElementById('graficoStatusAnual');
   if (graficoAnual) {
     graficoAnual.destroy();
     graficoAnual = null;
   }
-  if (!canvasAnual || !agregadoAnual || agregadoAnual.length === 0) return;
+  if (!canvasAnual) return;
+
+  if (!totaisAnoStatus || totaisAnoStatus.propostas === 0) {
+    const ctx = canvasAnual.getContext('2d');
+    ctx.clearRect(0, 0, canvasAnual.width, canvasAnual.height);
+    ctx.fillStyle = CORES.textoFraco;
+    ctx.font = '13px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Nenhuma proposta neste ano', canvasAnual.width / 2, canvasAnual.height / 2);
+    return;
+  }
+
+  const labels = ['Abertas', 'Negociando', 'Aprovadas', 'Perdidas', 'Pausadas'];
+  const valores = [totaisAnoStatus.abertas, totaisAnoStatus.negociando, totaisAnoStatus.aprovadas, totaisAnoStatus.perdidas, totaisAnoStatus.pausadas];
+  const cores = [CORES.neutro, CORES.ambar, CORES.ciano, CORES.vermelho, CORES.violeta];
 
   graficoAnual = new window.Chart(canvasAnual, {
-    type: 'bar',
+    type: 'doughnut',
     data: {
-      labels: agregadoAnual.map((b) => String(b.ano)),
-      datasets: [
-        {
-          type: 'bar',
-          label: 'Valor aprovado',
-          data: agregadoAnual.map((b) => b.valorAprovado),
-          backgroundColor: agregadoAnual.map((b) => b.ano === anoSelecionado ? CORES.ambar : '#333a48'),
-          borderRadius: 4,
-          maxBarThickness: 46,
-          yAxisID: 'y'
-        },
-        {
-          type: 'line',
-          label: 'Propostas recebidas',
-          data: agregadoAnual.map((b) => b.propostas),
-          borderColor: CORES.violeta,
-          backgroundColor: CORES.violeta,
-          borderWidth: 2,
-          pointRadius: 3,
-          pointBackgroundColor: CORES.violeta,
-          tension: 0.25,
-          yAxisID: 'y1'
-        }
-      ]
+      labels,
+      datasets: [{ data: valores, backgroundColor: cores, borderWidth: 1 }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      cutout: '62%',
       animation: { duration: 300 },
       plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, font: { size: 10 } } },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => ctx.dataset.yAxisID === 'y1'
-              ? `${ctx.dataset.label}: ${ctx.parsed.y}`
-              : `${ctx.dataset.label}: ${formatarMoeda(ctx.parsed.y)}`
-          }
-        }
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: CORES.textoFraco, font: { size: 11 } } },
-        y: { position: 'left', grid: { color: CORES.linhaSuave }, ticks: { color: CORES.textoFraco, font: { size: 10 }, callback: (v) => formatarMoedaCompacta(v) } },
-        y1: { position: 'right', grid: { display: false }, ticks: { color: CORES.textoFraco, font: { size: 10 } } }
+        legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, font: { size: 10 } } }
       }
     }
   });
