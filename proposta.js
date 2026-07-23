@@ -2,6 +2,7 @@ import './auth-guard.js';
 import './user-menu.js';
 import './ui.js';
 import { db, loadCurrentUserPermissions } from './supabase.js';
+import { fetchCotacaoAtual } from './cotacao.js';
 
 await window.crmAuthReady;
 
@@ -39,6 +40,12 @@ const state = {
   proposalLoaded: null
 };
 
+// Cotação do dólar buscada ao carregar a página (usada para converter USD -> BRL automaticamente)
+let cotacaoAtual = null;
+// Guarda qual cotação foi de fato usada para gerar o valor em reais atualmente no formulário
+// (persistida junto com a proposta nas colunas exchange_rate / exchange_rate_at / exchange_rate_source)
+let cotacaoUtilizada = null;
+
 const fldProposalNumber = document.getElementById('fldProposalNumber');
 const fldProposalClientSearch = document.getElementById('fldProposalClientSearch');
 const fldProposalClientId = document.getElementById('fldProposalClientId');
@@ -56,6 +63,7 @@ const fldProposalProjectStatus = document.getElementById('fldProposalProjectStat
 const fldProposalNotes = document.getElementById('fldProposalNotes');
 const fldProposalValueBRL = document.getElementById('fldProposalValueBRL');
 const fldProposalValueUSD = document.getElementById('fldProposalValueUSD');
+const fldCotacaoInfo = document.getElementById('cotacaoInfo');
 const fldProposalPaymentMethod = document.getElementById('fldProposalPaymentMethod');
 const fldProposalInstallmentTerms = document.getElementById('fldProposalInstallmentTerms');
 const fldProposalPaymentDueDate = document.getElementById('fldProposalPaymentDueDate');
@@ -189,6 +197,49 @@ function moedaOuNull(valor) {
   }
   const numero = Number(texto);
   return Number.isFinite(numero) ? numero : null;
+}
+
+async function carregarCotacaoAtual() {
+  try {
+    cotacaoAtual = await fetchCotacaoAtual();
+    if (fldCotacaoInfo) {
+      fldCotacaoInfo.textContent = `Cotação atual do dólar: R$ ${cotacaoAtual.bid.toFixed(4)}`;
+      fldCotacaoInfo.style.color = '';
+    }
+  } catch (error) {
+    console.error('[Proposta] Falha ao obter cotação do dólar:', error);
+    cotacaoAtual = null;
+    if (fldCotacaoInfo) {
+      fldCotacaoInfo.textContent = 'Não foi possível obter a cotação do dólar agora. Preencha o valor em reais manualmente.';
+      fldCotacaoInfo.style.color = '#B45309';
+    }
+  }
+}
+
+// Recalcula o valor em reais sempre que o usuário digita no campo de dólar.
+// Só é acionado por digitação do usuário (evento "input"), então nunca sobrescreve
+// o valor em reais quando o formulário é preenchido programaticamente (ex: ao editar
+// uma proposta existente) — isso permite que propostas só em reais continuem editáveis normalmente.
+function calcularValorReaisAPartirDoDolar() {
+  const usd = converterValorMonetario(fldProposalValueUSD.value);
+
+  if (usd === null || usd <= 0) {
+    cotacaoUtilizada = null;
+    return;
+  }
+
+  if (!cotacaoAtual) {
+    showToast('Cotação do dólar indisponível no momento. Informe o valor em reais manualmente.', 'error');
+    return;
+  }
+
+  const brl = usd * cotacaoAtual.bid;
+  fldProposalValueBRL.value = brl.toFixed(2);
+  cotacaoUtilizada = {
+    rate: cotacaoAtual.bid,
+    at: cotacaoAtual.dataHora,
+    source: cotacaoAtual.fonte
+  };
 }
 
 function obterTexto(input) {
@@ -488,6 +539,14 @@ function preencherFormulario(proposal) {
   fldProposalNotes.value = proposal.observations || proposal.notes || '';
   fldProposalValueBRL.value = proposal.value_brl ?? '';
   fldProposalValueUSD.value = proposal.value_usd ?? '';
+
+  cotacaoUtilizada = proposal.exchange_rate
+    ? {
+        rate: Number(proposal.exchange_rate),
+        at: proposal.exchange_rate_at ? new Date(proposal.exchange_rate_at) : null,
+        source: proposal.exchange_rate_source || null
+      }
+    : null;
   fldProposalPaymentMethod.value = proposal.payment_method || '';
   fldProposalInstallmentTerms.value = proposal.installment_terms || '';
   fldProposalPaymentDueDate.value = proposal.payment_due_date || '';
@@ -545,6 +604,9 @@ function montarPayload() {
     closing_month: textoOuNull(fldProposalClosingMonth?.value),
     value_brl: moedaOuNull(fldProposalValueBRL?.value),
     value_usd: moedaOuNull(fldProposalValueUSD?.value),
+    exchange_rate: cotacaoUtilizada?.rate ?? null,
+    exchange_rate_at: cotacaoUtilizada?.at ? cotacaoUtilizada.at.toISOString() : null,
+    exchange_rate_source: cotacaoUtilizada?.source ?? null,
     proposal_status: textoOuNull(fldProposalStatus?.value),
     project_status: textoOuNull(fldProposalProjectStatus?.value),
     observations: textoOuNull(fldProposalNotes?.value),
@@ -698,6 +760,8 @@ async function salvarProposta() {
   }
 }
 
+fldProposalValueUSD.addEventListener('input', calcularValorReaisAPartirDoDolar);
+
 fldProposalClosingDate.addEventListener('change', () => {
   if (fldProposalClosingDate.value) {
     fldProposalClosingMonth.value = formatMonthToInput(fldProposalClosingDate.value);
@@ -710,7 +774,7 @@ document.getElementById('btnSaveProposal').addEventListener('click', salvarPropo
 document.getElementById('btnCancelProposal').addEventListener('click', voltarParaOrigem);
 document.getElementById('btnBackProposal').addEventListener('click', voltarParaOrigem);
 
-await carregarClientes();
+await Promise.all([carregarClientes(), carregarCotacaoAtual()]);
 configurarCampoProjetoDesabilitado();
 
 if (!proposalId) {
