@@ -206,7 +206,7 @@
 
       const podeEditar =
         perfilAtivo &&
-        roleName === 'master';
+        ['master', 'editor'].includes(roleName);
 
       if (!clientId && !podeAdicionar) {
           showToast('Seu usuario nao possui permissao para salvar clientes.', 'error');

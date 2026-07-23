@@ -1,7 +1,7 @@
-import './auth-guard.js?v=20260722-9';
-import './user-menu.js?v=20260722-9';
-import './ui.js?v=20260722-9';
-import { db, loadCurrentUserPermissions } from './supabase.js?v=20260722-9';
+import './auth-guard.js';
+import './user-menu.js';
+import './ui.js';
+import { db, loadCurrentUserPermissions } from './supabase.js';
 
 await window.crmAuthReady;
 
@@ -111,6 +111,15 @@ function obterDestinoOuPaginaAtual() {
 
 function voltarParaOrigem() {
   const destino = obterDestinoRetorno();
+
+  // O parâmetro returnTo representa a página que abriu o registro e tem prioridade.
+  // Assim, uma proposta aberta por projetos.html volta para projetos.html, mesmo que
+  // exista outro item no histórico do navegador.
+  if (destino) {
+    window.location.href = `./${destino}`;
+    return;
+  }
+
   const veioDoMesmoSite = (() => {
     try {
       return document.referrer && new URL(document.referrer).origin === window.location.origin;
@@ -121,11 +130,6 @@ function voltarParaOrigem() {
 
   if (veioDoMesmoSite && window.history.length > 1) {
     window.history.back();
-    return;
-  }
-
-  if (destino) {
-    window.location.href = `./${destino}`;
     return;
   }
 
@@ -303,7 +307,7 @@ async function renderRecord() {
             ${renderCampo('Status projeto', proposal.project_status)}
             ${renderCampo('Contato', proposal.contact_name)}
             ${renderCampo('Ponto de contato', proposal.point_of_contact)}
-            ${renderCampo('Observacoes', proposal.notes)}
+            ${renderCampo('Observacoes', proposal.observations || proposal.notes)}
           </div>
           <div class="page-card" style="padding:18px;">
             <h3 style="margin-top:0;">Financeiro</h3>

@@ -1,5 +1,19 @@
-import { supabase } from './supabase.js';
-import { showToast } from './ui.js';
+import { db, loadCurrentUserPermissions } from './supabase.js';
+import { escapeHtml, showToast } from './ui.js';
+
+await window.crmAuthReady;
+
+const access = await loadCurrentUserPermissions().catch((error) => {
+  console.error('[funil] Não foi possível carregar as permissões:', error);
+  return null;
+});
+
+if (!access) {
+  window.location.href = './login.html';
+  throw new Error('Usuário não autenticado.');
+}
+
+const permissions = access.permissions;
 
 let allProposals = [];
 let filteredProposals = [];
@@ -13,12 +27,58 @@ const BTN_FILTER_APPLY = document.getElementById('btnFilterApply');
 const BTN_FILTER_CLEAR = document.getElementById('btnFilterClear');
 const FOOTER_INFO = document.getElementById('footerInfo');
 const FILTER_COUNT = document.getElementById('filterCount');
+const BTN_NEW_PROPOSAL = document.getElementById('btnNewProposal');
+
+const PROPOSAL_STATUS_OPTIONS = ['Aberta', 'Negociando', 'Fechada', 'Perdida', 'Pausada'];
+const PROJECT_STATUS_OPTIONS = [
+  '',
+  'Aguardando dados para contrato',
+  'Contrato em elaboração',
+  'Aguardando assinatura',
+  'Contrato assinado',
+  'Em produção',
+  'Projeto em andamento',
+  'Entrega parcial',
+  'Aprovação',
+  'Cobrança enviada',
+  'Projeto finalizado'
+];
+
+const EDITABLE_FIELDS = {
+  proposal_number: { type: 'text', label: 'número da proposta' },
+  contact_name: { type: 'text', label: 'contato' },
+  point_of_contact: { type: 'text', label: 'ponto de contato' },
+  budget_date: { type: 'date', label: 'data do orçamento' },
+  closing_date: { type: 'date', label: 'data de fechamento' },
+  closing_month: { type: 'month', label: 'mês de fechamento' },
+  value_usd: { type: 'number', step: '0.01', label: 'valor exterior' },
+  value_brl: { type: 'number', step: '0.01', label: 'valor em reais' },
+  proposal_status: { type: 'select', options: PROPOSAL_STATUS_OPTIONS, label: 'status do orçamento' },
+  project_status: { type: 'select', options: PROJECT_STATUS_OPTIONS, label: 'status do andamento' },
+  observations: { type: 'text', label: 'observações' }
+};
+
+if (BTN_NEW_PROPOSAL && !permissions.podeAdicionar) {
+  BTN_NEW_PROPOSAL.style.display = 'none';
+}
+
+function stringValue(value) {
+  return String(value ?? '');
+}
+
+function lower(value) {
+  return stringValue(value).toLowerCase();
+}
+
+function findProposal(id) {
+  return allProposals.find((proposal) => Number(proposal.id) === Number(id)) || null;
+}
 
 async function loadProposals() {
   try {
     TABLE_BODY.innerHTML = '<tr><td colspan="13" class="state-message"><div class="title">Carregando propostas...</div></td></tr>';
 
-    const { data, error } = await supabase
+    const { data, error } = await db.client
       .from('proposals')
       .select(`
         id,
@@ -46,10 +106,18 @@ async function loadProposals() {
 
     allProposals = data || [];
     filteredProposals = [...allProposals];
-    renderTable();
-  } catch (err) {
-    console.error('Erro:', err);
+    renderCurrentView();
+  } catch (error) {
+    console.error('Erro:', error);
     renderError();
+  }
+}
+
+function renderCurrentView() {
+  if (SEARCH_INPUT.value.trim()) {
+    applySearch();
+  } else {
+    renderTable();
   }
 }
 
@@ -61,19 +129,20 @@ function renderTable() {
   }
 
   TABLE_BODY.innerHTML = filteredProposals.map(renderRow).join('');
-
   FOOTER_INFO.textContent = `${filteredProposals.length} ${filteredProposals.length === 1 ? 'proposta' : 'propostas'}`;
 }
 
 function applyFilters() {
   const filters = {
-    number: document.getElementById('filterNumber').value.toLowerCase(),
-    client: document.getElementById('filterClient').value.toLowerCase(),
-    project: document.getElementById('filterProject').value.toLowerCase(),
-    contact: document.getElementById('filterContact').value.toLowerCase(),
-    poc: document.getElementById('filterPOC').value.toLowerCase(),
-    proposalStatus: Array.from(document.getElementById('filterProposalStatus').selectedOptions).map(o => o.value).filter(v => v),
-    projectStatus: document.getElementById('filterProjectStatus').value.toLowerCase(),
+    number: lower(document.getElementById('filterNumber').value),
+    client: lower(document.getElementById('filterClient').value),
+    project: lower(document.getElementById('filterProject').value),
+    contact: lower(document.getElementById('filterContact').value),
+    poc: lower(document.getElementById('filterPOC').value),
+    proposalStatus: Array.from(document.getElementById('filterProposalStatus').selectedOptions)
+      .map((option) => option.value)
+      .filter(Boolean),
+    projectStatus: lower(document.getElementById('filterProjectStatus').value),
     budgetDateFrom: document.getElementById('filterBudgetDateFrom').value,
     budgetDateTo: document.getElementById('filterBudgetDateTo').value,
     closingDateFrom: document.getElementById('filterClosingDateFrom').value,
@@ -82,80 +151,81 @@ function applyFilters() {
     valueUSDMin: parseFloat(document.getElementById('filterValueUSDMin').value) || 0,
     valueUSDMax: parseFloat(document.getElementById('filterValueUSDMax').value) || Infinity,
     valueBRLMin: parseFloat(document.getElementById('filterValueBRLMin').value) || 0,
-    valueBRLMax: parseFloat(document.getElementById('filterValueBRLMax').value) || Infinity,
+    valueBRLMax: parseFloat(document.getElementById('filterValueBRLMax').value) || Infinity
   };
 
-  activeFilters = Object.keys(filters).reduce((acc, key) => {
-    if (filters[key] && filters[key] !== '' && (!Array.isArray(filters[key]) || filters[key].length > 0)) {
-      acc[key] = filters[key];
+  activeFilters = Object.keys(filters).reduce((result, key) => {
+    const value = filters[key];
+    if (value && value !== '' && (!Array.isArray(value) || value.length > 0)) {
+      result[key] = value;
     }
-    return acc;
+    return result;
   }, {});
 
-  filteredProposals = allProposals.filter(proposal => {
-    if (filters.number && !proposal.proposal_number.toLowerCase().includes(filters.number)) return false;
-    if (filters.client && !(proposal.client?.name + proposal.client?.legal_name).toLowerCase().includes(filters.client)) return false;
-    if (filters.project && !proposal.project?.name?.toLowerCase().includes(filters.project)) return false;
-    if (filters.contact && !proposal.contact_name?.toLowerCase().includes(filters.contact)) return false;
-    if (filters.poc && !proposal.point_of_contact?.toLowerCase().includes(filters.poc)) return false;
+  filteredProposals = allProposals.filter((proposal) => {
+    const clientText = `${proposal.client?.name || ''} ${proposal.client?.legal_name || ''}`;
+
+    if (filters.number && !lower(proposal.proposal_number).includes(filters.number)) return false;
+    if (filters.client && !lower(clientText).includes(filters.client)) return false;
+    if (filters.project && !lower(proposal.project?.name).includes(filters.project)) return false;
+    if (filters.contact && !lower(proposal.contact_name).includes(filters.contact)) return false;
+    if (filters.poc && !lower(proposal.point_of_contact).includes(filters.poc)) return false;
     if (filters.proposalStatus.length && !filters.proposalStatus.includes(proposal.proposal_status)) return false;
-    if (filters.projectStatus && !proposal.project_status?.toLowerCase().includes(filters.projectStatus)) return false;
-    if (filters.budgetDateFrom && proposal.budget_date < filters.budgetDateFrom) return false;
-    if (filters.budgetDateTo && proposal.budget_date > filters.budgetDateTo) return false;
-    if (filters.closingDateFrom && proposal.closing_date < filters.closingDateFrom) return false;
-    if (filters.closingDateTo && proposal.closing_date > filters.closingDateTo) return false;
+    if (filters.projectStatus && !lower(proposal.project_status).includes(filters.projectStatus)) return false;
+    if (filters.budgetDateFrom && stringValue(proposal.budget_date) < filters.budgetDateFrom) return false;
+    if (filters.budgetDateTo && stringValue(proposal.budget_date) > filters.budgetDateTo) return false;
+    if (filters.closingDateFrom && stringValue(proposal.closing_date) < filters.closingDateFrom) return false;
+    if (filters.closingDateTo && stringValue(proposal.closing_date) > filters.closingDateTo) return false;
     if (filters.month && proposal.closing_month !== filters.month) return false;
-    if (proposal.value_usd && (proposal.value_usd < filters.valueUSDMin || proposal.value_usd > filters.valueUSDMax)) return false;
-    if (proposal.value_brl && (proposal.value_brl < filters.valueBRLMin || proposal.value_brl > filters.valueBRLMax)) return false;
+    if (proposal.value_usd != null && (Number(proposal.value_usd) < filters.valueUSDMin || Number(proposal.value_usd) > filters.valueUSDMax)) return false;
+    if (proposal.value_brl != null && (Number(proposal.value_brl) < filters.valueBRLMin || Number(proposal.value_brl) > filters.valueBRLMax)) return false;
     return true;
   });
 
-  const filterCount = Object.keys(activeFilters).length;
-  if (filterCount > 0) {
-    FILTER_COUNT.textContent = ` (${filterCount})`;
+  const count = Object.keys(activeFilters).length;
+  if (count > 0) {
+    FILTER_COUNT.textContent = ` (${count})`;
     FILTER_COUNT.style.display = 'inline';
   } else {
     FILTER_COUNT.style.display = 'none';
   }
 
   FILTER_PANEL.classList.remove('show');
-  renderTable();
-  applySearch();
+  renderCurrentView();
 }
 
 function clearFilters() {
-  document.getElementById('filterNumber').value = '';
-  document.getElementById('filterClient').value = '';
-  document.getElementById('filterProject').value = '';
-  document.getElementById('filterContact').value = '';
-  document.getElementById('filterPOC').value = '';
-  document.getElementById('filterProposalStatus').value = '';
-  document.getElementById('filterProjectStatus').value = '';
-  document.getElementById('filterBudgetDateFrom').value = '';
-  document.getElementById('filterBudgetDateTo').value = '';
-  document.getElementById('filterClosingDateFrom').value = '';
-  document.getElementById('filterClosingDateTo').value = '';
-  document.getElementById('filterMonth').value = '';
-  document.getElementById('filterValueUSDMin').value = '';
-  document.getElementById('filterValueUSDMax').value = '';
-  document.getElementById('filterValueBRLMin').value = '';
-  document.getElementById('filterValueBRLMax').value = '';
+  const ids = [
+    'filterNumber', 'filterClient', 'filterProject', 'filterContact', 'filterPOC',
+    'filterProjectStatus', 'filterBudgetDateFrom', 'filterBudgetDateTo',
+    'filterClosingDateFrom', 'filterClosingDateTo', 'filterMonth',
+    'filterValueUSDMin', 'filterValueUSDMax', 'filterValueBRLMin', 'filterValueBRLMax'
+  ];
+
+  ids.forEach((id) => {
+    document.getElementById(id).value = '';
+  });
+
+  const statusSelect = document.getElementById('filterProposalStatus');
+  Array.from(statusSelect.options).forEach((option) => {
+    option.selected = false;
+  });
 
   activeFilters = {};
   FILTER_COUNT.style.display = 'none';
   filteredProposals = [...allProposals];
-  renderTable();
-  applySearch();
+  renderCurrentView();
 }
 
 function applySearch() {
-  const searchTerm = SEARCH_INPUT.value.toLowerCase().trim();
+  const searchTerm = lower(SEARCH_INPUT.value).trim();
+
   if (!searchTerm) {
     renderTable();
     return;
   }
 
-  const searched = filteredProposals.filter(proposal => {
+  const searched = filteredProposals.filter((proposal) => {
     const searchableText = [
       proposal.proposal_number,
       proposal.client?.name,
@@ -180,7 +250,7 @@ function applySearch() {
 
 function formatDate(dateStr) {
   if (!dateStr) return '—';
-  const date = new Date(dateStr + 'T00:00:00');
+  const date = new Date(`${dateStr}T00:00:00`);
   return date.toLocaleDateString('pt-BR');
 }
 
@@ -191,60 +261,183 @@ function formatMonth(monthStr) {
 }
 
 function formatCurrency(value, type) {
-  if (!value && value !== 0) return 'Não informado';
-  const formatted = Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (value === null || value === undefined || value === '') return 'Não informado';
+  const formatted = Math.abs(Number(value)).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
   return type === 'USD' ? `US$ ${formatted}` : `R$ ${formatted}`;
 }
 
 function formatClientName(client) {
-  if (!client) return 'Cliente não informado';
-  return client.legal_name || client.name || 'Cliente não informado';
+  return client?.legal_name || client?.name || 'Cliente não informado';
 }
 
 function formatProjectName(project) {
-  if (!project) return 'Projeto não informado';
-  return project.name || 'Projeto não informado';
-}
-
-function formatProposalNumber(num) {
-  return num || '—';
+  return project?.name || 'Projeto não informado';
 }
 
 function formatBadgeClass(status) {
-  if (!status) return '';
-  return status.toLowerCase().replace(/\s+/g, '');
+  return lower(status).replace(/\s+/g, '');
+}
+
+function editableCell(proposal, field, content, extraClass = '') {
+  const editable = permissions.podeEditar && EDITABLE_FIELDS[field];
+  const className = [extraClass, editable ? 'inline-editable-cell' : '']
+    .filter(Boolean)
+    .join(' ');
+  const attributes = editable
+    ? ` data-proposal-id="${proposal.id}" data-edit-field="${field}" title="Clique para editar" tabindex="0"`
+    : '';
+
+  return `<td class="${className}"${attributes}>${content}</td>`;
 }
 
 function renderRow(proposal) {
+  const statusContent = `<span class="badge ${formatBadgeClass(proposal.proposal_status)}">${escapeHtml(proposal.proposal_status || '—')}</span>`;
+
   return `
     <tr>
       <td>
-        <button class="action-button" onclick="window.location.href='./visualizar.html?type=proposal&id=${proposal.id}&returnTo=funil.html'" title="Visualizar proposta">
+        <button class="action-button" type="button" onclick="window.location.href='./visualizar.html?type=proposal&id=${proposal.id}&returnTo=funil.html'" title="Visualizar proposta">
           <svg viewBox="0 0 24 24">
             <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2"/>
             <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
           </svg>
         </button>
       </td>
-      <td>${formatProposalNumber(proposal.proposal_number)}</td>
+      ${editableCell(proposal, 'proposal_number', escapeHtml(proposal.proposal_number || '—'))}
       <td>
         <div class="client-project">
-          <strong>${formatClientName(proposal.client)}</strong>
-          <small>${formatProjectName(proposal.project)}</small>
+          <strong>${escapeHtml(formatClientName(proposal.client))}</strong>
+          <small>${escapeHtml(formatProjectName(proposal.project))}</small>
         </div>
       </td>
-      <td>${proposal.contact_name || '—'}</td>
-      <td>${proposal.point_of_contact || '—'}</td>
-      <td>${formatDate(proposal.budget_date)}</td>
-      <td>${formatDate(proposal.closing_date)}</td>
-      <td>${formatMonth(proposal.closing_month)}</td>
-      <td>${formatCurrency(proposal.value_usd, 'USD')}</td>
-      <td>${formatCurrency(proposal.value_brl, 'BRL')}</td>
-      <td><span class="badge ${formatBadgeClass(proposal.proposal_status)}">${proposal.proposal_status || '—'}</span></td>
-      <td>${proposal.project_status || '—'}</td>
-      <td>${proposal.observations || '—'}</td>
+      ${editableCell(proposal, 'contact_name', escapeHtml(proposal.contact_name || '—'))}
+      ${editableCell(proposal, 'point_of_contact', escapeHtml(proposal.point_of_contact || '—'))}
+      ${editableCell(proposal, 'budget_date', escapeHtml(formatDate(proposal.budget_date)))}
+      ${editableCell(proposal, 'closing_date', escapeHtml(formatDate(proposal.closing_date)))}
+      ${editableCell(proposal, 'closing_month', escapeHtml(formatMonth(proposal.closing_month)))}
+      ${editableCell(proposal, 'value_usd', escapeHtml(formatCurrency(proposal.value_usd, 'USD')))}
+      ${editableCell(proposal, 'value_brl', escapeHtml(formatCurrency(proposal.value_brl, 'BRL')))}
+      ${editableCell(proposal, 'proposal_status', statusContent)}
+      ${editableCell(proposal, 'project_status', escapeHtml(proposal.project_status || '—'))}
+      ${editableCell(proposal, 'observations', escapeHtml(proposal.observations || '—'), 'observations-cell')}
     </tr>
   `;
+}
+
+function inputValueForField(proposal, field) {
+  const value = proposal[field];
+  return value === null || value === undefined ? '' : String(value);
+}
+
+function createEditor(config, currentValue) {
+  if (config.type === 'select') {
+    const select = document.createElement('select');
+    select.className = 'inline-editor-control';
+    config.options.forEach((value) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = value || '—';
+      option.selected = value === currentValue;
+      select.appendChild(option);
+    });
+    return select;
+  }
+
+  const input = document.createElement('input');
+  input.className = 'inline-editor-control';
+  input.type = config.type;
+  input.value = currentValue;
+  if (config.step) input.step = config.step;
+  return input;
+}
+
+function normalizeEditedValue(config, rawValue) {
+  const trimmed = String(rawValue ?? '').trim();
+  if (!trimmed) return null;
+
+  if (config.type === 'number') {
+    const number = Number(trimmed);
+    if (!Number.isFinite(number)) {
+      throw new Error('Informe um valor numérico válido.');
+    }
+    return number;
+  }
+
+  return trimmed;
+}
+
+async function startInlineEdit(cell) {
+  if (!permissions.podeEditar || cell.dataset.editing === 'true') return;
+
+  const proposal = findProposal(cell.dataset.proposalId);
+  const field = cell.dataset.editField;
+  const config = EDITABLE_FIELDS[field];
+  if (!proposal || !config) return;
+
+  cell.dataset.editing = 'true';
+  const originalHtml = cell.innerHTML;
+  const editor = createEditor(config, inputValueForField(proposal, field));
+  cell.innerHTML = '';
+  cell.appendChild(editor);
+  editor.focus();
+  if (typeof editor.select === 'function' && config.type !== 'date' && config.type !== 'month') {
+    editor.select();
+  }
+
+  let finished = false;
+
+  const cancel = () => {
+    if (finished) return;
+    finished = true;
+    cell.innerHTML = originalHtml;
+    delete cell.dataset.editing;
+  };
+
+  const save = async () => {
+    if (finished) return;
+    finished = true;
+    editor.disabled = true;
+
+    try {
+      const value = normalizeEditedValue(config, editor.value);
+      const payload = { [field]: value };
+
+      if (field === 'closing_date') {
+        payload.closing_month = value ? String(value).slice(0, 7) : null;
+      }
+
+      await db.updateProposal(proposal.id, payload);
+      Object.assign(proposal, payload);
+      showToast(`${config.label.charAt(0).toUpperCase()}${config.label.slice(1)} atualizado com sucesso.`, 'success');
+      renderCurrentView();
+    } catch (error) {
+      console.error('[funil inline edit]', error);
+      showToast(error?.message || 'Não foi possível salvar a alteração.', 'error');
+      cell.innerHTML = originalHtml;
+      delete cell.dataset.editing;
+    }
+  };
+
+  editor.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancel();
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      save();
+    }
+  });
+
+  editor.addEventListener('blur', save, { once: true });
+  if (config.type === 'select') {
+    editor.addEventListener('change', save, { once: true });
+  }
 }
 
 function renderError() {
@@ -252,15 +445,25 @@ function renderError() {
   FOOTER_INFO.textContent = '0 propostas';
 }
 
-// Event Listeners
 BTN_FILTERS.addEventListener('click', () => {
   FILTER_PANEL.classList.toggle('show');
 });
 
 BTN_FILTER_APPLY.addEventListener('click', applyFilters);
 BTN_FILTER_CLEAR.addEventListener('click', clearFilters);
-
 SEARCH_INPUT.addEventListener('input', applySearch);
 
-// Initialize
+TABLE_BODY.addEventListener('click', (event) => {
+  const cell = event.target.closest('td[data-edit-field]');
+  if (cell) startInlineEdit(cell);
+});
+
+TABLE_BODY.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  const cell = event.target.closest('td[data-edit-field]');
+  if (!cell || cell.dataset.editing === 'true') return;
+  event.preventDefault();
+  startInlineEdit(cell);
+});
+
 loadProposals();

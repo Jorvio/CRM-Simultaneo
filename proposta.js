@@ -1,7 +1,7 @@
-import './auth-guard.js?v=20260722-10';
-import './user-menu.js?v=20260722-10';
-import './ui.js?v=20260722-10';
-import { db, loadCurrentUserPermissions } from './supabase.js?v=20260723-11';
+import './auth-guard.js';
+import './user-menu.js';
+import './ui.js';
+import { db, loadCurrentUserPermissions } from './supabase.js';
 
 await window.crmAuthReady;
 

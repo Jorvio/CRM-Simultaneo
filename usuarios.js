@@ -233,7 +233,7 @@ async function loadUsers() {
         .trim()
         .toLowerCase();
 
-    const roleOptions = ['editor', 'master']
+    const roleOptions = ['editor', 'visualizador', 'master']
       .map((role) => {
         const selected =
           currentRole === role
@@ -243,7 +243,9 @@ async function loadUsers() {
         const label =
           role === 'master'
             ? 'Master'
-            : 'Editor';
+            : role === 'visualizador'
+              ? 'Visualizador'
+              : 'Editor';
 
         return `
           <option
@@ -651,6 +653,7 @@ function initCreateUserModal() {
 
       if (
         roleName !== 'editor' &&
+        roleName !== 'visualizador' &&
         roleName !== 'master'
       ) {
         showCreateUserMessage(
@@ -805,7 +808,9 @@ async function initUsersPage() {
 
   if (!profile) return;
 
+  const currentRole = String(profile.role_name || '').trim().toLowerCase();
   if (
+    currentRole !== 'master' ||
     profile.can_manage_users !== true
   ) {
     alert(

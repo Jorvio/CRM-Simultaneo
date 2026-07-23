@@ -33,8 +33,16 @@ function openMenu(trigger, profile) {
   menu.style.top = `${Math.min(window.innerHeight - 260, rect.bottom + 8)}px`;
   menu.style.left = `${Math.max(12, rect.left)}px`;
 
-  const roleTag = String(profile.role_name || '').toLowerCase() === 'master' ? 'MASTER' : 'EDITOR';
-  const canManageUsers = Boolean(profile.can_manage_users) && profile.account_status === 'active';
+  const normalizedRole = String(profile.role_name || '').trim().toLowerCase();
+  const roleTag = normalizedRole === 'master'
+    ? 'MASTER'
+    : normalizedRole === 'visualizador'
+      ? 'VISUALIZADOR'
+      : 'EDITOR';
+  const canManageUsers =
+    normalizedRole === 'master' &&
+    profile.can_manage_users === true &&
+    profile.account_status === 'active';
 
   menu.innerHTML = `
     <div class="user-menu-head">

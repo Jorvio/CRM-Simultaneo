@@ -1,0 +1,104 @@
+CRM SIMULTÂNEO — ALTERAÇÕES DE PERMISSÕES, FUNIL E SIDEBAR
+
+O pacote foi preparado para substituir os arquivos existentes na raiz do repositório.
+Não crie outra pasta dentro do projeto e não mantenha cópias com “(1)” no nome.
+
+1. SUPABASE — SQL EDITOR
+
+Abra o arquivo:
+
+supabase-permissoes.sql
+
+Copie todo o conteúdo para Supabase > SQL Editor > New query e clique em Run.
+O script faz:
+
+- permite os papéis master, editor e visualizador;
+- MASTER: consultar, cadastrar, editar, excluir e gerenciar usuários;
+- EDITOR: consultar, cadastrar, editar e excluir, mas não gerencia usuários;
+- VISUALIZADOR: somente consultar;
+- ajusta as políticas de clients, projects, proposals, responsaveis,
+  contracts e project_followups;
+- permite que somente MASTER altere função/status em profiles.
+
+2. SUPABASE — EDGE FUNCTION
+
+Abra:
+
+Edge Functions > create-crm-user > index.ts
+
+Substitua o código pelo conteúdo de:
+
+create-crm-user.ts
+
+Depois clique em Deploy function novamente.
+Essa versão aceita master, editor e visualizador.
+
+3. CODESPACE — ARQUIVOS
+
+Substitua os arquivos existentes pelos arquivos deste pacote:
+
+- supabase.js
+- sidebar.js
+- user-menu.js
+- funil.html
+- funil.js
+- funil.css
+- visualizar.html
+- visualizar.js
+- usuarios.html
+- usuarios.js
+- cliente-novo.html
+- projeto-novo.html
+- proposta.html
+- proposta.js
+- dashboard.html
+
+Não copie para uma pasta nova. Os arquivos devem permanecer na raiz do projeto,
+no mesmo local dos arquivos atuais.
+
+4. O QUE FOI CORRIGIDO
+
+- O botão Voltar em visualizar.html respeita returnTo. Quando o registro for aberto
+  por projetos.html, ele volta para projetos.html.
+- Campos do funil podem ser editados clicando diretamente na célula para MASTER
+  e EDITOR.
+- VISUALIZADOR não vê botões de cadastro/edição/exclusão e o banco bloqueia escrita.
+- EDITOR passa a ter as mesmas permissões de dados do MASTER, sem gerenciamento
+  de usuários.
+- A sidebar cria o rodapé de usuário quando ele estiver ausente e carrega nome,
+  função e iniciais do perfil.
+- A página de usuários aceita o papel Visualizador.
+- A Edge Function aceita o papel visualizador.
+
+No funil, Cliente e Projeto continuam sendo alterados pela tela completa de edição
+da proposta, porque são relacionamentos por ID. Os demais campos comerciais,
+financeiros, status e observações são editáveis diretamente na tabela.
+
+5. COMMIT E PUSH
+
+No terminal do Codespace, execute um comando por vez:
+
+git status
+git add .
+git commit -m "Ajusta permissoes, funil e sidebar"
+git push
+
+Depois aguarde o GitHub Pages atualizar e pressione Ctrl + F5 no site.
+
+6. TESTES RECOMENDADOS
+
+MASTER
+- criar/editar/excluir cliente, projeto e proposta;
+- editar uma célula no funil;
+- criar usuário editor e visualizador;
+- abrir Gerenciamento de usuários.
+
+EDITOR
+- criar/editar/excluir cliente, projeto e proposta;
+- editar uma célula no funil;
+- confirmar que não acessa Gerenciamento de usuários.
+
+VISUALIZADOR
+- abrir Dashboard, Funil, Clientes, Projetos e Visualizar;
+- confirmar que não aparecem botões de criar, editar ou excluir;
+- confirmar que clicar nas células do funil não inicia edição.

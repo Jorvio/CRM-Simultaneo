@@ -60,8 +60,22 @@ function renderSidebarBrand() {
 }
 
 function addSidebarCredit() {
-  const footer = document.querySelector('.sidebar-footer');
-  if (!footer) return;
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+
+  let footer = sidebar.querySelector('.sidebar-footer');
+  if (!footer) {
+    footer = document.createElement('div');
+    footer.className = 'sidebar-footer';
+    footer.innerHTML = `
+      <div class="profile-avatar">—</div>
+      <div class="profile-info">
+        <span class="profile-name">Carregando…</span>
+        <span class="profile-role">—</span>
+      </div>
+    `;
+    sidebar.appendChild(footer);
+  }
 
   let profileRow = footer.querySelector('.sidebar-profile-row');
   const avatar = footer.querySelector('.profile-avatar');

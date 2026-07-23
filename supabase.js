@@ -111,21 +111,18 @@ function normalizeRoleName(roleName) {
 function buildPermissions(perfil) {
   const role = normalizeRoleName(perfil?.role_name);
   const perfilAtivo = perfil?.account_status === 'active';
-
-  const podeAdicionar = perfilAtivo && ['master', 'editor'].includes(role);
-  const podeEditar = perfilAtivo && role === 'master';
-  const podeExcluir = perfilAtivo && role === 'master';
-  const podeGerenciarUsuarios =
-    perfilAtivo && (role === 'master' || Boolean(perfil?.can_manage_users));
+  const papelValido = ['master', 'editor', 'visualizador'].includes(role);
+  const podeEscrever = perfilAtivo && ['master', 'editor'].includes(role);
 
   return {
     perfilAtivo,
     role,
-    podeVisualizar: podeAdicionar,
-    podeAdicionar,
-    podeEditar,
-    podeExcluir,
-    podeGerenciarUsuarios
+    podeVisualizar: perfilAtivo && papelValido,
+    podeAdicionar: podeEscrever,
+    podeEditar: podeEscrever,
+    podeExcluir: podeEscrever,
+    podeGerenciarUsuarios:
+      perfilAtivo && role === 'master' && perfil?.can_manage_users === true
   };
 }
 
@@ -610,6 +607,7 @@ window.db = {
           billing_delivery_method,
           proposal_status,
           project_status,
+          observations,
           notes,
           created_at,
           updated_at,

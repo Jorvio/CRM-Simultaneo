@@ -611,3 +611,56 @@ footer.status-bar {
     margin-left: auto !important;
   }
 }
+/* Edição direta das propostas no funil */
+.inline-editable-cell {
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.inline-editable-cell:hover,
+.inline-editable-cell:focus {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  outline: none;
+}
+
+.inline-editable-cell::after {
+  content: 'Editar';
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.inline-editable-cell:hover::after,
+.inline-editable-cell:focus::after {
+  opacity: 0.7;
+}
+
+.inline-editor-control {
+  width: 100%;
+  min-width: 110px;
+  height: 34px;
+  padding: 6px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.observations-cell {
+  min-width: 180px;
+  max-width: 320px;
+  white-space: normal;
+}
