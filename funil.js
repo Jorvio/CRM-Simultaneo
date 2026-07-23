@@ -16,7 +16,7 @@ const FILTER_COUNT = document.getElementById('filterCount');
 
 async function loadProposals() {
   try {
-    TABLE_BODY.innerHTML = '<tr><td colspan="12" class="state-message"><div class="title">Carregando propostas...</div></td></tr>';
+    TABLE_BODY.innerHTML = '<tr><td colspan="13" class="state-message"><div class="title">Carregando propostas...</div></td></tr>';
 
     const { data, error } = await supabase
       .from('proposals')
@@ -54,39 +54,12 @@ async function loadProposals() {
 
 function renderTable() {
   if (filteredProposals.length === 0) {
-    TABLE_BODY.innerHTML = '<tr><td colspan="12" class="state-message"><div class="title">Nenhuma proposta corresponde aos critérios.</div></td></tr>';
+    TABLE_BODY.innerHTML = '<tr><td colspan="13" class="state-message"><div class="title">Nenhuma proposta corresponde aos critérios.</div></td></tr>';
     FOOTER_INFO.textContent = '0 propostas';
     return;
   }
 
-  TABLE_BODY.innerHTML = filteredProposals.map(proposal => `
-    <tr>
-      <td>
-        <button class="action-button" onclick="window.location.href='./visualizar.html?type=proposal&id=${proposal.id}&returnTo=funil.html'" title="Visualizar proposta">
-          <svg viewBox="0 0 24 24">
-            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2"/>
-            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-          </svg>
-        </button>
-      </td>
-      <td>${formatProposalNumber(proposal.proposal_number)}</td>
-      <td>
-        <div class="client-project">
-          <strong>${formatClientName(proposal.client)}</strong>
-          <small>${formatProjectName(proposal.project)}</small>
-        </div>
-      </td>
-      <td>${proposal.contact_name || '—'}</td>
-      <td>${proposal.point_of_contact || '—'}</td>
-      <td>${formatDate(proposal.budget_date)}</td>
-      <td>${formatDate(proposal.closing_date)}</td>
-      <td>${formatMonth(proposal.closing_month)}</td>
-      <td>${formatCurrency(proposal.value_usd, 'USD')}</td>
-      <td>${formatCurrency(proposal.value_brl, 'BRL')}</td>
-      <td><span class="badge ${formatBadgeClass(proposal.proposal_status)}">${proposal.proposal_status || '—'}</span></td>
-      <td>${proposal.project_status || '—'}</td>
-    </tr>
-  `).join('');
+  TABLE_BODY.innerHTML = filteredProposals.map(renderRow).join('');
 
   FOOTER_INFO.textContent = `${filteredProposals.length} ${filteredProposals.length === 1 ? 'proposta' : 'propostas'}`;
 }
@@ -182,6 +155,7 @@ function applySearch() {
   }
 
   const searched = filteredProposals.filter(proposal => {
+    const observationType = getObservationType(proposal.project_status);
     const searchableText = [
       proposal.proposal_number,
       proposal.client?.name,
@@ -190,42 +164,16 @@ function applySearch() {
       proposal.contact_name,
       proposal.point_of_contact,
       proposal.proposal_status,
-      proposal.project_status
+      proposal.project_status,
+      observationType.label
     ].join(' ').toLowerCase();
 
     return searchableText.includes(searchTerm);
   });
 
   TABLE_BODY.innerHTML = searched.length === 0
-    ? '<tr><td colspan="12" class="state-message"><div class="title">Nenhuma proposta encontrada.</div></td></tr>'
-    : searched.map(proposal => `
-      <tr>
-        <td>
-          <button class="action-button" onclick="window.location.href='./visualizar.html?type=proposal&id=${proposal.id}&returnTo=funil.html'" title="Visualizar proposta">
-            <svg viewBox="0 0 24 24">
-              <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2"/>
-              <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
-            </svg>
-          </button>
-        </td>
-        <td>${formatProposalNumber(proposal.proposal_number)}</td>
-        <td>
-          <div class="client-project">
-            <strong>${formatClientName(proposal.client)}</strong>
-            <small>${formatProjectName(proposal.project)}</small>
-          </div>
-        </td>
-        <td>${proposal.contact_name || '—'}</td>
-        <td>${proposal.point_of_contact || '—'}</td>
-        <td>${formatDate(proposal.budget_date)}</td>
-        <td>${formatDate(proposal.closing_date)}</td>
-        <td>${formatMonth(proposal.closing_month)}</td>
-        <td>${formatCurrency(proposal.value_usd, 'USD')}</td>
-        <td>${formatCurrency(proposal.value_brl, 'BRL')}</td>
-        <td><span class="badge ${formatBadgeClass(proposal.proposal_status)}">${proposal.proposal_status || '—'}</span></td>
-        <td>${proposal.project_status || '—'}</td>
-      </tr>
-    `).join('');
+    ? '<tr><td colspan="13" class="state-message"><div class="title">Nenhuma proposta encontrada.</div></td></tr>'
+    : searched.map(renderRow).join('');
 
   FOOTER_INFO.textContent = `${searched.length} ${searched.length === 1 ? 'proposta' : 'propostas'}`;
 }
@@ -267,8 +215,56 @@ function formatBadgeClass(status) {
   return status.toLowerCase().replace(/\s+/g, '');
 }
 
+function getObservationType(projectStatus) {
+  const value = String(projectStatus || '').toLowerCase();
+
+  if (value.includes('nf') || value.includes('nota fiscal') || value.includes('boleto')) {
+    return { label: 'NF e boleto enviado', className: 'obs-type-financeiro' };
+  }
+
+  if (value.includes('contrato')) {
+    return { label: 'Contrato enviado', className: 'obs-type-contrato' };
+  }
+
+  return { label: '—', className: 'obs-type-empty' };
+}
+
+function renderRow(proposal) {
+  const observationType = getObservationType(proposal.project_status);
+
+  return `
+    <tr>
+      <td>
+        <button class="action-button" onclick="window.location.href='./visualizar.html?type=proposal&id=${proposal.id}&returnTo=funil.html'" title="Visualizar proposta">
+          <svg viewBox="0 0 24 24">
+            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+      </td>
+      <td>${formatProposalNumber(proposal.proposal_number)}</td>
+      <td>
+        <div class="client-project">
+          <strong>${formatClientName(proposal.client)}</strong>
+          <small>${formatProjectName(proposal.project)}</small>
+        </div>
+      </td>
+      <td>${proposal.contact_name || '—'}</td>
+      <td>${proposal.point_of_contact || '—'}</td>
+      <td>${formatDate(proposal.budget_date)}</td>
+      <td>${formatDate(proposal.closing_date)}</td>
+      <td>${formatMonth(proposal.closing_month)}</td>
+      <td>${formatCurrency(proposal.value_usd, 'USD')}</td>
+      <td>${formatCurrency(proposal.value_brl, 'BRL')}</td>
+      <td><span class="badge ${formatBadgeClass(proposal.proposal_status)}">${proposal.proposal_status || '—'}</span></td>
+      <td>${proposal.project_status || '—'}</td>
+      <td><span class="obs-type ${observationType.className}">${observationType.label}</span></td>
+    </tr>
+  `;
+}
+
 function renderError() {
-  TABLE_BODY.innerHTML = '<tr><td colspan="12" class="state-message"><div class="title">Não foi possível carregar o Funil.</div><div class="description">Tente novamente recarregando a página.</div></td></tr>';
+  TABLE_BODY.innerHTML = '<tr><td colspan="13" class="state-message"><div class="title">Não foi possível carregar o Funil.</div><div class="description">Tente novamente recarregando a página.</div></td></tr>';
   FOOTER_INFO.textContent = '0 propostas';
 }
 
