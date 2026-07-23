@@ -42,10 +42,14 @@
 .chart-wrapper{position:relative;width:100%;height:260px;min-height:260px;max-height:260px;}
 .chart-wrapper canvas{display:block;width:100% !important;height:100% !important;max-height:260px !important;}
 
+.chart-wrapper-tall{position:relative;width:100%;height:400px;min-height:400px;max-height:400px;}
+.chart-wrapper-tall canvas{display:block;width:100% !important;height:100% !important;max-height:400px !important;}
+
 @media (max-width: 900px) {
   .dashboard-charts{grid-template-columns:1fr;}
   .chart-card{height:320px;}
   .chart-wrapper{height:240px;min-height:240px;max-height:240px;}
+  .chart-wrapper-tall{height:280px;min-height:280px;max-height:280px;}
 }
 </style>
 </head>
@@ -138,6 +142,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="./auth-guard.js"></script>
   <script type="module" src="./user-menu.js"></script>
-  <script type="module" src="./dashboard.js?v=20260723-15"></script>
+  <script type="module" src="./dashboard.js?v=20260723-18"></script>
 </body>
 </html>

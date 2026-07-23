@@ -7,6 +7,7 @@ import { fetchCotacaoAtual, fetchHistoricoDolar } from './cotacao.js';
 
 const MESES_FULL = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const MESES_ABREV = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+const MESES_ABREV_MIN = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const ANO_MINIMO = 2005;
 
 const CORES = {
@@ -19,8 +20,18 @@ const CORES = {
   ciano: '#10B981',
   violeta: '#7C3AED',
   vermelho: '#EF4444',
-  neutro: '#4a5162'
+  neutro: '#4a5162',
+  marca: '#ffb800'
 };
+
+const PERIODOS_DOLAR = [
+  { chave: '1D', label: '1 D', qtd: 2 },
+  { chave: '5D', label: '5 D', qtd: 5 },
+  { chave: '1M', label: '1 M', qtd: 22 },
+  { chave: '1A', label: '1 A', qtd: 252 },
+  { chave: '5A', label: '5 A', qtd: null },
+  { chave: 'MAX', label: 'Máx', qtd: null }
+];
 
 const NOMES_FONTES = {
   clients: 'clientes',
@@ -42,9 +53,11 @@ let totaisGlobais = { totalClientes: 0, totalProjetos: 0, totalContratos: 0, tot
 let graficoValor = null;
 let graficoStatus = null;
 let graficoDolar = null;
+let graficoAnual = null;
 
 let cotacaoAtual = null;
 let historicoDolar = [];
+let periodoSelecionadoDolar = '1M';
 
 const elDashRoot = document.getElementById('dash-root');
 const elAvisos = document.getElementById('dash-avisos');
@@ -144,6 +157,11 @@ function classificarStatus(valor) {
 
 function formatarMoeda(valor) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(valor) || 0);
+}
+
+function formatarTaxaCambio(valor) {
+  const v = Number(valor);
+  return Number.isFinite(v) ? `R$ ${v.toFixed(4).replace('.', ',')}` : '—';
 }
 
 function formatarMoedaCompacta(valor) {
@@ -319,6 +337,37 @@ function construirAgregadoDoAno(ano) {
   return buckets;
 }
 
+function construirAgregadoAnual() {
+  const porAno = new Map();
+
+  function obterBucket(ano) {
+    if (!porAno.has(ano)) {
+      porAno.set(ano, { ano, propostas: 0, valorPropostas: 0, aprovadas: 0, valorAprovado: 0 });
+    }
+    return porAno.get(ano);
+  }
+
+  propostasNormalizadas.forEach((p) => {
+    const dataRecebimento = extrairData(p.budgetDate) || extrairData(p.createdAt);
+    if (dataRecebimento) {
+      const bucket = obterBucket(dataRecebimento.ano);
+      bucket.propostas++;
+      bucket.valorPropostas += p.valorReais;
+    }
+
+    if (p.statusCategoria === 'aprovada') {
+      const dataAprovacao = extrairData(p.closingDate) || extrairData(p.budgetDate) || extrairData(p.createdAt);
+      if (dataAprovacao) {
+        const bucket = obterBucket(dataAprovacao.ano);
+        bucket.aprovadas++;
+        bucket.valorAprovado += p.valorReais;
+      }
+    }
+  });
+
+  return Array.from(porAno.values()).sort((a, b) => a.ano - b.ano);
+}
+
 function calcularDelta(atual, anterior, campo) {
   if (!anterior || !anterior[campo]) return null;
   return Math.round(((atual[campo] - anterior[campo]) / anterior[campo]) * 100);
@@ -384,22 +433,13 @@ function renderizarDashboard() {
       ${kpiHtml('Total de propostas', totaisGlobais.totalPropostas)}
     </div>
 
-    <div class="section-label"><span>COTAÇÃO DO DÓLAR</span><div class="section-rule"></div></div>
-    <div class="charts-row two" style="margin-bottom:24px;">
+    <div class="section-label"><span>COTAÇÃO DO DÓLAR &amp; HISTÓRICO ANUAL</span><div class="section-rule"></div></div>
+    <div class="charts-row" style="grid-template-columns:0.65fr 2fr; margin-bottom:24px; align-items:stretch;">
+      <div id="fxCardDolar" style="height:100%;">${renderizarPainelDolar()}</div>
       <div class="panel">
-        <div class="panel-title">Dólar comercial (USD/BRL) — últimos 30 dias</div>
-        <div class="panel-sub">${cotacaoAtual ? `Atualizado em ${escapeHtml(formatarDataHoraExibicao(cotacaoAtual.dataHora))}` : 'Cotação indisponível no momento'}</div>
-        <div class="chart-wrapper" style="height:180px;"><canvas id="graficoDolar"></canvas></div>
-      </div>
-      <div class="panel" style="display:flex;flex-direction:column;justify-content:center;">
-        <div class="panel-title">Cotação atual</div>
-        <div class="kpi-value num" style="font-size:34px;margin-top:10px;color:${CORES.ciano}">
-          ${cotacaoAtual ? formatarMoeda(cotacaoAtual.bid) : '—'}
-        </div>
-        ${cotacaoAtual ? `<div class="kpi-delta" style="margin-top:8px;">
-          <span class="pct num" style="color:${cotacaoAtual.pctChange >= 0 ? CORES.ciano : CORES.vermelho}">${cotacaoAtual.pctChange >= 0 ? '+' : ''}${cotacaoAtual.pctChange}%</span>
-          <span class="vs">no dia</span>
-        </div>` : `<div class="panel-sub" style="color:${CORES.vermelho};margin-top:8px;">Não foi possível buscar a cotação agora. Tente atualizar a página.</div>`}
+        <div class="panel-title">Propostas por ano</div>
+        <div class="panel-sub">Valor aprovado (barras) e propostas recebidas (linha)</div>
+        <div class="chart-wrapper-tall"><canvas id="graficoPropostasAnual"></canvas></div>
       </div>
     </div>
 
@@ -456,7 +496,64 @@ function renderizarDashboard() {
   `;
 
   renderizarGraficos(agregadoAno, bucketAtual);
+  renderizarGraficoAnual(construirAgregadoAnual());
   atualizarBotoesMes();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Painel de cotação do dólar (estilo ticker / análise técnica)
+// ─────────────────────────────────────────────────────────────────────────
+
+function renderizarPainelDolar() {
+  if (!cotacaoAtual) {
+    return `
+      <div class="panel" style="display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:6px;">
+        <div class="panel-title">USD / BRL</div>
+        <div class="panel-sub" style="color:${CORES.vermelho};">Não foi possível buscar a cotação agora.</div>
+      </div>`;
+  }
+
+  const subiu = cotacaoAtual.pctChange >= 0;
+  const corTendencia = subiu ? '#3ddc84' : '#ff5c5c';
+  const seta = subiu ? '▲' : '▼';
+
+  const tabsHtml = PERIODOS_DOLAR.map((periodo) => {
+    const ativo = periodo.chave === periodoSelecionadoDolar;
+    return `<button type="button" class="fx-periodo-btn" data-periodo="${periodo.chave}"
+      style="border:none;background:${ativo ? CORES.marca : 'transparent'};color:${ativo ? '#1a1300' : '#8b90a0'};
+      font-weight:${ativo ? '700' : '500'};font-size:11.5px;padding:5px 10px;border-radius:7px;cursor:pointer;
+      font-family:'Space Grotesk',sans-serif;transition:background .15s,color .15s;">${periodo.label}</button>`;
+  }).join('');
+
+  return `
+    <div class="panel fx-panel" style="display:flex;flex-direction:column;background:#12151c;border:1px solid #232733;border-radius:12px;padding:16px;height:100%;box-sizing:border-box;">
+      <div style="display:flex;align-items:center;gap:2px;margin-bottom:14px;">${tabsHtml}</div>
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+        <div>
+          <div style="font-size:11px;letter-spacing:.06em;color:#8b90a0;font-weight:600;">USD / BRL</div>
+          <div class="num" style="font-size:24px;font-weight:700;color:#f2f3f7;margin-top:2px;">${escapeHtml(formatarTaxaCambio(cotacaoAtual.bid))}</div>
+        </div>
+        <div class="num" style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:${corTendencia}22;color:${corTendencia};white-space:nowrap;margin-top:2px;">
+          ${seta} ${subiu ? '+' : ''}${cotacaoAtual.pctChange}%
+        </div>
+      </div>
+
+      <div class="chart-wrapper" style="flex:1;min-height:120px;height:auto;max-height:none;">
+        <canvas id="graficoDolar"></canvas>
+      </div>
+
+      <div style="font-size:10.5px;color:#5b6072;margin-top:8px;">
+        Atualizado em ${escapeHtml(formatarDataHoraExibicao(cotacaoAtual.dataHora))}${['5A', 'MAX'].includes(periodoSelecionadoDolar) ? ' · histórico limitado a ~360 dias (API gratuita)' : ''}
+      </div>
+    </div>`;
+}
+
+function atualizarPainelDolar() {
+  const container = document.getElementById('fxCardDolar');
+  if (!container) return;
+  container.innerHTML = renderizarPainelDolar();
+  renderizarGraficoDolar();
 }
 
 function renderizarLinhasTabela(propostas) {
@@ -570,6 +667,13 @@ function renderizarGraficos(agregadoAno, bucketAtual) {
   renderizarGraficoDolar();
 }
 
+function obterHistoricoParaPeriodo(periodo) {
+  if (!historicoDolar || historicoDolar.length === 0) return [];
+  const config = PERIODOS_DOLAR.find((p) => p.chave === periodo);
+  if (!config || !config.qtd) return historicoDolar; // 5A / Máx -> usa tudo que a API entregou
+  return historicoDolar.slice(-config.qtd);
+}
+
 function renderizarGraficoDolar() {
   if (typeof window.Chart === 'undefined') return;
 
@@ -578,34 +682,145 @@ function renderizarGraficoDolar() {
     graficoDolar.destroy();
     graficoDolar = null;
   }
-  if (!canvasDolar || !historicoDolar || historicoDolar.length === 0) return;
+  if (!canvasDolar) return;
+
+  const pontos = obterHistoricoParaPeriodo(periodoSelecionadoDolar);
+
+  if (pontos.length < 2) {
+    const ctx = canvasDolar.getContext('2d');
+    ctx.clearRect(0, 0, canvasDolar.width, canvasDolar.height);
+    ctx.fillStyle = '#5b6072';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Histórico insuficiente para este período', canvasDolar.width / 2, canvasDolar.height / 2);
+    return;
+  }
+
+  const corLinha = CORES.marca; // dourado — cor da marca, igual em qualquer tendência
 
   graficoDolar = new window.Chart(canvasDolar, {
     type: 'line',
     data: {
-      labels: historicoDolar.map((item) => item.data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })),
+      labels: pontos.map((item) => `${item.data.getDate()} de ${MESES_ABREV_MIN[item.data.getMonth()]}.`),
       datasets: [{
         label: 'USD/BRL',
-        data: historicoDolar.map((item) => item.bid),
-        borderColor: CORES.ambar,
-        backgroundColor: `${CORES.ambar}22`,
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.3,
+        data: pontos.map((item) => item.bid),
+        borderColor: corLinha,
+        backgroundColor: (ctx) => {
+          const { chartArea, ctx: canvasCtx } = ctx.chart;
+          if (!chartArea) return `${corLinha}00`;
+          const gradiente = canvasCtx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          gradiente.addColorStop(0, `${corLinha}55`);
+          gradiente.addColorStop(1, `${corLinha}00`);
+          return gradiente;
+        },
+        borderWidth: 1.8,
+        pointRadius: pontos.map((_, i) => i === pontos.length - 1 ? 4 : 0),
+        pointHoverRadius: 4,
+        pointBackgroundColor: corLinha,
+        pointBorderColor: '#12151c',
+        pointBorderWidth: 1.5,
+        tension: 0.25,
         fill: true
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 300 },
+      animation: { duration: 250 },
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: (ctx) => formatarMoeda(ctx.parsed.y) } }
+        tooltip: {
+          displayColors: false,
+          backgroundColor: '#1c202b',
+          titleColor: '#8b90a0',
+          bodyColor: '#f2f3f7',
+          borderColor: '#2b303e',
+          borderWidth: 1,
+          padding: 8,
+          callbacks: {
+            title: (items) => items[0]?.label || '',
+            label: (ctx) => formatarTaxaCambio(ctx.parsed.y)
+          }
+        }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: CORES.textoFraco, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
-        y: { grid: { color: CORES.linhaSuave }, ticks: { color: CORES.textoFraco, font: { size: 10 }, callback: (v) => `R$ ${Number(v).toFixed(2)}` } }
+        x: {
+          grid: { display: false },
+          ticks: { color: '#5b6072', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 4 }
+        },
+        y: {
+          position: 'left',
+          grid: { color: '#232733' },
+          ticks: {
+            color: '#5b6072',
+            font: { size: 10 },
+            maxTicksLimit: 5,
+            callback: (v) => Number(v).toFixed(2).replace('.', ',')
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderizarGraficoAnual(agregadoAnual) {
+  if (typeof window.Chart === 'undefined') return;
+
+  const canvasAnual = document.getElementById('graficoPropostasAnual');
+  if (graficoAnual) {
+    graficoAnual.destroy();
+    graficoAnual = null;
+  }
+  if (!canvasAnual || !agregadoAnual || agregadoAnual.length === 0) return;
+
+  graficoAnual = new window.Chart(canvasAnual, {
+    type: 'bar',
+    data: {
+      labels: agregadoAnual.map((b) => String(b.ano)),
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Valor aprovado',
+          data: agregadoAnual.map((b) => b.valorAprovado),
+          backgroundColor: agregadoAnual.map((b) => b.ano === anoSelecionado ? CORES.ambar : '#333a48'),
+          borderRadius: 4,
+          maxBarThickness: 46,
+          yAxisID: 'y'
+        },
+        {
+          type: 'line',
+          label: 'Propostas recebidas',
+          data: agregadoAnual.map((b) => b.propostas),
+          borderColor: CORES.violeta,
+          backgroundColor: CORES.violeta,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: CORES.violeta,
+          tension: 0.25,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, font: { size: 10 } } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ctx.dataset.yAxisID === 'y1'
+              ? `${ctx.dataset.label}: ${ctx.parsed.y}`
+              : `${ctx.dataset.label}: ${formatarMoeda(ctx.parsed.y)}`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: CORES.textoFraco, font: { size: 11 } } },
+        y: { position: 'left', grid: { color: CORES.linhaSuave }, ticks: { color: CORES.textoFraco, font: { size: 10 }, callback: (v) => formatarMoedaCompacta(v) } },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: CORES.textoFraco, font: { size: 10 } } }
       }
     }
   });
@@ -684,6 +899,15 @@ function configurarFiltros() {
       dropdown.classList.add('hidden');
     });
   }
+
+  // Delegado no elDashRoot (elemento estável entre re-renderizações) para as
+  // abas de período do gráfico do dólar (1D / 5D / 1M / 1A / 5A / Máx)
+  elDashRoot.addEventListener('click', (evento) => {
+    const botaoPeriodo = evento.target.closest('.fx-periodo-btn');
+    if (!botaoPeriodo) return;
+    periodoSelecionadoDolar = botaoPeriodo.dataset.periodo;
+    atualizarPainelDolar();
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -716,7 +940,7 @@ async function carregarDadosDashboard() {
       db.fetchProposals(),
       db.fetchContracts(),
       fetchCotacaoAtual(),
-      fetchHistoricoDolar(30)
+      fetchHistoricoDolar(360)
     ]);
 
     const errosDeFonte = [];

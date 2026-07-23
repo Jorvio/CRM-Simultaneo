@@ -84,11 +84,24 @@ export async function fetchHistoricoDolar(dias = 30) {
     throw new Error('Resposta de histórico em formato inesperado');
   }
 
-  return dados
+  const pontos = dados
     .map((item) => ({
       data: item.create_date ? new Date(item.create_date.replace(' ', 'T')) : null,
       bid: Number(item.bid)
     }))
-    .filter((item) => item.data && Number.isFinite(item.bid))
-    .sort((a, b) => a.data - b.data);
+    .filter((item) => item.data && Number.isFinite(item.bid));
+
+  // A API pode retornar mais de uma cotação por dia (ticks intraday).
+  // Aqui mantemos apenas o registro mais recente de cada dia civil,
+  // senão o gráfico "achata" tudo em poucos pontos.
+  const porDia = new Map();
+  pontos.forEach((ponto) => {
+    const chave = ponto.data.toISOString().slice(0, 10); // YYYY-MM-DD
+    const existente = porDia.get(chave);
+    if (!existente || ponto.data > existente.data) {
+      porDia.set(chave, ponto);
+    }
+  });
+
+  return Array.from(porDia.values()).sort((a, b) => a.data - b.data);
 }
