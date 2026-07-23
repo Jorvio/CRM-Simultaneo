@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Importar e Exportar — CRM Simultâneo</title>
+  <link rel="icon" type="image/png" href="./favicon.png?v=20260722-1">
+  <link rel="apple-touch-icon" href="./favicon.png?v=20260722-1">
+  <meta name="theme-color" content="#ffb800">
+  <link rel="stylesheet" href="./shared.css?v=20260723-20">
+  <link rel="stylesheet" href="./auth.css?v=20260723-3">
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"></div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <div class="profile-avatar">—</div>
+        <div class="profile-info">
+          <span class="profile-name">Carregando…</span>
+          <span class="profile-role">—</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="page-content">
+      <div class="app">
+        <section class="page-card data-page-card">
+          <header class="page-header">
+            <div>
+              <h1 class="page-title">Importar e Exportar Dados</h1>
+              <p class="page-subtext">Transfira as planilhas antigas para o CRM ou baixe uma cópia dos dados cadastrados.</p>
+            </div>
+            <button id="btnDownloadTemplate" class="btn-secondary" type="button">
+              Baixar modelo vazio
+            </button>
+          </header>
+
+          <div class="page-body data-page-body">
+            <div id="dataMessage" class="data-message is-hidden" role="alert" aria-live="polite"></div>
+
+            <section class="data-section" aria-labelledby="exportTitle">
+              <div class="data-section-head">
+                <div>
+                  <h2 id="exportTitle">Exportar dados</h2>
+                  <p>Baixe um arquivo Excel com clientes, responsáveis, projetos e propostas.</p>
+                </div>
+              </div>
+
+              <div class="export-grid">
+                <label class="export-option">
+                  <input type="checkbox" id="exportClients" checked>
+                  <span><strong>Clientes</strong><small>Dados cadastrais de pessoas físicas e jurídicas.</small></span>
+                </label>
+                <label class="export-option">
+                  <input type="checkbox" id="exportResponsibles" checked>
+                  <span><strong>Responsáveis</strong><small>Contatos responsáveis vinculados aos projetos.</small></span>
+                </label>
+                <label class="export-option">
+                  <input type="checkbox" id="exportProjects" checked>
+                  <span><strong>Projetos</strong><small>Projeto, contrato, cobrança e acompanhamento.</small></span>
+                </label>
+                <label class="export-option">
+                  <input type="checkbox" id="exportProposals" checked>
+                  <span><strong>Propostas</strong><small>Informações comerciais, financeiras e observações.</small></span>
+                </label>
+              </div>
+
+              <div class="data-actions">
+                <button id="btnExportData" class="btn-primary" type="button">Exportar Excel</button>
+              </div>
+            </section>
+
+            <section id="importSection" class="data-section" aria-labelledby="importTitle">
+              <div class="data-section-head">
+                <div>
+                  <h2 id="importTitle">Importar planilha</h2>
+                  <p>Use o modelo com as abas PROPOSTA, FICHA CADASTRAL DO PROJETO, FICHA CADASTRAL CLIENTE e FICHA CADASTRAL RESPONSÁVEL.</p>
+                </div>
+              </div>
+
+              <div id="dropZone" class="upload-zone" tabindex="0" role="button" aria-label="Selecionar planilha para importação">
+                <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden>
+                <div class="upload-zone-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3v12"></path><path d="m7 8 5-5 5 5"></path><path d="M5 21h14a2 2 0 0 0 2-2v-4"></path><path d="M3 15v4a2 2 0 0 0 2 2"></path>
+                  </svg>
+                </div>
+                <strong>Arraste a planilha para cá</strong>
+                <span>ou clique para selecionar um arquivo</span>
+                <small>Formatos aceitos: .xlsx, .xls e .csv</small>
+              </div>
+
+              <div id="selectedFile" class="selected-file is-hidden">
+                <div>
+                  <strong id="selectedFileName">—</strong>
+                  <small id="selectedFileMeta">—</small>
+                </div>
+                <button id="btnRemoveFile" type="button" class="btn-secondary">Remover</button>
+              </div>
+
+              <div id="importOptions" class="import-options is-hidden">
+                <div class="field">
+                  <label for="duplicateMode">Quando o registro já existir</label>
+                  <select id="duplicateMode">
+                    <option value="skip">Ignorar e manter os dados atuais</option>
+                    <option value="update">Atualizar com os dados preenchidos na planilha</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="previewArea" class="preview-area is-hidden">
+                <div class="preview-summary" id="previewSummary"></div>
+
+                <div id="validationSummary" class="validation-summary"></div>
+
+                <div class="preview-tabs" role="tablist" aria-label="Prévia das abas">
+                  <button class="preview-tab active" data-preview-tab="clients" type="button">Clientes</button>
+                  <button class="preview-tab" data-preview-tab="responsibles" type="button">Responsáveis</button>
+                  <button class="preview-tab" data-preview-tab="projects" type="button">Projetos</button>
+                  <button class="preview-tab" data-preview-tab="proposals" type="button">Propostas</button>
+                  <button class="preview-tab" data-preview-tab="issues" type="button">Avisos e erros</button>
+                </div>
+
+                <div class="preview-table-wrap">
+                  <table class="preview-table">
+                    <thead id="previewTableHead"></thead>
+                    <tbody id="previewTableBody"></tbody>
+                  </table>
+                </div>
+
+                <div class="data-actions">
+                  <button id="btnImportData" class="btn-primary" type="button" disabled>Importar para o CRM</button>
+                </div>
+              </div>
+
+              <div id="importProgress" class="import-progress is-hidden" aria-live="polite">
+                <div class="import-progress-line">
+                  <strong id="importProgressText">Preparando importação...</strong>
+                  <span id="importProgressPercent">0%</span>
+                </div>
+                <div class="progress-track"><div id="importProgressBar" class="progress-bar"></div></div>
+              </div>
+
+              <div id="importResult" class="import-result is-hidden"></div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script type="module" src="./auth-guard.js?v=20260723-20"></script>
+  <script type="module" src="./sidebar.js?v=20260723-20"></script>
+  <script type="module" src="./user-menu.js?v=20260723-20"></script>
+  <script type="module" src="./dados.js?v=20260723-20"></script>
+</body>
+</html>
