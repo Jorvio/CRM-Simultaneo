@@ -474,3 +474,113 @@ footer.status-bar {
     margin-left: auto;
   }
 }
+
+/* =====================================================
+   CORREÇÃO DA BARRA DE PESQUISA DO FUNIL
+===================================================== */
+
+.toolbar-search {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+
+  margin-bottom: 18px !important;
+  padding: 12px 20px !important;
+
+  display: block !important;
+
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+}
+
+.toolbar-search .toolbar-bottom {
+  width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  gap: 10px !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Pesquisa posicionada no canto esquerdo */
+.toolbar-search .search-box {
+  order: 1 !important;
+
+  flex: 0 1 500px !important;
+  width: 500px !important;
+  max-width: 500px !important;
+  min-width: 280px !important;
+
+  height: 40px !important;
+  margin: 0 !important;
+  padding: 8px 12px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  background: var(--surface-alt) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+}
+
+.toolbar-search .search-box input {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+
+/* Empurra os filtros e a nova proposta para a direita */
+.toolbar-search .search-box + * {
+  margin-left: auto !important;
+}
+
+.toolbar-search .status-filters {
+  order: 2 !important;
+}
+
+.toolbar-search .btn-add {
+  order: 3 !important;
+  margin-left: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Celular e telas menores */
+@media (max-width: 800px) {
+  .toolbar-search {
+    padding: 12px !important;
+  }
+
+  .toolbar-search .toolbar-bottom {
+    height: auto !important;
+    min-height: 0 !important;
+    flex-wrap: wrap !important;
+  }
+
+  .toolbar-search .search-box {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .toolbar-search .search-box + * {
+    margin-left: 0 !important;
+  }
+
+  .toolbar-search .btn-add {
+    margin-left: auto !important;
+  }
+}

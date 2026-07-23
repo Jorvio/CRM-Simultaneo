@@ -7,9 +7,9 @@
   <link rel="icon" type="image/png" href="./favicon.png?v=20260722-1">
   <link rel="apple-touch-icon" href="./favicon.png?v=20260722-1">
   <meta name="theme-color" content="#ffb800">
-  <link rel="stylesheet" href="shared.css?v=20260722-11">
+  <link rel="stylesheet" href="./shared.css?v=20260723-1">
   <link rel="stylesheet" href="auth.css?v=20260723-2">
-  <link rel="stylesheet" href="funil.css?v=20260723-1">
+  <link rel="stylesheet" href="./funil.css?v=20260723-4">
   <style>
     :root {
       --bg: #F8FAFC;
@@ -417,29 +417,31 @@
         </div>
       </div>
 
-      <div class="toolbar">
-        <div class="search-box">
-          <svg viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="M21 21l-4.35-4.35"/>
-          </svg>
-          <input id="searchInput" type="text" placeholder="Pesquisar proposta, cliente ou projeto...">
-        </div>
-        <div class="toolbar-buttons">
-          <button id="btnFilters" class="btn secondary" title="Abrir filtros">
+      <div class="toolbar toolbar-search">
+        <div class="toolbar-bottom">
+          <div class="search-box">
             <svg viewBox="0 0 24 24">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+              <circle cx="11" cy="11" r="8"/>
+              <path d="M21 21l-4.35-4.35"/>
             </svg>
-            <span>Filtros</span>
-            <span id="filterCount" style="display: none;"></span>
-          </button>
-          <a href="./proposta.html?returnTo=funil.html" class="btn" title="Criar nova proposta">
-            <svg viewBox="0 0 24 24">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Nova Proposta
-          </a>
+            <input id="searchInput" type="text" placeholder="Pesquisar proposta, cliente ou projeto...">
+          </div>
+          <div class="toolbar-buttons status-filters">
+            <button id="btnFilters" class="btn secondary" title="Abrir filtros">
+              <svg viewBox="0 0 24 24">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+              </svg>
+              <span>Filtros</span>
+              <span id="filterCount" style="display: none;"></span>
+            </button>
+            <a href="./proposta.html?returnTo=funil.html" class="btn btn-add" title="Criar nova proposta">
+              <svg viewBox="0 0 24 24">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Nova Proposta
+            </a>
+          </div>
         </div>
       </div>
 
