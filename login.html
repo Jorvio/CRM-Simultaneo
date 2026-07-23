@@ -1,54 +1,105 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Entrar - CRM</title>
-<link rel="icon" type="image/png" href="./favicon.png?v=20260722-1">
-<link rel="apple-touch-icon" href="./favicon.png?v=20260722-1">
-<meta name="theme-color" content="#ffb800">
-<link rel="stylesheet" href="shared.css?v=20260722-9">
-<link rel="stylesheet" href="auth.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Entrar - CRM</title>
+
+  <link rel="icon" type="image/png" href="./favicon.png?v=20260722-1">
+  <link rel="apple-touch-icon" href="./favicon.png?v=20260722-1">
+
+  <meta name="theme-color" content="#ffb800">
+
+  <link rel="stylesheet" href="shared.css?v=20260722-9">
+  <link rel="stylesheet" href="auth.css?v=20260723-2">
 </head>
+
 <body class="auth-page">
   <main class="auth-card" aria-labelledby="loginTitle">
-    <img src="./astra-logo.png?v=20260722-1" alt="Astra CRM" class="auth-logo">
+    <img
+      src="./astra-logo.png?v=20260722-1"
+      alt="Astra CRM"
+      class="auth-logo"
+    >
 
     <h1 id="loginTitle" class="auth-title">Entrar</h1>
-    <p class="auth-subtitle">Acesse o módulo comercial</p>
 
-    <div id="loginMessage" class="auth-error is-hidden" role="alert" aria-live="polite"></div>
+    <p class="auth-subtitle">
+      Acesse o módulo comercial
+    </p>
+
+    <div
+      id="loginMessage"
+      class="auth-error is-hidden"
+      role="alert"
+      aria-live="polite"
+    ></div>
 
     <form id="loginForm" class="auth-form" novalidate>
       <div class="field">
         <label for="email">E-mail</label>
-        <input id="email" name="email" type="email" autocomplete="email" required>
+
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          required
+        >
       </div>
 
       <div class="field">
         <label for="password">Senha</label>
+
         <div class="input-wrap">
-          <input id="password" name="password" type="password" autocomplete="current-password" required>
-          <button id="togglePassword" type="button" class="toggle-pass">Mostrar</button>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          >
+
+          <button
+            id="togglePassword"
+            type="button"
+            class="toggle-pass"
+          >
+            Mostrar
+          </button>
         </div>
       </div>
 
       <div class="auth-row">
         <label class="auth-checkbox" for="rememberMe">
-          <input id="rememberMe" name="rememberMe" type="checkbox">
+          <input
+            id="rememberMe"
+            name="rememberMe"
+            type="checkbox"
+          >
+
           Manter conectado
         </label>
-        <a class="auth-link" href="esqueci-senha.html">Esqueci minha senha</a>
+
+        <a class="auth-link" href="esqueci-senha.html">
+          Esqueci minha senha
+        </a>
       </div>
 
-      <button id="btnLogin" type="submit" class="btn-primary btn-block">Entrar</button>
-
-      <div class="auth-separator">ou</div>
-
-      <button id="btnGoogleLogin" type="button" class="btn-google btn-block">Entrar com Google</button>
+      <button
+        id="btnLogin"
+        type="submit"
+        class="btn-primary btn-block"
+      >
+        Entrar
+      </button>
     </form>
   </main>
 
-  <script type="module" src="./login.js?v=20260722-9"></script>
+  <script
+    type="module"
+    src="./login.js?v=20260722-9"
+  ></script>
 </body>
 </html>
