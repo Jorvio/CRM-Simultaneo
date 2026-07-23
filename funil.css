@@ -664,3 +664,51 @@ footer.status-bar {
   max-width: 320px;
   white-space: normal;
 }
+
+/* =====================================================
+   BOTÃO DE CONVERSÃO USD -> BRL (coluna "Converter")
+===================================================== */
+
+.convert-cell {
+  text-align: center;
+  padding: 8px 6px !important;
+}
+
+.convert-hint {
+  color: var(--text-faint);
+}
+
+.btn-convert {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-convert:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-convert:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.btn-convert.is-loading svg {
+  animation: convert-spin 0.8s linear infinite;
+}
+
+@keyframes convert-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

@@ -1,5 +1,6 @@
 import { db, loadCurrentUserPermissions } from './supabase.js';
 import { escapeHtml, showToast } from './ui.js';
+import { fetchCotacaoAtual } from './cotacao.js?v=20260723-22';
 
 await window.crmAuthReady;
 
@@ -76,7 +77,7 @@ function findProposal(id) {
 
 async function loadProposals() {
   try {
-    TABLE_BODY.innerHTML = '<tr><td colspan="13" class="state-message"><div class="title">Carregando propostas...</div></td></tr>';
+    TABLE_BODY.innerHTML = '<tr><td colspan="14" class="state-message"><div class="title">Carregando propostas...</div></td></tr>';
 
     const { data, error } = await db.client
       .from('proposals')
@@ -90,6 +91,9 @@ async function loadProposals() {
         closing_month,
         value_usd,
         value_brl,
+        exchange_rate,
+        exchange_rate_at,
+        exchange_rate_source,
         proposal_status,
         project_status,
         observations,
@@ -123,7 +127,7 @@ function renderCurrentView() {
 
 function renderTable() {
   if (filteredProposals.length === 0) {
-    TABLE_BODY.innerHTML = '<tr><td colspan="13" class="state-message"><div class="title">Nenhuma proposta corresponde aos critérios.</div></td></tr>';
+    TABLE_BODY.innerHTML = '<tr><td colspan="14" class="state-message"><div class="title">Nenhuma proposta corresponde aos critérios.</div></td></tr>';
     FOOTER_INFO.textContent = '0 propostas';
     return;
   }
@@ -242,7 +246,7 @@ function applySearch() {
   });
 
   TABLE_BODY.innerHTML = searched.length === 0
-    ? '<tr><td colspan="13" class="state-message"><div class="title">Nenhuma proposta encontrada.</div></td></tr>'
+    ? '<tr><td colspan="14" class="state-message"><div class="title">Nenhuma proposta encontrada.</div></td></tr>'
     : searched.map(renderRow).join('');
 
   FOOTER_INFO.textContent = `${searched.length} ${searched.length === 1 ? 'proposta' : 'propostas'}`;
@@ -293,6 +297,34 @@ function editableCell(proposal, field, content, extraClass = '') {
   return `<td class="${className}"${attributes}>${content}</td>`;
 }
 
+function renderConversionCell(proposal) {
+  const temUsd = proposal.value_usd !== null && proposal.value_usd !== undefined && String(proposal.value_usd).trim() !== '';
+
+  if (!permissions.podeEditar) {
+    return '<td class="convert-cell">—</td>';
+  }
+
+  if (!temUsd) {
+    return '<td class="convert-cell"><span class="convert-hint" title="Informe o valor em dólar para poder converter">—</span></td>';
+  }
+
+  const taxa = proposal.exchange_rate
+    ? `Última conversão: R$ ${Number(proposal.exchange_rate).toFixed(4)}`
+    : 'Ainda não convertido';
+
+  return `
+    <td class="convert-cell">
+      <button class="btn-convert" type="button" data-convert-id="${proposal.id}" title="Atualizar valor em reais com a cotação atual&#10;${escapeHtml(taxa)}">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 2v6h-6"></path>
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+          <path d="M3 22v-6h6"></path>
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+        </svg>
+      </button>
+    </td>`;
+}
+
 function renderRow(proposal) {
   const statusContent = `<span class="badge ${formatBadgeClass(proposal.proposal_status)}">${escapeHtml(proposal.proposal_status || '—')}</span>`;
 
@@ -319,12 +351,51 @@ function renderRow(proposal) {
       ${editableCell(proposal, 'closing_date', escapeHtml(formatDate(proposal.closing_date)))}
       ${editableCell(proposal, 'closing_month', escapeHtml(formatMonth(proposal.closing_month)))}
       ${editableCell(proposal, 'value_usd', escapeHtml(formatCurrency(proposal.value_usd, 'USD')))}
+      ${renderConversionCell(proposal)}
       ${editableCell(proposal, 'value_brl', escapeHtml(formatCurrency(proposal.value_brl, 'BRL')))}
       ${editableCell(proposal, 'proposal_status', statusContent)}
       ${editableCell(proposal, 'project_status', escapeHtml(proposal.project_status || '—'))}
       ${editableCell(proposal, 'observations', escapeHtml(proposal.observations || '—'), 'observations-cell')}
     </tr>
   `;
+}
+
+async function converterLinha(proposalId, botao) {
+  const proposal = findProposal(proposalId);
+  if (!proposal) return;
+
+  const usd = Number(proposal.value_usd);
+  if (!Number.isFinite(usd) || usd <= 0) {
+    showToast('Esta proposta não possui valor em dólar para converter.', 'error');
+    return;
+  }
+
+  if (botao.disabled) return;
+  botao.disabled = true;
+  botao.classList.add('is-loading');
+
+  try {
+    // forcarAtualizacao garante a cotação do momento, sem usar o cache de 5 min
+    const cotacao = await fetchCotacaoAtual({ forcarAtualizacao: true });
+
+    const payload = {
+      value_brl: Number((usd * cotacao.bid).toFixed(2)),
+      exchange_rate: cotacao.bid,
+      exchange_rate_at: cotacao.dataHora.toISOString(),
+      exchange_rate_source: cotacao.fonte
+    };
+
+    await db.updateProposal(proposal.id, payload);
+    Object.assign(proposal, payload);
+
+    showToast(`Convertido com a cotação R$ ${cotacao.bid.toFixed(4)} — novo valor: ${formatCurrency(payload.value_brl, 'BRL')}`, 'success');
+    renderCurrentView();
+  } catch (error) {
+    console.error('[funil] Falha ao converter valor:', error);
+    showToast(error?.message || 'Não foi possível atualizar o valor em reais.', 'error');
+    botao.disabled = false;
+    botao.classList.remove('is-loading');
+  }
 }
 
 function inputValueForField(proposal, field) {
@@ -441,7 +512,7 @@ async function startInlineEdit(cell) {
 }
 
 function renderError() {
-  TABLE_BODY.innerHTML = '<tr><td colspan="13" class="state-message"><div class="title">Não foi possível carregar o Funil.</div><div class="description">Tente novamente recarregando a página.</div></td></tr>';
+  TABLE_BODY.innerHTML = '<tr><td colspan="14" class="state-message"><div class="title">Não foi possível carregar o Funil.</div><div class="description">Tente novamente recarregando a página.</div></td></tr>';
   FOOTER_INFO.textContent = '0 propostas';
 }
 
@@ -454,6 +525,13 @@ BTN_FILTER_CLEAR.addEventListener('click', clearFilters);
 SEARCH_INPUT.addEventListener('input', applySearch);
 
 TABLE_BODY.addEventListener('click', (event) => {
+  const botaoConverter = event.target.closest('[data-convert-id]');
+  if (botaoConverter) {
+    event.stopPropagation();
+    converterLinha(botaoConverter.dataset.convertId, botaoConverter);
+    return;
+  }
+
   const cell = event.target.closest('td[data-edit-field]');
   if (cell) startInlineEdit(cell);
 });
