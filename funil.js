@@ -32,6 +32,7 @@ async function loadProposals() {
         value_brl,
         proposal_status,
         project_status,
+        observations,
         client:clients!proposals_client_id_fkey(id, name, legal_name),
         project:projects!proposals_project_id_fkey(id, name, client_id)
       `)
@@ -155,7 +156,6 @@ function applySearch() {
   }
 
   const searched = filteredProposals.filter(proposal => {
-    const observationType = getObservationType(proposal.project_status);
     const searchableText = [
       proposal.proposal_number,
       proposal.client?.name,
@@ -165,7 +165,7 @@ function applySearch() {
       proposal.point_of_contact,
       proposal.proposal_status,
       proposal.project_status,
-      observationType.label
+      proposal.observations
     ].join(' ').toLowerCase();
 
     return searchableText.includes(searchTerm);
@@ -215,23 +215,7 @@ function formatBadgeClass(status) {
   return status.toLowerCase().replace(/\s+/g, '');
 }
 
-function getObservationType(projectStatus) {
-  const value = String(projectStatus || '').toLowerCase();
-
-  if (value.includes('nf') || value.includes('nota fiscal') || value.includes('boleto')) {
-    return { label: 'NF e boleto enviado', className: 'obs-type-financeiro' };
-  }
-
-  if (value.includes('contrato')) {
-    return { label: 'Contrato enviado', className: 'obs-type-contrato' };
-  }
-
-  return { label: '—', className: 'obs-type-empty' };
-}
-
 function renderRow(proposal) {
-  const observationType = getObservationType(proposal.project_status);
-
   return `
     <tr>
       <td>
@@ -258,7 +242,7 @@ function renderRow(proposal) {
       <td>${formatCurrency(proposal.value_brl, 'BRL')}</td>
       <td><span class="badge ${formatBadgeClass(proposal.proposal_status)}">${proposal.proposal_status || '—'}</span></td>
       <td>${proposal.project_status || '—'}</td>
-      <td><span class="obs-type ${observationType.className}">${observationType.label}</span></td>
+      <td>${proposal.observations || '—'}</td>
     </tr>
   `;
 }

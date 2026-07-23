@@ -1,7 +1,7 @@
 import './auth-guard.js?v=20260722-10';
 import './user-menu.js?v=20260722-10';
 import './ui.js?v=20260722-10';
-import { db, loadCurrentUserPermissions } from './supabase.js?v=20260722-10';
+import { db, loadCurrentUserPermissions } from './supabase.js?v=20260723-11';
 
 await window.crmAuthReady;
 
@@ -485,7 +485,7 @@ function preencherFormulario(proposal) {
   fldProposalClosingMonth.value = proposal.closing_month ? formatMonthToInput(proposal.closing_month) : formatMonthToInput(proposal.closing_date || '');
   fldProposalStatus.value = proposal.proposal_status || statusPropostaOptions[0];
   fldProposalProjectStatus.value = proposal.project_status || statusProjetoOptions[0];
-  fldProposalNotes.value = proposal.notes || '';
+  fldProposalNotes.value = proposal.observations || proposal.notes || '';
   fldProposalValueBRL.value = proposal.value_brl ?? '';
   fldProposalValueUSD.value = proposal.value_usd ?? '';
   fldProposalPaymentMethod.value = proposal.payment_method || '';
@@ -547,6 +547,7 @@ function montarPayload() {
     value_usd: moedaOuNull(fldProposalValueUSD?.value),
     proposal_status: textoOuNull(fldProposalStatus?.value),
     project_status: textoOuNull(fldProposalProjectStatus?.value),
+    observations: textoOuNull(fldProposalNotes?.value),
     notes: textoOuNull(fldProposalNotes?.value),
     payment_method: textoOuNull(fldProposalPaymentMethod?.value),
     installment_terms: textoOuNull(fldProposalInstallmentTerms?.value),
