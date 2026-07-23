@@ -415,17 +415,17 @@ function renderizarDashboard() {
     </div>
 
     <div class="section-label"><span>COTAÇÃO DO DÓLAR &amp; HISTÓRICO ANUAL</span><div class="section-rule"></div></div>
-    <div class="charts-row" style="grid-template-columns:0.65fr 2fr; margin-bottom:24px; align-items:stretch;">
-      <div id="fxCardDolar" style="height:100%;">${renderizarPainelDolar()}</div>
-      <div class="panel" style="display:flex;flex-direction:column;height:100%;box-sizing:border-box;">
+    <div class="charts-row" style="grid-template-columns:1fr 1fr; margin-bottom:24px; align-items:stretch;">
+      <div id="fxCardDolar">${renderizarPainelDolar()}</div>
+      <div class="panel" style="display:flex;flex-direction:column;box-sizing:border-box;">
         <div class="panel-title">Propostas por ano</div>
         <div class="panel-sub">Total e distribuição de status em ${anoSelecionado}</div>
-        <div style="display:flex;align-items:center;gap:24px;flex:1;min-height:0;margin-top:6px;">
+        <div style="display:flex;align-items:center;gap:20px;margin-top:8px;">
           <div style="flex-shrink:0;">
             <div style="font-size:11px;color:var(--text-soft,#6B7280);margin-bottom:4px;">Total no ano</div>
-            <div class="num" style="font-size:40px;font-weight:700;color:${CORES.texto};line-height:1;">${totaisAnoStatus.propostas}</div>
+            <div class="num" style="font-size:36px;font-weight:700;color:${CORES.texto};line-height:1;">${totaisAnoStatus.propostas}</div>
           </div>
-          <div style="flex:1;min-width:0;height:100%;position:relative;">
+          <div style="flex:1;min-width:0;height:230px;position:relative;">
             <canvas id="graficoStatusAnual"></canvas>
           </div>
         </div>
@@ -536,7 +536,7 @@ function renderizarPainelDolar() {
   }).join('');
 
   return `
-    <div class="panel fx-panel" style="display:flex;flex-direction:column;background:#12151c;border:1px solid #232733;border-radius:12px;padding:16px;height:100%;box-sizing:border-box;">
+    <div class="panel fx-panel" style="display:flex;flex-direction:column;background:#12151c;border:1px solid #232733;border-radius:12px;padding:16px;box-sizing:border-box;">
       <div style="display:flex;align-items:center;gap:2px;margin-bottom:14px;">${tabsHtml}</div>
 
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
@@ -549,7 +549,7 @@ function renderizarPainelDolar() {
         </div>
       </div>
 
-      <div class="chart-wrapper" style="flex:1;min-height:120px;height:auto;max-height:none;">
+      <div class="chart-wrapper" style="height:190px;min-height:190px;max-height:190px;">
         <canvas id="graficoDolar"></canvas>
       </div>
 
@@ -811,7 +811,7 @@ function renderizarGraficoStatusAnual(totaisAnoStatus) {
       cutout: '62%',
       animation: { duration: 300 },
       plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, font: { size: 10 } } }
+        legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true, font: { size: 11 }, padding: 10 } }
       }
     }
   });

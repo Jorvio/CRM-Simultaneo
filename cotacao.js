@@ -69,11 +69,25 @@ export async function fetchCotacaoAtual({ forcarAtualizacao = false } = {}) {
   return cotacao;
 }
 
-function formatarDataParaAPI(data) {
-  const ano = data.getFullYear();
-  const mes = String(data.getMonth() + 1).padStart(2, '0');
-  const dia = String(data.getDate()).padStart(2, '0');
-  return `${ano}${mes}${dia}`;
+function converterDataDaAPI(item) {
+  // A API só envia "create_date" no primeiro registro da lista; os demais
+  // trazem apenas "timestamp" (unix). Por isso o timestamp é a fonte primária.
+  if (item.timestamp) {
+    const bruto = Number(item.timestamp);
+    if (Number.isFinite(bruto) && bruto > 0) {
+      // timestamps de 13 dígitos já vêm em milissegundos
+      const ms = bruto > 1e12 ? bruto : bruto * 1000;
+      const data = new Date(ms);
+      if (!Number.isNaN(data.getTime())) return data;
+    }
+  }
+
+  if (item.create_date) {
+    const data = new Date(String(item.create_date).replace(' ', 'T'));
+    if (!Number.isNaN(data.getTime())) return data;
+  }
+
+  return null;
 }
 
 /**
@@ -81,22 +95,10 @@ function formatarDataParaAPI(data) {
  * Retorna array ordenado (mais antigo -> mais recente) de { data, bid }
  */
 export async function fetchHistoricoDolar(dias = 30) {
-  const hoje = new Date();
-  const inicio = new Date();
-  inicio.setDate(inicio.getDate() - dias);
+  // Limite máximo da API é 360 dias por requisição
+  const quantidade = Math.min(Math.max(Number(dias) || 30, 2), 360);
 
-  // Forçamos start_date/end_date explícitos: sem isso, a API às vezes devolve
-  // várias cotações de um intervalo curto (ex: só do dia de hoje) em vez de
-  // uma cotação por dia espalhada ao longo do período pedido.
-  const params = new URLSearchParams({
-    start_date: formatarDataParaAPI(inicio),
-    end_date: formatarDataParaAPI(hoje)
-  });
-
-  // Limite máximo da API é 360; damos uma folga (fins de semana/feriados não têm cotação)
-  const quantidade = Math.min(Math.ceil(dias * 1.6) + 10, 360);
-
-  const resposta = await fetch(`${AWESOME_API_BASE}/json/daily/USD-BRL/${quantidade}?${params.toString()}`);
+  const resposta = await fetch(`${AWESOME_API_BASE}/json/daily/USD-BRL/${quantidade}`);
   if (!resposta.ok) {
     throw new Error(`Falha ao buscar histórico do dólar (HTTP ${resposta.status})`);
   }
@@ -108,17 +110,16 @@ export async function fetchHistoricoDolar(dias = 30) {
 
   const pontos = dados
     .map((item) => ({
-      data: item.create_date ? new Date(item.create_date.replace(' ', 'T')) : null,
+      data: converterDataDaAPI(item),
       bid: Number(item.bid)
     }))
     .filter((item) => item.data && Number.isFinite(item.bid));
 
   // A API pode retornar mais de uma cotação por dia (ticks intraday).
-  // Aqui mantemos apenas o registro mais recente de cada dia civil,
-  // senão o gráfico "achata" tudo em poucos pontos.
+  // Mantemos apenas o registro mais recente de cada dia civil.
   const porDia = new Map();
   pontos.forEach((ponto) => {
-    const chave = ponto.data.toISOString().slice(0, 10); // YYYY-MM-DD
+    const chave = `${ponto.data.getFullYear()}-${ponto.data.getMonth()}-${ponto.data.getDate()}`;
     const existente = porDia.get(chave);
     if (!existente || ponto.data > existente.data) {
       porDia.set(chave, ponto);
