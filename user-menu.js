@@ -85,16 +85,35 @@ async function initUserMenu() {
     return;
   }
 
-  const { profile } = await requireAuth();
-  if (!profile) return;
-
   const profileName = document.querySelector('.profile-name');
   const profileRole = document.querySelector('.profile-role');
   const profileAvatar = document.querySelector('.profile-avatar');
 
-  if (profileName) profileName.textContent = profile.full_name || 'Usuário';
-  if (profileRole) profileRole.textContent = String(profile.role_name || 'editor').toUpperCase();
-  if (profileAvatar) profileAvatar.textContent = initials(profile.full_name, profile.email);
+  const applyProfile = (profile) => {
+    if (!profile) return;
+    if (profileName) profileName.textContent = profile.full_name || profile.email || 'Usuário';
+    if (profileRole) profileRole.textContent = String(profile.role_name || 'editor').toUpperCase();
+    if (profileAvatar) profileAvatar.textContent = initials(profile.full_name, profile.email);
+  };
+
+  const cachedProfile = getCachedProfile();
+  if (cachedProfile) {
+    applyProfile(cachedProfile);
+  } else {
+    if (profileName && /carregando/i.test(profileName.textContent || '')) profileName.textContent = 'Usuário';
+    if (profileRole && /carregando|—|-/.test(profileRole.textContent || '')) profileRole.textContent = 'EDITOR';
+    if (profileAvatar && /carregando|—|-/.test(profileAvatar.textContent || '')) profileAvatar.textContent = 'U';
+  }
+
+  let profile = cachedProfile;
+  try {
+    const result = await requireAuth();
+    profile = result?.profile || profile;
+  } catch (error) {
+    console.warn('[user-menu] Nao foi possivel carregar o perfil em tempo real:', error);
+  }
+
+  if (profile) applyProfile(profile);
 
   const settingsLink = document.querySelector('.sidebar-nav .nav-item[data-nav-key="configuracoes"]');
   if (!settingsLink) return;

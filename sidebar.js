@@ -63,11 +63,23 @@ function addSidebarCredit() {
   const footer = document.querySelector('.sidebar-footer');
   if (!footer) return;
 
+  let profileRow = footer.querySelector('.sidebar-profile-row');
+  const avatar = footer.querySelector('.profile-avatar');
+  const info = footer.querySelector('.profile-info');
+
+  if (!profileRow && avatar && info) {
+    profileRow = document.createElement('div');
+    profileRow.className = 'sidebar-profile-row';
+    footer.prepend(profileRow);
+    profileRow.appendChild(avatar);
+    profileRow.appendChild(info);
+  }
+
   let credit = footer.querySelector('.sidebar-credit');
   if (!credit) {
     credit = document.createElement('div');
     credit.className = 'sidebar-credit';
-    credit.textContent = 'produced by Juana Wurges';
+    credit.textContent = 'Produced by Juana Wurges';
     footer.appendChild(credit);
   }
 }
